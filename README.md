@@ -71,7 +71,7 @@ AI 看不到你的資料細節？錯 — **AI 就是你跑的 Codex/Claude Code*
 ## 🚀 快速開始 Quick Start
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/cablate/finance-viewer
 cd finance-viewer
 npm install
 npm run seed:demo   # 產生示範假資料（通用商家，不含任何真實個資）
@@ -82,7 +82,7 @@ npm run dev         # 啟動 → http://localhost:3127
 
 ### 匯入你自己的帳單
 ```bash
-npm run seed --ledger=path/to/your/ledger.csv
+npm run seed -- --ledger=path/to/your/ledger.csv
 # 或讓你的 AI agent 打 POST /api/import-ledger
 ```
 
@@ -109,6 +109,10 @@ npm run seed --ledger=path/to/your/ledger.csv
 | GET | `/api/transactions/:id` | 單筆明細 |
 | PATCH | `/api/transactions/:id` | 單筆修正（白名單欄位） |
 | POST | `/api/transactions/batch` | 批次修正（AI 批次處理） |
+| POST | `/api/transactions/review` | 批次標記已審（人類認可規則套用） |
+| GET | `/api/rules` `/rules/:id` `/rules/normalize` `/rules/suggest` | 規則查詢／正規化預覽／候選建議 |
+| POST | `/api/rules` | 新增規則（帶 confidence） |
+| PATCH/DELETE | `/api/rules/:id` | 改／刪規則 |
 | POST | `/api/import-ledger` | 匯入 CSV（csvPath 白名單） |
 
 ---
@@ -129,11 +133,11 @@ npm run seed --ledger=path/to/your/ledger.csv
 
 ```
 finance-viewer/
-├─ app/            page.js（URL params 驅動）+ 13 個 API route + layout
-├─ components/     Overview · TransactionTable(編輯+批次) · ReviewQueue
+├─ app/            page.js（URL params 驅動）+ 18 個 API route（含 rules 系統）+ layout
+├─ components/     Overview · TransactionTable(編輯+批次+確認) · ReviewQueue · RulesManager(規則 CRUD)
 │                  · CorrectionsLog · TrendView · AppSidebar · ScopeBar
 │                  · SearchInput · ErrorBoundary · charts/
-├─ lib/            db（單例）· queries（15 函式, DB transaction 包裹）
+├─ lib/            db（單例）· queries/（core/transactions/rules/corrections/review 子模組）· normalize · constants
 │                  · format（cents/100）· constants · api-client · hooks · utils
 ├─ middleware.js   安全標頭（CSP / X-Frame-Options / nosniff / Referrer-Policy）
 ├─ AGENTS.md       給外部 AI Agent（Codex/Claude Code）的操作指引
@@ -191,8 +195,13 @@ MIT — 自由使用、修改、散布、商用。
 
 ## 🤝 貢獻 Contributing
 
-PR welcome。**已知未實作**（ roadmap ）：
-- AI 從 `correction_log` 自動產生分類規則 → 下次匯入自動套用（目前 AI 只能讀 log 給建議，未自動化）
+PR welcome。
+
+**已實作**：規則系統（兩環進化、匯入自動套用、RulesManager、審查佇列一鍵 bootstrap）、mobile card、確認鈕、API 綁 localhost、`.env` 支援、Node 版本守門。
+
+**未來方向**（roadmap）：
+- 關鍵路徑自動化測試、eslint 設定。
+- AI 流程優化：websearch 提升分類信心、控制分類發散度（避免過細）、進一步降低人類負擔。
 
 ---
 

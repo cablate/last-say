@@ -84,6 +84,7 @@ POST /api/transactions/batch {corrections: [...]}
 - 比對條件（皆可選、AND 組合，留空 = 不限）：`match_key` / `source_type` / `direction`(`in`=轉入 / `out`=轉出)
 - 分類結果（皆可選，留空 = 不動該欄）：`owner_value` / `category_value` / `necessity_value`
 - 元資料：`confidence`(0~1，你給) / `sample_count` / `origin`(`ai_analysis`|`human_correction`|`bootstrap`) / `enabled` / `note`
+- 客觀指標（本工具維護，補 AI 主觀信心度）：`applied_count`（套用次數）/ `overridden_count`（被人類覆寫次數）；準確率 = (applied − overridden) / applied
 - 兩側各至少需一項（至少一個條件 + 一個結果），否則 POST 會 400。
 
 **`match_key` 必須用 `normalizeForRule(名稱)` 算**（本工具匯入套用與你產規則用同一演算法，否則對不上）。**強烈建議直接呼叫 `GET /api/rules/normalize?text=...` 取 match_key，不要自己手算**（順序錯會對不上）。步驟（與 `lib/normalize.js` 完全一致）：
