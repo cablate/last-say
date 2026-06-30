@@ -7,7 +7,12 @@ import { batchCorrection } from '@/lib/queries';
 // 回傳 { ok: true, ...results }，results 含 updated / errors / details（可能含 truncated / error）。
 export async function POST(request) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     const corrections = body.corrections || body.items || [];
     const results = batchCorrection(corrections);
     return NextResponse.json({ ok: true, ...results });

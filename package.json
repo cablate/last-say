@@ -4,9 +4,9 @@
   "private": true,
   "description": "Local Cathay 2026 finance viewer — Next.js + shadcn/ui, backed by SQLite.",
   "scripts": {
-    "dev": "next dev -p 3127",
+    "dev": "next dev -H 127.0.0.1 -p 3127",
     "build": "next build",
-    "start": "next start -p 3127",
+    "start": "next start -H 127.0.0.1 -p 3127",
     "lint": "next lint",
     "seed": "node scripts/seed-from-ledger.js",
     "seed:reset": "node scripts/seed-from-ledger.js --reset",

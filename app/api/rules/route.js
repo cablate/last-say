@@ -26,7 +26,12 @@ export async function GET(request) {
 //         confidence, sample_count, origin, enabled, note }
 export async function POST(request) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     const rule = createRule(body || {});
     return NextResponse.json({ ok: true, rule }, { status: 201 });
   } catch (err) {

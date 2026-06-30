@@ -6,7 +6,12 @@ import { markReviewed } from '@/lib/queries';
 // body: { ids: [1,2,3] }，上限 500。
 export async function POST(request) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     const ids = Array.isArray(body && body.ids) ? body.ids : [];
     const result = markReviewed(ids);
     return NextResponse.json({ ok: true, ...result });

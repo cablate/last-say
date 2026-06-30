@@ -28,7 +28,12 @@ export async function PATCH(request, { params }) {
     if (!Number.isFinite(ruleId)) {
       return NextResponse.json({ error: 'Invalid rule id' }, { status: 400 });
     }
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     let rule;
     const onlyEnabled =
       body && Object.prototype.hasOwnProperty.call(body, 'enabled') && Object.keys(body).length === 1;

@@ -61,7 +61,12 @@ export async function PATCH(request, { params }) {
         { status: 400 }
       );
     }
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     const result = patchTransaction(txnId, body);
     return NextResponse.json(result.body, { status: result.status });
   } catch (err) {

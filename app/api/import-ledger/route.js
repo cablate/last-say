@@ -34,7 +34,12 @@ function isAllowedPath(candidate) {
 export async function POST(request) {
   let tmpPath = null;
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
+    }
     let csvPath = body.csvPath || body.ledgerPath || null;
     const csvContent = body.csvContent;
     const sourcePath = body.sourcePath || body.sourceIndexPath || null;
