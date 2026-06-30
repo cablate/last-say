@@ -250,9 +250,10 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
   const csvOwner = row['先放哪邊'] || '待確認';
   const csvCategory = row['分類'] || '待確認';
   const csvNecessity = row['必要/可省'] || '需確認';
-  // AI 對本次分類的信心度 0~1（選填，CSV 欄「信心度」）；超出範圍或非數字 → null。
-  const _confRaw = Number(String(row['信心度'] ?? '').trim());
-  const aiConfidence = Number.isFinite(_confRaw) && _confRaw >= 0 && _confRaw <= 1 ? _confRaw : null;
+  // AI 對本次分類的信心度 0~1（選填，CSV 欄「信心度」）；空字串/非數字/超出範圍 → null。
+  const _confStr = String(row['信心度'] ?? '').trim();
+  const _confRaw = Number(_confStr);
+  const aiConfidence = _confStr === '' || !Number.isFinite(_confRaw) || _confRaw < 0 || _confRaw > 1 ? null : _confRaw;
   const owner = (rule && rule.owner_value) || csvOwner;
   const category = (rule && rule.category_value) || csvCategory;
   const necessity = (rule && rule.necessity_value) || csvNecessity;
