@@ -24,6 +24,10 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-danger: var(--danger);
+    --color-info: var(--info);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -48,72 +52,81 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.985 0 0);
+    --foreground: oklch(0.145 0.02 240);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.145 0.02 240);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.145 0.02 240);
+    --primary: oklch(0.62 0.13 200);
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.97 0.015 200);
+    --secondary-foreground: oklch(0.205 0.02 240);
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --muted-foreground: oklch(0.556 0.02 240);
+    --accent: oklch(0.95 0.04 200);
+    --accent-foreground: oklch(0.205 0.02 240);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: oklch(0.922 0.012 200);
+    --input: oklch(0.922 0.012 200);
+    --ring: oklch(0.62 0.13 200);
+    /* 語意 status tokens：用色彩編碼資訊（非裝飾），與 brand teal 同源 */
+    --success: oklch(0.62 0.13 200);      /* teal：收入 / 人類已確認 / 高信心（= brand）*/
+    --warning: oklch(0.74 0.15 75);       /* amber：可節省 / pending 待分析 / 中信心 */
+    --danger: oklch(0.577 0.245 27.325);  /* rose：支出 / 需確認 / 低信心（= destructive）*/
+    --info: oklch(0.55 0.18 255);         /* blue：規則自動套用 */
+    --chart-1: oklch(0.62 0.13 200);      /* teal */
+    --chart-2: oklch(0.55 0.18 255);      /* blue */
+    --chart-3: oklch(0.74 0.15 75);       /* amber */
+    --chart-4: oklch(0.60 0.20 10);       /* rose */
+    --chart-5: oklch(0.55 0.16 300);      /* violet */
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar: oklch(0.985 0.006 200);
+    --sidebar-foreground: oklch(0.145 0.02 240);
+    --sidebar-primary: oklch(0.62 0.13 200);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-accent: oklch(0.95 0.05 200);
+    --sidebar-accent-foreground: oklch(0.205 0.02 240);
+    --sidebar-border: oklch(0.922 0.012 200);
+    --sidebar-ring: oklch(0.62 0.13 200);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
+    --background: oklch(0.145 0.02 240);
     --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
+    --card: oklch(0.205 0.02 240);
     --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
+    --popover: oklch(0.205 0.02 240);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
+    --primary: oklch(0.68 0.13 200);
+    --primary-foreground: oklch(0.145 0.02 240);
+    --secondary: oklch(0.269 0.02 240);
     --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
+    --muted: oklch(0.269 0.02 240);
+    --muted-foreground: oklch(0.708 0.02 240);
+    --accent: oklch(0.30 0.05 200);
     --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
+    --ring: oklch(0.68 0.13 200);
+    --success: oklch(0.68 0.13 200);
+    --warning: oklch(0.78 0.15 75);
+    --danger: oklch(0.704 0.191 22.216);
+    --info: oklch(0.65 0.16 255);
+    --chart-1: oklch(0.68 0.13 200);
+    --chart-2: oklch(0.65 0.16 255);
+    --chart-3: oklch(0.78 0.15 75);
+    --chart-4: oklch(0.70 0.18 10);
+    --chart-5: oklch(0.65 0.15 300);
+    --sidebar: oklch(0.205 0.02 240);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary: oklch(0.68 0.13 200);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent: oklch(0.30 0.05 200);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.68 0.13 200);
 }
 
 @layer base {

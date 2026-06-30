@@ -176,7 +176,7 @@ export default function Overview() {
           <CardTitle className="text-3xl">{formatTWD(netCash)}</CardTitle>
           <CardAction>
             {netCashPositive ? (
-              <Badge className="border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+              <Badge className="border-transparent bg-success/15 text-success">
                 <ArrowUpRight className="h-3 w-3" />
                 流入大於支出
               </Badge>
@@ -353,7 +353,7 @@ export default function Overview() {
                       <span className="truncate text-foreground">
                         {item.label}
                       </span>
-                      <span className="font-medium text-emerald-700 dark:text-emerald-300">
+                      <span className="font-medium text-success">
                         +{formatTWD(item.inflow)}
                       </span>
                     </button>
@@ -433,7 +433,7 @@ export default function Overview() {
                         <span
                           className={
                             isIncome
-                              ? "text-sm font-medium text-emerald-700 dark:text-emerald-300"
+                              ? "text-sm font-medium text-success"
                               : "text-sm font-medium text-foreground"
                           }
                         >
@@ -458,7 +458,7 @@ export default function Overview() {
               {balanceDelta === null ? (
                 "帳戶餘額軌跡"
               ) : balanceDelta >= 0 ? (
-                <Badge className="border-transparent bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                <Badge className="border-transparent bg-success/15 text-success">
                   <ArrowUpRight className="h-3 w-3" />
                   較上月 +{formatTWD(balanceDelta)}
                 </Badge>

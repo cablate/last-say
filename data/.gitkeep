@@ -1,0 +1,2 @@
+# placeholder：讓 data/ 目錄存在於 repo。
+# 真實 SQLite（finance.sqlite / -wal / -shm）與任何備份變體皆被 .gitignore 的 data/* 規則排除，絕不追蹤。

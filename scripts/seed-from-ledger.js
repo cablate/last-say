@@ -2,6 +2,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { DEFAULT_DB_PATH, initializeDatabase, openDatabase } = require('../lib/db');
+const { getMatchingRule, incrementRuleStat } = require('../lib/queries');
+const { normalizeForRule } = require('../lib/normalize');
 
 const PROJECT_ROOT = process.cwd();
 const DEFAULT_LEDGER_PATH = path.join(PROJECT_ROOT, 'sample-ledger.csv');
@@ -74,7 +76,10 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function normalizedName(value) {
+// 匯入去重用的輕量正規化（trim + collapse whitespace + lowercase）。
+// 注意：這與 lib/normalize.js 的 normalizeForRule（NFKC + 去期數 + 去識別碼，用於規則比對鍵）
+// 是「不同語意、不可互換」——本函式穩定餵 dedupe_key/import_match_key，改它會使既有資料失效。
+function normalizeForDedupe(value) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
@@ -116,7 +121,7 @@ function buildKeys(row) {
   const sourceType = row['來源類型'] || '';
   const family = sourceFamily(sourceType);
   const date = row['日期'];
-  const name = normalizedName(row['名稱']);
+  const name = normalizeForDedupe(row['名稱']);
   const amount = toNumber(row['金額']) ?? 0;
   const importMatchKey = hashKey([family, date, name, amount]);
 
@@ -228,21 +233,41 @@ function attachTag(db, transactionId, tagType, name) {
 }
 
 function insertOrUpdateTransaction(db, row, accountId, source, keys) {
-  const amount = (toNumber(row['金額']) ?? 0) * 100;
-  const inflow = (toNumber(row['流入']) ?? 0) * 100;
-  const outflow = (toNumber(row['流出']) ?? 0) * 100;
+  // Math.round：避免 IEEE-754 漂移（如 2.55*100=254.9999…）。cents 必為整數。
+  const amount = Math.round((toNumber(row['金額']) ?? 0) * 100);
+  const inflowRaw = toNumber(row['流入']) ?? 0;
+  const outflowRaw = toNumber(row['流出']) ?? 0;
+  const inflow = Math.round(inflowRaw * 100);
+  const outflow = Math.round(outflowRaw * 100);
   const balanceRaw = toNumber(row['帳戶餘額']);
-  const balance = balanceRaw !== null ? balanceRaw * 100 : null;
+  const balance = balanceRaw !== null ? Math.round(balanceRaw * 100) : null;
   const statementMonth = source.statementMonth || parseStatementMonth(row['來源類型'], row['來源說明'], row['月份']);
+
+  // 規則套用：只影響 INSERT 新交易。ON CONFLICT DO UPDATE 不碰分類欄 → 重匯尊重人工校正。
+  const matchKey = normalizeForRule(row['名稱']);
+  const direction = inflowRaw > 0 ? 'in' : (outflowRaw > 0 ? 'out' : null);
+  const rule = getMatchingRule(matchKey, row['來源類型'] || null, direction, db);
+  const csvOwner = row['先放哪邊'] || '待確認';
+  const csvCategory = row['分類'] || '待確認';
+  const csvNecessity = row['必要/可省'] || '需確認';
+  const owner = (rule && rule.owner_value) || csvOwner;
+  const category = (rule && rule.category_value) || csvCategory;
+  const necessity = (rule && rule.necessity_value) || csvNecessity;
+  const sourceKind = rule
+    ? 'rule'
+    : (csvOwner !== '待確認' || csvCategory !== '待確認' || csvNecessity !== '需確認' ? 'ai' : 'pending');
+  const ruleId = rule ? rule.id : null;
+  // 是否為新交易：重匯（dedupe_key 已存在）走 ON CONFLICT DO UPDATE，不計規則套用。
+  const existed = !!db.prepare('SELECT 1 FROM transactions WHERE dedupe_key = ?').get(keys.dedupeKey);
 
   db.prepare(`
     INSERT INTO transactions (
       dedupe_key, import_match_key, transaction_date, transaction_month, statement_month,
       source_type, flow_type, name, amount, inflow, outflow, owner_primary,
       category_primary, necessity, judgment_reason, memo, raw_info, balance,
-      account_original_order, account_id, first_source_id
+      account_original_order, account_id, first_source_id, classification_source, rule_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(dedupe_key) DO UPDATE SET
       statement_month = COALESCE(transactions.statement_month, excluded.statement_month),
       judgment_reason = COALESCE(NULLIF(transactions.judgment_reason, ''), excluded.judgment_reason),
@@ -260,16 +285,18 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     amount,
     inflow,
     outflow,
-    row['先放哪邊'] || '待確認',
-    row['分類'] || '待確認',
-    row['必要/可省'] || '需確認',
+    owner,
+    category,
+    necessity,
     row['判斷理由'] || '',
     row['備註'] || '',
     row['原始交易資訊'] || '',
     balance,
     row['帳戶原始排序'] || '',
     accountId,
-    source.id
+    source.id,
+    sourceKind,
+    ruleId
   );
 
   const transaction = db.prepare('SELECT id FROM transactions WHERE dedupe_key = ?').get(keys.dedupeKey);
@@ -280,14 +307,15 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     VALUES (?, ?, ?, ?, ?)
   `).run(transaction.id, source.id, row.id || row['id'] || keys.importMatchKey, row['來源說明'] || '', row['原始交易資訊'] || '');
 
-  attachTag(db, transaction.id, 'owner', row['先放哪邊'] || '待確認');
-  attachTag(db, transaction.id, 'category', row['分類'] || '待確認');
-  attachTag(db, transaction.id, 'necessity', row['必要/可省'] || '需確認');
+  attachTag(db, transaction.id, 'owner', owner);
+  attachTag(db, transaction.id, 'category', category);
+  attachTag(db, transaction.id, 'necessity', necessity);
   attachTag(db, transaction.id, 'source', row['來源類型']);
   attachTag(db, transaction.id, 'flow', row['這筆是什麼']);
   if (statementMonth) attachTag(db, transaction.id, 'statement_month', statementMonth);
 
-  return transaction.id;
+  if (!existed && rule) incrementRuleStat(db, rule.id, 'applied');
+  return { id: transaction.id, appliedRule: !existed && !!rule };
 }
 
 function main(opts = {}) {
@@ -318,6 +346,7 @@ function main(opts = {}) {
   initializeDatabase(db);
 
   let insertedOrMatched = 0;
+  let rulesApplied = 0;
   const importMatchCounts = new Map();
   const transactionIds = new Set();
 
@@ -328,9 +357,10 @@ function main(opts = {}) {
       const source = upsertSource(db, row, sourcesByDescription);
       const keys = buildKeys(row);
       importMatchCounts.set(keys.importMatchKey, (importMatchCounts.get(keys.importMatchKey) || 0) + 1);
-      const transactionId = insertOrUpdateTransaction(db, row, accountId, source, keys);
-      transactionIds.add(transactionId);
+      const res = insertOrUpdateTransaction(db, row, accountId, source, keys);
+      transactionIds.add(res.id);
       insertedOrMatched += 1;
+      if (res.appliedRule) rulesApplied += 1;
     }
     db.exec('COMMIT;');
   } catch (error) {
@@ -340,6 +370,7 @@ function main(opts = {}) {
 
   const stats = {
     ledger_rows_seen: insertedOrMatched,
+    rules_applied: rulesApplied,
     transactions_in_database: db.prepare('SELECT COUNT(*) AS count FROM transactions').get().count,
     source_links: db.prepare('SELECT COUNT(*) AS count FROM transaction_sources').get().count,
     accounts: db.prepare('SELECT COUNT(*) AS count FROM accounts').get().count,

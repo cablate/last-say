@@ -9,11 +9,9 @@ next-env.d.ts
 # production
 build/
 
-# === 機敏：真實財務 DB 絕不追蹤 ===
-data/*.sqlite
-data/*.sqlite-*
-data/*.sqlite.bak*
-data/*.bak*
+# === 機敏：真實財務 DB 絕不追蹤（整個 data/ 只留 .gitkeep，避免任何備份變體漏網）===
+data/*
+!data/.gitkeep
 
 # imports (uploaded CSV may contain real statements)
 uploads/
@@ -30,10 +28,16 @@ server.pid
 Thumbs.db
 .playwright-mcp/
 .env*
+!.env.example
 
 # internal docs (contain personal context / local paths, not for public)
 AUDIT-*.md
 DESIGN.md
 DEV-JOURNAL.md
+PRINCIPLES-RAW.md
 .vscode/
 .idea/
+
+# tool indexes (local only, not for repo)
+.codegraph/
+.serena/

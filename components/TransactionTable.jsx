@@ -22,6 +22,7 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   ChevronsUpDownIcon,
+  ListChecks,
   Loader2Icon,
   RotateCwIcon,
   XIcon,
@@ -29,7 +30,7 @@ import {
 
 import { cn } from "@/lib/utils"
 import { formatTWD, formatDate } from "@/lib/format"
-import { OWNER_OPTIONS, NECESSITY_OPTIONS } from "@/lib/constants"
+import { OWNER_OPTIONS, NECESSITY_OPTIONS, EDITABLE_FIELDS, EDITABLE_LABELS } from "@/lib/constants"
 import { useMeta, useTransactions, usePatchTxn, useBatchCorrect } from "@/lib/hooks"
 
 import { Button } from "@/components/ui/button"
@@ -117,26 +118,37 @@ function pageWindow(current, total) {
   return out
 }
 
-// ---- 信心度 Badge：從 correction_count 與 uncertain 欄位推導（與舊版 public/app.js 一致）----
-function ConfidenceBadge({ row }) {
-  const isCorrected = (row.correction_count ?? 0) > 0
-  const isUncertain =
-    !isCorrected &&
-    (row.owner_primary === "待確認" ||
-      row.category_primary === "待確認" ||
-      row.necessity === "需確認")
-
-  if (isCorrected) {
+// ---- 分類來源 Badge：以 classification_source 為事實來源（rule/ai/human/pending），
+// correction_count 退為 tooltip 補充。取代舊 ConfidenceBadge（用 correction_count 推導，
+// 規則系統上線後會把「規則套用」誤標成「AI 分類」）。
+function SourceBadge({ row }) {
+  const src = row.classification_source
+  const corrected = (row.correction_count ?? 0) > 0
+  if (src === "rule") {
     return (
-      <Badge variant="secondary" title={`已人工修正 ${row.correction_count} 次`}>
+      <Badge variant="outline" className="border-info/40 bg-info/10 text-info" title={`規則自動套用${row.rule_id ? `（規則 #${row.rule_id}）` : ""}`}>
+        <ListChecks /> 規則
+      </Badge>
+    )
+  }
+  if (src === "human" || corrected) {
+    return (
+      <Badge variant="outline" className="border-success/40 bg-success/10 text-success" title={`已人工修正 ${row.correction_count ?? 0} 次`}>
         <CheckIcon /> 已修正
       </Badge>
     )
   }
-  if (isUncertain) {
-    return <Badge variant="destructive" title="分類需人工確認">需確認</Badge>
+  if (src === "pending") {
+    return <Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning" title="規則未覆蓋且 AI 未分類，待分析">待分析</Badge>
   }
-  return <Badge variant="outline" title="AI 原始分類，尚未人工覆核">AI 分類</Badge>
+  const uncertain =
+    row.owner_primary === "待確認" ||
+    row.category_primary === "待確認" ||
+    row.necessity === "需確認"
+  if (uncertain) {
+    return <Badge variant="outline" className="border-danger/40 bg-danger/10 text-danger" title="AI 初分有欄位待確認">需確認</Badge>
+  }
+  return <Badge variant="outline" className="text-muted-foreground" title="AI 初分類，尚未人工覆核">AI 分類</Badge>
 }
 
 // ---- 金額欄：支出（outflow）優先，用語意色 text-destructive；收入用前景色；移轉用柔和色 ----
@@ -148,7 +160,7 @@ function AmountCell({ row }) {
     sign = "−"
   } else if (Number(row.inflow) > 0) {
     text = formatTWD(row.inflow)
-    className = "text-foreground"
+    className = "text-success"
     sign = "+"
   } else {
     text = formatTWD(row.amount)
@@ -306,7 +318,7 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
       ) : null}
 
       <div className="flex items-center justify-between gap-2">
-        <ConfidenceBadge row={row} />
+        <SourceBadge row={row} />
         <div className="flex items-center gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             取消
@@ -336,12 +348,8 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
 }
 
 // ---- 批次動作列 ----
-const BATCH_FIELDS = [
-  { key: "owner_primary", label: "歸屬" },
-  { key: "category_primary", label: "分類" },
-  { key: "necessity", label: "必要性" },
-  { key: "memo", label: "備註" },
-]
+// 批次目標欄位由 EDITABLE_FIELDS + EDITABLE_LABELS 衍生（單一來源，不再手抄）
+const BATCH_FIELDS = EDITABLE_FIELDS.map((key) => ({ key, label: EDITABLE_LABELS[key] }))
 
 function BatchBar({ selectedIds, categoryOptions, onDone, onClear }) {
   const batchMutate = useBatchCorrect()
@@ -652,7 +660,7 @@ export default function TransactionTable() {
                         <TableCell><NecessityBadge value={row.necessity} /></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <ConfidenceBadge row={row} />
+                            <SourceBadge row={row} />
                             <Button
                               type="button"
                               variant={open ? "secondary" : "ghost"}
@@ -774,7 +782,7 @@ function TableHeaderCells({ sort, direction, onSort }) {
           )}
         </TableHead>
       ))}
-      <TableHead className="text-right text-xs font-medium text-muted-foreground">信心度 / 操作</TableHead>
+      <TableHead className="text-right text-xs font-medium text-muted-foreground">來源 / 操作</TableHead>
     </>
   )
 }
@@ -785,14 +793,14 @@ function FieldBadge({ value }) {
   return <Badge variant="outline">{value}</Badge>
 }
 
-// 必要性 Badge：用語意色對應層級（必要=中性、可節省/可優化=次要、需確認/不列入=破壞/柔和）
+// 必要性 Badge：語意色編碼層級（必要=中性 / 可節省·可優化=警示琥珀 / 需確認=紅 / 不列入=灰）
 function NecessityBadge({ value }) {
   if (!value) return <span className="text-xs text-muted-foreground">—</span>
-  let variant = "outline"
-  if (value === "必要" || value === "事業必要") variant = "secondary"
-  else if (value === "可節省" || value === "可優化") variant = "outline"
-  else if (value === "需確認" || value === "不列入") variant = "destructive"
-  return <Badge variant={variant}>{value}</Badge>
+  let cls = "border-border bg-muted/60 text-foreground"
+  if (value === "可節省" || value === "可優化") cls = "border-warning/40 bg-warning/10 text-warning"
+  else if (value === "需確認") cls = "border-danger/40 bg-danger/10 text-danger"
+  else if (value === "不列入") cls = "border-border bg-muted/40 text-muted-foreground"
+  return <Badge variant="outline" className={cls}>{value}</Badge>
 }
 
 // 給 PaginationLink/Prev/Next 的 href 用：以當前 search params 為底，覆寫 page。

@@ -10,6 +10,7 @@ import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { History, AlertTriangle, RefreshCw, X } from "lucide-react"
 import { useCorrections } from "@/lib/hooks"
+import { EDITABLE_LABELS as FIELD_LABEL } from "@/lib/constants"
 import { formatDate } from "@/lib/format"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,14 +42,6 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
-// 後端 EDITABLE_FIELDS 對應的中文顯示
-const FIELD_LABEL = {
-  owner_primary: "歸屬",
-  category_primary: "分類",
-  necessity: "必要性",
-  memo: "備註",
-}
-
 function fieldLabel(name) {
   return FIELD_LABEL[name] || name
 }
@@ -70,47 +63,55 @@ function pageRange(current, total) {
 
 function displayValue(v) {
   if (v === null || v === undefined || v === "") return "（空）"
-  return String(v)
+  const s = String(v)
+  // 防呆：值含 U+FFFD（替換字元，通常是 curl/PowerShell CP950 雙重編碼殘留）時，
+  // 顯示占位而非把亂碼噴進表格。寫入路徑（fetch+request.json）不會腐蝕 UTF-8，
+  // 僅防手動 curl/PowerShell 呼叫造成的髒資料。
+  if (s.includes("�")) return "（編碼異常）"
+  return s
 }
 
-function SummaryTable({ rows, activeField, onPick }) {
+// 規則候選摘要：以 match_key + 欄位 + 新值聚合（哪個比對鍵被一致校正成什麼）。
+// 點列下鑽該比對鍵的明細（URL ?key= → getCorrections matchKey 過濾）。等同 AI 第二環的規則候選清單。
+function SummaryTable({ rows, activeKey, onPick }) {
   return (
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>比對鍵</TableHead>
           <TableHead>欄位</TableHead>
-          <TableHead>舊值</TableHead>
-          <TableHead>新值</TableHead>
+          <TableHead>校正為</TableHead>
           <TableHead className="text-right">次數</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.map((row, i) => {
-          const key = `${row.field_name}|${row.old_value}|${row.new_value}|${i}`
-          const isActive = activeField === row.field_name
+          const k = `${row.match_key}|${row.field_name}|${row.new_value}|${i}`
+          const isActive = activeKey && activeKey === row.match_key
           return (
             <TableRow
-              key={key}
+              key={k}
               data-active={isActive}
               className={isActive ? "bg-muted/50" : "cursor-pointer hover:bg-muted/40"}
-              onClick={() => onPick && onPick(row.field_name)}
+              onClick={() => onPick && onPick(row.match_key)}
               tabIndex={onPick ? 0 : undefined}
               role={onPick ? "button" : undefined}
               aria-pressed={onPick ? isActive : undefined}
+              aria-label={onPick ? `下鑽比對鍵 ${row.match_key}` : undefined}
               onKeyDown={
                 onPick
                   ? (e) => {
                       if (e.key === "Enter" || e.key === " ") {
                         e.preventDefault()
-                        onPick(row.field_name)
+                        onPick(row.match_key)
                       }
                     }
                   : undefined
               }
             >
-              <TableCell className="font-medium">{fieldLabel(row.field_name)}</TableCell>
+              <TableCell className="font-medium">{displayValue(row.match_key)}</TableCell>
               <TableCell className="text-muted-foreground">
-                {displayValue(row.old_value)}
+                {fieldLabel(row.field_name)}
               </TableCell>
               <TableCell>
                 <Badge variant="secondary" className="font-normal">
@@ -253,9 +254,12 @@ export default function CorrectionsLog() {
   const searchParams = useSearchParams()
 
   // corrections 是跨月累積的學習資產，不依月份/scope 過濾。
-  // 僅支援可選的 ?field= 下鑽（summary 點擊 → 明細過濾）。
-  const field = searchParams.get("field") || ""
-  const params = field ? `field=${encodeURIComponent(field)}` : ""
+  // 支援 ?key= 下鑽：summary 點擊某比對鍵 → 明細過濾到該鍵（規則候選 → 原始校正明細）。
+  const matchKey = searchParams.get("key") || ""
+  const paramParts = []
+  if (matchKey) paramParts.push(`matchKey=${encodeURIComponent(matchKey)}`)
+  paramParts.push("limit=1000")
+  const params = paramParts.join("&")
 
   const { data, loading, error, refetch } = useCorrections(params)
 
@@ -269,21 +273,21 @@ export default function CorrectionsLog() {
   const start = (safePage - 1) * PAGE_SIZE
   const pageRows = rows.slice(start, start + PAGE_SIZE)
 
-  function handlePick(nextField) {
+  function handlePick(nextKey) {
     const sp = new URLSearchParams(searchParams)
-    if (field === nextField) {
-      sp.delete("field")
+    if (matchKey === nextKey) {
+      sp.delete("key")
     } else {
-      sp.set("field", nextField)
+      sp.set("key", nextKey)
     }
     sp.set("mode", "corrections")
     setPage(1)
     router.push(`?${sp.toString()}`, { scroll: false })
   }
 
-  function clearField() {
+  function clearKey() {
     const sp = new URLSearchParams(searchParams)
-    sp.delete("field")
+    sp.delete("key")
     sp.set("mode", "corrections")
     setPage(1)
     router.push(`?${sp.toString()}`, { scroll: false })
@@ -322,21 +326,21 @@ export default function CorrectionsLog() {
                 <div className="rounded-md border">
                   <SummaryTable
                     rows={summary}
-                    activeField={field}
+                    activeKey={matchKey}
                     onPick={handlePick}
                   />
                 </div>
               )}
-              {field && (
+              {matchKey && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>
-                    已套用篩選：欄位 = {fieldLabel(field)}
+                    已套用篩選：比對鍵 = {matchKey}
                   </span>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="h-6 px-2 text-xs"
-                    onClick={clearField}
+                    onClick={clearKey}
                   >
                     <X className="mr-1 h-3 w-3" />
                     清除
@@ -351,7 +355,8 @@ export default function CorrectionsLog() {
                 <h3 className="text-sm font-medium text-muted-foreground">修正明細</h3>
                 {!loading && rows.length > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    共 {rows.length} 筆
+                    共 {data?.total ?? rows.length} 筆
+                    {data && data.total > rows.length ? `（僅顯示最近 ${rows.length} 筆）` : ""}
                   </span>
                 )}
               </div>

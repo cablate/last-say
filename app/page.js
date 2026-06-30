@@ -16,11 +16,12 @@ import TransactionTable from "@/components/TransactionTable"
 import TrendView from "@/components/TrendView"
 import ReviewQueue from "@/components/ReviewQueue"
 import CorrectionsLog from "@/components/CorrectionsLog"
+import RulesManager from "@/components/RulesManager"
 import SearchInput from "@/components/SearchInput"
 import { useMeta } from "@/lib/hooks"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const VALID_MODES = ["overview", "transactions", "trend", "review", "corrections"]
+const VALID_MODES = ["overview", "transactions", "trend", "review", "corrections", "rules"]
 
 // 從 useMeta 結果取最新月份（months.transaction 已按月份由小到大排序）。
 function latestMonth(meta) {
@@ -55,7 +56,7 @@ function PageContent() {
   //   URL 無 month 且 meta 已載入但無可補月份 → ready（讓元件顯示空狀態，避免永遠卡骨架）
   //   URL 無 month 且 meta 尚未到 → 等補月
   const lm = latestMonth(meta)
-  const isReady = month !== "" || (meta && !lm) ? true : false
+  const isReady = mode === "rules" || mode === "corrections" || month !== "" || (meta && !lm) ? true : false
 
   // search 存在時一律走 TransactionTable（搜尋結果）；否則依 mode，非法 mode fallback overview。
   const effectiveMode =
@@ -75,6 +76,8 @@ function PageContent() {
         return <ReviewQueue />
       case "corrections":
         return <CorrectionsLog />
+      case "rules":
+        return <RulesManager />
       case "overview":
       default:
         return <Overview />

@@ -32,6 +32,13 @@
 | GET | `/api/trend?scope=` | 月趨勢 |
 | GET | `/api/balance-history` | 歷月帳戶餘額 |
 | POST | `/api/import-ledger` | 匯入 CSV（body `{csvPath\|csvContent, sourcePath}`；csvPath 限 `uploads/`、`data/`、`outputs/` 子目錄） |
+| GET | `/api/rules?enabled=&maxConfidence=&origin=&q=` | 列分類規則（給 UI / 你檢視） |
+| POST | `/api/rules` | 新增規則（body 見「分類規則」段；匯入時自動套用） |
+| GET | `/api/rules/:id` | 單筆規則 |
+| PATCH | `/api/rules/:id` | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
+| DELETE | `/api/rules/:id` | 刪除規則（已套用的交易保留，僅斷連結） |
+| GET | `/api/rules/normalize?text=` | 正規化預覽（產規則前驗證 match_key） |
+| GET | `/api/rules/suggest` | 冷啟動建議（聚合已分類歷史 → 眾數規則建議） |
 
 ## 可編輯欄位白名單（PATCH / batch）
 
@@ -46,7 +53,9 @@
 
 - `transactions.amount / inflow / outflow / balance` 是 **cents（元 ×100）**。顯示時除 100。
 - `correction_log` 是 **append-only**（trigger 阻擋 UPDATE/DELETE）—— 你只能讀，不能改歷史。
+- `correction_log` **自帶規則脈絡**：每筆校正寫入時即帶 `match_key`（= `normalizeForRule(名稱)`）、`source_type`、`direction`、`rule_id`（若該筆原本是規則套用、被人類覆寫，則記該規則）。AI 第二環可直接 `GROUP BY match_key` 聚合 → 規則候選，**不必 join transactions**。`GET /api/corrections?matchKey=...` 可下鑽單一比對鍵的明細。
 - `dedupe_key`：信用卡家族 = `hash(sourceType, date, name, amount)`；重匯不覆蓋人工已改的 owner/category/necessity。
+- `transactions.classification_source`：該筆分類怎麼來的 — `rule`（規則套用）/ `ai`（你 CSV 初分）/ `human`（人工修正後）/ `pending`（待你分析）。`rule_id` 指向套用的規則。
 
 ## 不變量（務必遵守）
 
@@ -67,13 +76,42 @@ GET /api/transactions?category=待確認&month=2026-06
 POST /api/transactions/batch {corrections: [...]}
 ```
 
-### 3. 產出分類規則分析（給人決策）
+### 3. 分類規則（你最重要的學習資產 — 兩環進化）
+
+規則存本工具，由**你（AI）產出與維護**；本工具在**匯入新交易時機械式套用**（覆蓋到的直接套、沒覆蓋的標 `pending` 等你分析）。目標：後續匯入 9 成靠「規則 + 你分析」正確分類。
+
+**規則資料模型**（`classification_rules` 表）：
+- 比對條件（皆可選、AND 組合，留空 = 不限）：`match_key` / `source_type` / `direction`(`in`=轉入 / `out`=轉出)
+- 分類結果（皆可選，留空 = 不動該欄）：`owner_value` / `category_value` / `necessity_value`
+- 元資料：`confidence`(0~1，你給) / `sample_count` / `origin`(`ai_analysis`|`human_correction`|`bootstrap`) / `enabled` / `note`
+- 兩側各至少需一項（至少一個條件 + 一個結果），否則 POST 會 400。
+
+**`match_key` 必須用 `normalizeForRule(名稱)` 算**（本工具匯入套用與你產規則用同一演算法，否則對不上）。**強烈建議直接呼叫 `GET /api/rules/normalize?text=...` 取 match_key，不要自己手算**（順序錯會對不上）。步驟（與 `lib/normalize.js` 完全一致）：
+1. NFKC 全形→半形（台灣帳單的 `Ｃａｂ`→`Cab`、`＊`→`*`、`－`→`-`）
+2. 去期數 `\b\d{1,2}/\d{1,2}\b`（`保險費分期 01/12`→`保險費分期`）
+3. 移除識別碼 token（`isLikelyIdToken`）：含數字 ≥4 碼，或「**全大寫**純英字母 ≥5 碼且母音 ≤1」（高熵隨機後綴如 `WMZPFP`/`QCPZWS`/`Z9FJ2T`）。⚠ **此步驟在 lowercase 之前，必須用原始大小寫判斷**——若先 lowercase，`/^[A-Z]{5,}$/` 永遠不成立，後綴不會被移掉，match_key 會對不上。
+4. lowercase + collapse whitespace（最後才統一轉小寫並壓空白）
+
+範例：`GOOGLE*CLOUD WMZPFP` / `Z9FJ2T` / `QCPZWS` → 都是 `google*cloud`。產規則前用 `GET /api/rules/normalize?text=...` 驗證。
+
+**兩環**：
+- **第一環（即時）**：你分析新帳單時，用既有規則分類 → 產 CSV → 把新學的規則 `POST /api/rules`（帶 `confidence`）。
+- **第二環（回饋）**：你讀 `GET /api/corrections`（回傳的 `summary` 已以 `match_key` 聚合 = 規則候選清單，**免 join**）→ 挑穩定候選 `POST /api/rules`。`correction_log.rule_id` 非 NULL =「人類覆寫了該規則的套用」→ 據此 `PATCH` 降該規則的 confidence 或拆規則。人類會在 UI 規則頁查看低信心（`confidence<0.5`）規則做調整。
+
+**冷啟動**：`GET /api/rules/suggest` 給你「同 (match_key, source_type, direction) 眾數分類」建議（來自已分類歷史），你再 `POST` 成規則（`origin=bootstrap`）。
+
 ```
+# 冷啟動：把歷史聚合成規則集
+GET /api/rules/suggest
+→ 挑樣本數高的建議，POST /api/rules（origin:"bootstrap"）
+
+# 第二環：讀人工修正 → 整理規則
 GET /api/corrections?limit=1000
-→ 分析重複的 (field, old_value → new_value) 模式
-→ 整理成「建議規則清單」給使用者審核
+→ 分析重複的 (field, old→new) 模式
+→ PATCH/POST /api/rules 調整對應規則的值與信心度
 ```
-（目前不自動套用下次匯入，僅產出建議）
+
+規則套用發生在匯入當下（`POST /api/import-ledger` 的回應 `stats.rules_applied` 告訴你這次套了幾筆）。重匯不覆蓋人工已改的分類（`classification_source=human` 的不動）。
 
 ### 4. 月度分析報告
 ```

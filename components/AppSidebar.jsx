@@ -36,6 +36,7 @@ import {
   ClipboardCheck,
   History,
   LayoutDashboard,
+  ListChecks,
   PieChart,
   ReceiptText,
   TrendingUp,
@@ -47,6 +48,7 @@ const NAV = [
   { mode: "trend", label: "走勢", icon: TrendingUp },
   { mode: "review", label: "審查佇列", icon: ClipboardCheck },
   { mode: "corrections", label: "修正紀錄", icon: History },
+  { mode: "rules", label: "分類規則", icon: ListChecks },
 ]
 
 export default function AppSidebar({ children }) {
