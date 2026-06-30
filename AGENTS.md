@@ -5,10 +5,17 @@
 
 ## 你的角色
 
-1. 使用者請你分析原始銀行帳單 → 你產出**含 AI 初分值**的 CSV ledger
-2. 你（或使用者）打 `POST /api/import-ledger` 匯入 CSV
-3. 使用者在 Web UI（http://localhost:3127）逐筆**人工終審**
-4. 你可打 `/api/*` 做後續：查審查佇列、批次修正、讀 correction_log 產出分類規則分析、做月度報告
+**核心：帳單「讀格式 → 轉成本工具 schema」完全由你（AI）做，不能寫程式解析**——帳單格式千百種，程式不可能涵蓋。本工具只吃你轉好的 schema，不做任何帳單解析。
+
+每月流程：
+1. 使用者給你原始帳單（任意格式）→ 你**讀懂格式、逐筆理解**，轉成本工具的 ledger schema（欄位見「資料模型」）。
+2. 你對每筆算 `match_key`（用 `GET /api/rules/normalize`），對照**既有規則**：被覆蓋的，工具匯入時自動套用建檔。
+3. **未覆蓋的明細** → 你分析分類（歸屬/分類/必要性），並給**信心度 0~1**；沒把握的標 `待確認/需確認`（別硬猜）。
+4. 把第 3 步**有把握的每個 distinct 商家**各建一條規則 `POST /api/rules`（帶 `confidence`、`origin=ai_analysis`）——這些規則給**未來月份**用。
+5. 產出 ledger CSV → `POST /api/import-ledger` 匯入。理論上這個月帳單到此處理完畢。
+6. 下個月 → 開銷結構類似 → 更多筆被既有規則套用 → 你越來越閒（複利）。
+
+人工修正回饋（第二環）：使用者在 UI 改錯 → 寫進 `correction_log`（帶規則脈絡）→ 你讀 `GET /api/corrections` 據以修訂/新增規則。你給的**信心度**讓 UI 把低信心排前面、優先給人審。
 
 ## server 在哪
 
@@ -38,7 +45,6 @@
 | PATCH | `/api/rules/:id` | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
 | DELETE | `/api/rules/:id` | 刪除規則（已套用的交易保留，僅斷連結） |
 | GET | `/api/rules/normalize?text=` | 正規化預覽（產規則前驗證 match_key） |
-| GET | `/api/rules/suggest` | 冷啟動建議（聚合已分類歷史 → 眾數規則建議） |
 
 ## 可編輯欄位白名單（PATCH / batch）
 
@@ -96,17 +102,13 @@ POST /api/transactions/batch {corrections: [...]}
 範例：`GOOGLE*CLOUD WMZPFP` / `Z9FJ2T` / `QCPZWS` → 都是 `google*cloud`。產規則前用 `GET /api/rules/normalize?text=...` 驗證。
 
 **兩環**：
-- **第一環（即時）**：你分析新帳單時，用既有規則分類 → 產 CSV → 把新學的規則 `POST /api/rules`（帶 `confidence`）。
-- **第二環（回饋）**：你讀 `GET /api/corrections`（回傳的 `summary` 已以 `match_key` 聚合 = 規則候選清單，**免 join**）→ 挑穩定候選 `POST /api/rules`。`correction_log.rule_id` 非 NULL =「人類覆寫了該規則的套用」→ 據此 `PATCH` 降該規則的 confidence 或拆規則。人類會在 UI 規則頁查看低信心（`confidence<0.5`）規則做調整。
+- **第一環（即時，每月匯入）**：你把帳單轉成 schema → 既有規則覆蓋的，工具匯入時自動套用 → **未覆蓋的你分析分類（給信心度）→ 把有把握的每個 distinct 商家各建一條規則**（`POST /api/rules`，帶 `confidence`、`origin=ai_analysis`）。這些規則給未來月份用，每月越疊越多 → 你越閒。
+- **第二環（回饋）**：人類在 UI 改錯 → 寫進 `correction_log`（自帶 `match_key`/`source_type`/`direction`/`rule_id` 脈絡）→ 你讀 `GET /api/corrections`（`summary` 已以 `match_key` 聚合，**免 join**）→ 據重複的 (field, old→new) 模式修訂既有規則或新增。`correction_log.rule_id` 非 NULL =「該規則套用被人類覆寫」→ `PATCH` 降該規則 `confidence` 或拆規則。
 
-**冷啟動**：`GET /api/rules/suggest` 給你「同 (match_key, source_type, direction) 眾數分類」建議（來自已分類歷史），你再 `POST` 成規則（`origin=bootstrap`）。
+**信心度**：你對每筆分類都給 0~1；工具會把**低信心**排前面，讓人類優先審你沒把握的（規則的 `confidence` + 工具維護的 `applied_count`/`overridden_count` 一起決定排序與準確率）。
 
 ```
-# 冷啟動：把歷史聚合成規則集
-GET /api/rules/suggest
-→ 挑樣本數高的建議，POST /api/rules（origin:"bootstrap"）
-
-# 第二環：讀人工修正 → 整理規則
+# 第二環：讀人工修正 → 修訂規則
 GET /api/corrections?limit=1000
 → 分析重複的 (field, old→new) 模式
 → PATCH/POST /api/rules 調整對應規則的值與信心度
