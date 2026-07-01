@@ -41,7 +41,8 @@ function classify(name) {
     return { owner: '個人', main: '保險', sub: null, necessity: '必要', reason: '保險分期', confidence: 0.8 };
   if (/手續費/.test(name))
     return { owner: '事業', main: '金融手續與稅費', sub: '手續費', necessity: '事業必要', reason: '交易手續費', confidence: 0.9 };
-  return null; // AI 沒把握 → pending，待人工
+  // 未匹配關鍵字：AI 仍給最佳猜測 + 低信心（不填哨兵留空）。低信心會進待審讓人複核。
+  return { owner: '個人', main: '購物', sub: '其他', necessity: '可節省', reason: '未匹配關鍵字，AI 低信心猜測', confidence: 0.25 };
 }
 
 function main() {

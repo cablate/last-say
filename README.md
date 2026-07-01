@@ -37,7 +37,7 @@ Finance Viewer 反過來 👇
 ## ✨ 特色 Features
 
 - 🤝 **外部 AI Agent 友善** — 完整 REST API + [`AGENTS.md`](./AGENTS.md)，Codex / Claude Code 直接打 API 匯入帳單、批次分類、產出分析
-- 🎯 **審查佇列** — 「待確認 / 未審」自動彙總，告訴你（與你的 AI agent）今天該先看哪幾筆
+- 🎯 **低信心優先審** — AIBanner 提示「AI 沒把握」筆數，一鍵帶到交易明細依信心度排序（最沒把握的排最前）
 - ⚡ **批次修正** — AI 透過 API 批次改、或你在 UI 勾選改
 - 🔍 **全文搜尋** — 交易名稱、備註、分類原因即時搜尋
 - 📊 **雙視角儀表板** — 圓餅圖 + 月趨勢 + 餘額走勢，scope 切換數字即時變
@@ -92,7 +92,7 @@ npm run seed -- --ledger=path/to/your/ledger.csv
 
 1. **匯入** — AI 分析帳單產出 CSV → 匯入（CLI 或 API）
 2. **總覽** — Overview 看 淨現金流 / 各類支出 / 餘額走勢，點指標卡可**下鑽**
-3. **審查** — 「審查佇列」看待確認，點進去逐筆校對
+3. **審查** — AIBanner「AI 待審」一鍵帶到低信心交易，逐筆校對
 4. **修正** — 展開交易 → 改 歸屬/分類/必要性/備註 → 儲存（寫進 correction_log）
 5. **批次** — UI 勾選 或 AI 透過 API 批次改
 6. **AI 後續分析** — AI 讀 `/api/corrections` 產出分類規則建議、`/api/summary` 做月報
@@ -105,12 +105,12 @@ npm run seed -- --ledger=path/to/your/ledger.csv
 
 | Method | Route | 用途 |
 |---|---|---|
-| GET | `/api/summary` `/breakdown` `/trend` `/transactions` `/review-queue` `/spending` `/corrections` `/balance-history` `/meta` `/health` | 查詢（AI 讀這些做分析） |
+| GET | `/api/summary` `/breakdown` `/trend` `/transactions` `/spending` `/corrections` `/balance-history` `/meta` `/health` | 查詢（AI 讀這些做分析；`/api/meta` 含 needsReview 待審計數） |
 | GET | `/api/transactions/:id` | 單筆明細 |
 | PATCH | `/api/transactions/:id` | 單筆修正（白名單欄位） |
 | POST | `/api/transactions/batch` | 批次修正（AI 批次處理） |
 | POST | `/api/transactions/review` | 批次標記已審（人類認可規則套用） |
-| GET | `/api/rules` `/rules/:id` `/rules/normalize` `/rules/suggest` | 規則查詢／正規化預覽／候選建議 |
+| GET | `/api/rules` `/rules/:id` `/rules/normalize` | 規則查詢／正規化預覽 |
 | POST | `/api/rules` | 新增規則（帶 confidence） |
 | PATCH/DELETE | `/api/rules/:id` | 改／刪規則 |
 | POST | `/api/import-ledger` | 匯入 CSV（csvPath 白名單） |
@@ -133,11 +133,11 @@ npm run seed -- --ledger=path/to/your/ledger.csv
 
 ```
 finance-viewer/
-├─ app/            page.js（URL params 驅動）+ 18 個 API route（含 rules 系統）+ layout
-├─ components/     Overview · TransactionTable(編輯+批次+確認) · ReviewQueue · RulesManager(規則 CRUD)
-│                  · CorrectionsLog · TrendView · AppSidebar · ScopeBar
-│                  · SearchInput · ErrorBoundary · charts/
-├─ lib/            db（單例）· queries/（core/transactions/rules/corrections/review 子模組）· normalize · constants
+├─ app/            (app)/ route group（共享 layout + 5 個 page：/ /transactions /trend /corrections /rules）+ 17 API route + root layout
+├─ components/     Overview · TransactionTable(編輯+批次+確認+待審篩選) · RulesManager(規則 CRUD)
+│                  · CorrectionsLog(交易為主體) · TrendView · AppSidebar · ScopeBar
+│                  · SearchInput · AIBanner · ErrorBoundary · charts/
+├─ lib/            db（單例）· queries/（core/transactions/rules/corrections 子模組）· normalize · constants
 │                  · format（cents/100）· constants · api-client · hooks · utils
 ├─ middleware.js   安全標頭（CSP / X-Frame-Options / nosniff / Referrer-Policy）
 ├─ AGENTS.md       給外部 AI Agent（Codex/Claude Code）的操作指引
@@ -197,7 +197,7 @@ MIT — 自由使用、修改、散布、商用。
 
 PR welcome。
 
-**已實作**：規則系統（兩環進化、匯入自動套用、RulesManager、審查佇列一鍵 bootstrap）、mobile card、確認鈕、API 綁 localhost、`.env` 支援、Node 版本守門。
+**已實作**：規則系統（兩環進化、匯入自動套用、RulesManager）、多 route 架構（取代 `?mode=` 單頁）、needsReview 單一判定（低信心優先審）、CorrectionsLog 交易為主體、mobile card、確認鈕、API 綁 localhost、`.env` 支援、Node 版本守門、AI 操作 playbook（`prompts/`）。
 
 **未來方向**（roadmap）：
 - 關鍵路徑自動化測試、eslint 設定。

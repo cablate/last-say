@@ -141,14 +141,7 @@ function SourceBadge({ row }) {
   if (src === "pending") {
     return <Badge variant="outline" className="border-warning/40 bg-warning/10 text-warning" title="規則未覆蓋且 AI 未分類，待分析">待分析</Badge>
   }
-  const uncertain =
-    row.owner_primary === "待確認" ||
-    row.category_primary === "待確認" ||
-    row.necessity === "需確認"
-  if (uncertain) {
-    return <Badge variant="outline" className="border-danger/40 bg-danger/10 text-danger" title="AI 初分有欄位待確認">需確認</Badge>
-  }
-  return <Badge variant="outline" className="text-muted-foreground" title="AI 初分類，尚未人工覆核">AI 分類</Badge>
+  return <Badge variant="outline" className="text-muted-foreground" title="AI 初分類，尚未人工覆核（低信心由旁邊色點標示）">AI 分類</Badge>
 }
 
 // ---- 金額欄：支出（outflow）優先，用語意色 text-destructive；收入用前景色；移轉用柔和色 ----

@@ -10,7 +10,7 @@
 每月流程：
 1. 使用者給你原始帳單（任意格式）→ 你**讀懂格式、逐筆理解**，轉成本工具的 ledger schema（欄位見「資料模型」）。
 2. 你對每筆算 `match_key`（用 `GET /api/rules/normalize`），對照**既有規則**：被覆蓋的，工具匯入時自動套用建檔。
-3. **未覆蓋的明細** → 你分析分類（歸屬/分類/必要性），並給**信心度 0~1**；沒把握的標 `待確認/需確認`（別硬猜）。
+3. **未覆蓋的明細** → 你分析分類（歸屬/分類/必要性）並給**信心度 0~1**。**即使沒把握也要給最佳猜測 + 低信心（0.2~0.4），不要留空標「待確認」**——低信心會排到 UI 審查最前面讓人複核，且 correction_log 才能記「猜測→正確」供你第二環進化規則。截斷／陌生商家名用 websearch 補全，結果寫進 `note`（詳見 `prompts/playbook.md` A3）。
 4. 把第 3 步**有把握的每個 distinct 商家**各建一條規則 `POST /api/rules`（帶 `confidence`、`origin=ai_analysis`）——這些規則給**未來月份**用。
 5. 產出 ledger CSV → `POST /api/import-ledger` 匯入。理論上這個月帳單到此處理完畢。
 6. 下個月 → 開銷結構類似 → 更多筆被既有規則套用 → 你越來越閒（複利）。
@@ -32,8 +32,8 @@
 | GET | `/api/transactions/:id` | 單筆明細 |
 | PATCH | `/api/transactions/:id` | 單筆修正（body 見下方白名單） |
 | POST | `/api/transactions/batch` | 批次修正（body `{corrections:[{id, ...fields}]}`，上限 500） |
-| GET | `/api/review-queue?limit=` | 待確認 / 未審 計數 + 樣本 |
-| GET | `/api/corrections?field=&limit=` | 修正歷史明細 + summary（你的「學習資產」原料） |
+| GET | `/api/corrections?field=&matchKey=&limit=` | 修正歷史明細 + summary（你的「學習資產」原料） |
+| GET | `/api/transactions?view=needs-review&sort=confidence&direction=asc` | 低信心／未審交易（你沒把握的，依信心升序） |
 | GET | `/api/spending?month=&category=&scope=` | 消費統計 |
 | GET | `/api/breakdown?dimension=&month=&scope=` | 分類 / 歸屬 / 必要性 維度分布 |
 | GET | `/api/trend?scope=` | 月趨勢 |
@@ -50,10 +50,12 @@
 
 只有這四個欄位可改，**金額 / 日期 / 來源完全不可改**：
 
-- `owner_primary`：個人 / 事業 / 事業候選 / 移轉不算 / 待確認
+- `owner_primary`：個人 / 事業 / 事業候選 / 移轉不算
 - `category_primary`：任意（從 `/api/meta` 取已用分類）
-- `necessity`：必要 / 事業必要 / 可節省 / 可優化 / 需確認 / 不列入
+- `necessity`：必要 / 事業必要 / 可節省 / 可優化 / 不列入
 - `memo`：任意文字
+
+> 沒把握時**不要**把欄位填「待確認／需確認」——改給最佳猜測 + 低信心度（見上 step 3）。
 
 ## 資料模型重點
 
@@ -77,7 +79,7 @@
 
 ### 2. 批次改分類
 ```
-GET /api/transactions?category=待確認&month=2026-06
+GET /api/transactions?view=needs-review&month=2026-06
 → 整理成 corrections: [{id:1, owner_primary:"事業"}, {id:2, owner_primary:"事業"}, ...]
 POST /api/transactions/batch {corrections: [...]}
 ```
