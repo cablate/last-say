@@ -249,6 +249,7 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
   const rule = getMatchingRule(matchKey, row['來源類型'] || null, direction, db);
   const csvOwner = row['先放哪邊'] || '待確認';
   const csvCategory = row['分類'] || '待確認';
+  const csvSubCategory = row['子類別'] || '';
   const csvNecessity = row['必要/可省'] || '需確認';
   // AI 對本次分類的信心度 0~1（選填，CSV 欄「信心度」）；空字串/非數字/超出範圍 → null。
   const _confStr = String(row['信心度'] ?? '').trim();
@@ -268,10 +269,10 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     INSERT INTO transactions (
       dedupe_key, import_match_key, transaction_date, transaction_month, statement_month,
       source_type, flow_type, name, amount, inflow, outflow, owner_primary,
-      category_primary, necessity, judgment_reason, memo, raw_info, balance,
+      category_primary, category_sub, necessity, judgment_reason, memo, raw_info, balance,
       account_original_order, account_id, first_source_id, classification_source, rule_id, ai_confidence
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(dedupe_key) DO UPDATE SET
       statement_month = COALESCE(transactions.statement_month, excluded.statement_month),
       judgment_reason = COALESCE(NULLIF(transactions.judgment_reason, ''), excluded.judgment_reason),
@@ -291,6 +292,7 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     outflow,
     owner,
     category,
+    csvSubCategory,
     necessity,
     row['判斷理由'] || '',
     row['備註'] || '',

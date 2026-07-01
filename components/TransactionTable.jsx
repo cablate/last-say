@@ -672,7 +672,7 @@ export default function TransactionTable() {
                           {Number(row.outflow) > 0 ? formatTWD(row.outflow) : "—"}
                         </TableCell>
                         <TableCell><FieldBadge value={row.owner_primary} /></TableCell>
-                        <TableCell><FieldBadge value={row.category_primary} /></TableCell>
+                        <TableCell><CategoryBadge row={row} /></TableCell>
                         <TableCell><NecessityBadge value={row.necessity} /></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -759,7 +759,7 @@ export default function TransactionTable() {
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         <FieldBadge value={row.owner_primary} />
-                        <FieldBadge value={row.category_primary} />
+                        <CategoryBadge row={row} />
                         <NecessityBadge value={row.necessity} />
                       </div>
                     </div>
@@ -900,6 +900,15 @@ function TableHeaderCells({ sort, direction, onSort }) {
 function FieldBadge({ value }) {
   if (!value) return <span className="text-xs text-muted-foreground">—</span>
   return <Badge variant="outline">{value}</Badge>
+}
+
+// 分類 Badge：主類別 + 子類別（如「飲食 – 咖啡」）；子類別缺漏時只顯示主類別。
+// category_primary 為 NOT NULL；category_sub 為自由文字（可能 null/空字串）。
+function CategoryBadge({ row }) {
+  const main = row.category_primary
+  const sub = row.category_sub
+  const value = main && sub ? `${main} – ${sub}` : main
+  return <FieldBadge value={value} />
 }
 
 // 必要性 Badge：語意色編碼層級（必要=中性 / 可節省·可優化=警示琥珀 / 需確認=紅 / 不列入=灰）
