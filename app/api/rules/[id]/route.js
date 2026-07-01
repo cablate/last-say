@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { getRule, updateRule, setRuleEnabled, deleteRule } from '@/lib/queries';
 
 // GET /api/rules/:id — 單筆規則明細。
@@ -14,7 +15,7 @@ export async function GET(request, { params }) {
     return NextResponse.json({ rule });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }
@@ -64,7 +65,7 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

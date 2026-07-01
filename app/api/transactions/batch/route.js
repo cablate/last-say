@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { batchCorrection } from '@/lib/queries';
 
 // POST /api/transactions/batch
@@ -18,7 +19,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, ...results });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { normalizeForRule } from '@/lib/normalize';
 
 // GET /api/rules/normalize?text=... — 正規化預覽。
@@ -10,7 +11,7 @@ export async function GET(request) {
     return NextResponse.json({ input: text, match_key: normalizeForRule(text) });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

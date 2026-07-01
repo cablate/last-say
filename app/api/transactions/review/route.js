@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { markReviewed } from '@/lib/queries';
 
 // POST /api/transactions/review — 批次標記交易為「已審」（reviewed=1）。
@@ -17,7 +18,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

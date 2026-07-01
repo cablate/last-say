@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { getDb } from '@/lib/db';
 import { patchTransaction } from '@/lib/queries';
 
@@ -43,7 +44,7 @@ export async function GET(request, { params }) {
     return NextResponse.json(txn);
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }
@@ -71,7 +72,7 @@ export async function PATCH(request, { params }) {
     return NextResponse.json(result.body, { status: result.status });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { getTransactions } from '@/lib/queries';
 
 // GET /api/transactions — 列表查詢（篩選/排序/分頁）。
@@ -9,7 +10,7 @@ export async function GET(request) {
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { safeErrorMessage } from "@/lib/api-helpers";
 import { getBalanceHistory } from "@/lib/queries";
 
 export async function GET() {
@@ -7,7 +8,7 @@ export async function GET() {
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
-      { error: String(err?.message || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }

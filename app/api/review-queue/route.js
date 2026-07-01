@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { getReviewQueue } from '@/lib/queries';
 
 export async function GET(request) {
@@ -8,6 +9,6 @@ export async function GET(request) {
     const data = getReviewQueue(limit);
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    return NextResponse.json({ error: safeErrorMessage(error) }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { safeErrorMessage } from '@/lib/api-helpers';
 import { listRules, createRule } from '@/lib/queries';
 
 // GET /api/rules — 列分類規則（給 UI 規則管理介面）。
@@ -15,7 +16,7 @@ export async function GET(request) {
     return NextResponse.json({ rules: listRules(filter) });
   } catch (err) {
     return NextResponse.json(
-      { error: String((err && err.message) || err) },
+      { error: safeErrorMessage(err) },
       { status: 500 }
     );
   }
