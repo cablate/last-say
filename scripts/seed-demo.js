@@ -63,8 +63,8 @@ const bankAcc = db.prepare(
 const insertTx = db.prepare(`
   INSERT OR IGNORE INTO transactions
     (dedupe_key, import_match_key, transaction_date, transaction_month, source_type, flow_type,
-     name, amount, inflow, outflow, owner_primary, category_primary, necessity, judgment_reason, account_id)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)
+     name, amount, inflow, outflow, category_primary, judgment_reason, account_id)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
 `);
 
 let count = 0;
@@ -83,12 +83,10 @@ for (let m = 1; m <= 6; m++) {
     const outflowCents = yuan * 100;
     const amountCents = -outflowCents;
     const dedupe = hashKey([sourceType, date, mer.name, amountCents, i]);
-    // 約 12% 留「待確認」讓審查佇列有資料
-    const owner = Math.random() < 0.12 ? '待確認' : mer.owner;
-    const category = Math.random() < 0.12 ? '待確認' : mer.cat;
+    const category = mer.cat;
     insertTx.run(
       dedupe, dedupe, date, month, sourceType, mer.flow, mer.name,
-      amountCents, outflowCents, owner, category, mer.nec,
+      amountCents, outflowCents, category,
       isCard ? 'AI 初分（範例）' : null,
       isCard ? cardAcc.lastInsertRowid : bankAcc.lastInsertRowid
     );
@@ -102,11 +100,11 @@ for (let m = 1; m <= 6; m++) {
   db.prepare(`
     INSERT OR IGNORE INTO transactions
       (dedupe_key, import_match_key, transaction_date, transaction_month, source_type, flow_type,
-       name, amount, inflow, outflow, owner_primary, category_primary, necessity, balance, account_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)
+       name, amount, inflow, outflow, category_primary, balance, account_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
   `).run(
     sKey, sKey, sDate, month, '國泰數位存款', '薪水入帳', '每月薪資',
-    salaryCents, salaryCents, '個人', '收入', '必要', bankBalance, bankAcc.lastInsertRowid
+    salaryCents, salaryCents, '收入', bankBalance, bankAcc.lastInsertRowid
   );
   count++;
 }

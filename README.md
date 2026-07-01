@@ -27,7 +27,7 @@ Finance Viewer 反過來 👇
 | 資料不想上雲 | **100% 本機** — SQLite 在你電腦，AI 在你電腦，資料不離開 |
 | AI 分類 + 人工校對兩頭跑 | AI 在外部產出 CSV / 打 API 批次處理，**人在 Web UI 拍板**，分工清楚 |
 | 改過又忘 | 每次修正寫進 **append-only 的 correction_log**，AI 可讀它做「分類規則分析」 |
-| 個人 vs 事業搞混 | **雙視角一鍵切**（全部 / 個人 / 事業），報稅報帳一秒切換 |
+| 想知道錢花哪去 | **分類分析**（標準 13 類支出結構），AI 初分 + 人工終審 |
 | UI 像上個世紀 | **shadcn/ui + Recharts**，現代、乾淨、手機也順 |
 
 > 你的 AI、你的資料、你的規則。伺服器只是忠實的資料層與審核介面。
@@ -93,7 +93,7 @@ npm run seed -- --ledger=path/to/your/ledger.csv
 1. **匯入** — AI 分析帳單產出 CSV → 匯入（CLI 或 API）
 2. **總覽** — Overview 看 淨現金流 / 各類支出 / 餘額走勢，點指標卡可**下鑽**
 3. **審查** — AIBanner「AI 待審」一鍵帶到低信心交易，逐筆校對
-4. **修正** — 展開交易 → 改 歸屬/分類/必要性/備註 → 儲存（寫進 correction_log）
+4. **修正** — 展開交易 → 改 分類/備註 → 儲存（寫進 correction_log）
 5. **批次** — UI 勾選 或 AI 透過 API 批次改
 6. **AI 後續分析** — AI 讀 `/api/corrections` 產出分類規則建議、`/api/summary` 做月報
 

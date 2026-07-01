@@ -247,20 +247,14 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
   const matchKey = normalizeForRule(row['名稱']);
   const direction = inflowRaw > 0 ? 'in' : (outflowRaw > 0 ? 'out' : null);
   const rule = getMatchingRule(matchKey, row['來源類型'] || null, direction, db);
-  const csvOwner = row['先放哪邊'] || '待確認';
   const csvCategory = row['分類'] || '待確認';
   const csvSubCategory = row['子類別'] || '';
-  const csvNecessity = row['必要/可省'] || '需確認';
   // AI 對本次分類的信心度 0~1（選填，CSV 欄「信心度」）；空字串/非數字/超出範圍 → null。
   const _confStr = String(row['信心度'] ?? '').trim();
   const _confRaw = Number(_confStr);
-  const aiConfidence = _confStr === '' || !Number.isFinite(_confRaw) || _confRaw < 0 || _confRaw > 1 ? null : _confRaw;
-  const owner = (rule && rule.owner_value) || csvOwner;
+  const aiConfidence = _confStr === '' || !Number.isFinite(_confRaw) || _confRaw < 0 || _confRaw > 1 ? null : _confStr;
   const category = (rule && rule.category_value) || csvCategory;
-  const necessity = (rule && rule.necessity_value) || csvNecessity;
-  const sourceKind = rule
-    ? 'rule'
-    : (csvOwner !== '待確認' || csvCategory !== '待確認' || csvNecessity !== '需確認' ? 'ai' : 'pending');
+  const sourceKind = rule ? 'rule' : (csvCategory !== '待確認' ? 'ai' : 'pending');
   const ruleId = rule ? rule.id : null;
   // 是否為新交易：重匯（dedupe_key 已存在）走 ON CONFLICT DO UPDATE，不計規則套用。
   const existed = !!db.prepare('SELECT 1 FROM transactions WHERE dedupe_key = ?').get(keys.dedupeKey);
@@ -268,11 +262,11 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
   db.prepare(`
     INSERT INTO transactions (
       dedupe_key, import_match_key, transaction_date, transaction_month, statement_month,
-      source_type, flow_type, name, amount, inflow, outflow, owner_primary,
-      category_primary, category_sub, necessity, judgment_reason, memo, raw_info, balance,
+      source_type, flow_type, name, amount, inflow, outflow,
+      category_primary, category_sub, judgment_reason, memo, raw_info, balance,
       account_original_order, account_id, first_source_id, classification_source, rule_id, ai_confidence
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(dedupe_key) DO UPDATE SET
       statement_month = COALESCE(transactions.statement_month, excluded.statement_month),
       judgment_reason = COALESCE(NULLIF(transactions.judgment_reason, ''), excluded.judgment_reason),
@@ -290,10 +284,8 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     amount,
     inflow,
     outflow,
-    owner,
     category,
     csvSubCategory,
-    necessity,
     row['判斷理由'] || '',
     row['備註'] || '',
     row['原始交易資訊'] || '',

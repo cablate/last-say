@@ -17,7 +17,7 @@
 
 ### A0. 前置確認
 - `GET /api/health` — 確認 server + DB 連線。
-- `GET /api/meta` — 看現有月份、已用分類／歸屬選項。
+- `GET /api/meta` — 看現有月份、已用分類選項。
 - `GET /api/rules` — 拉既有規則（A2 要對照套用）。
 
 ### A1. 讀懂帳單格式（非固定 Excel／CSV）
@@ -39,9 +39,7 @@
 對沒被規則覆蓋的每筆：
 
 1. **分類**：
-   - `owner`：個人 / 事業 / 事業候選 / 移轉不算
    - `category`：用標準 13 類（見下方，只能選這些）
-   - `necessity`：必要 / 事業必要 / 可節省 / 可優化 / 不列入
 2. **信心度** 0~1：沒把握就給低（0.3~0.5），低信心會排到人類審查前面讓人複核。
 3. **websearch 補全**（下列情形才搜，省 token）：
    - 商家名**截斷**（括號沒閉合、句子斷掉）
@@ -63,9 +61,7 @@
     "match_key": "<GET /api/rules/normalize 算出>",
     "source_type": "國泰信用卡 *XXXX",
     "direction": "out",
-    "owner_value": "個人",
     "category_value": "飲食",
-    "necessity_value": "可節省",
     "confidence": 0.8,
     "origin": "ai_analysis",
     "note": "<websearch 發現或分類理由>"
@@ -77,11 +73,11 @@
 ### A5. 產 CSV 匯入
 產 ledger CSV，欄位順序（每筆一行）：
 ```
-來源類型,來源說明,日期,月份,名稱,金額,流入,流出,帳戶餘額,帳戶原始排序,原始交易資訊,這筆是什麼,先放哪邊,分類,子類別,必要/可省,信心度,判斷理由,備註
+來源類型,來源說明,日期,月份,名稱,金額,流入,流出,帳戶餘額,帳戶原始排序,原始交易資訊,這筆是什麼,分類,子類別,信心度,判斷理由,備註
 ```
 - `日期` = `YYYY-MM-DD`、`月份` = `YYYY-MM`
 - `金額`：消費寫 `-金額`、流入=`金額`、流出=`0`；繳款反過來（流入=正、流出=0）
-- `先放哪邊` = owner、`分類` = category 主類別、`子類別` = 自由文字（如「便利商店」「餐飲」）、`必要/可省` = necessity、`信心度` = 你的信心
+- `分類` = category 主類別、`子類別` = 自由文字（如「便利商店」「餐飲」）、`信心度` = 你的信心
 - 含逗號的欄位用雙引號包。
 
 匯入：`POST /api/import-ledger { "csvPath": "uploads/<檔>" }`（檔須在 `uploads/` `data/` `outputs/` 下）或 `{ "csvContent": "..." }`。
@@ -110,7 +106,7 @@
 - **`rule_id` NULL**：該商家沒規則（被改的是 AI 初分）→ 建新規則。
 
 ### B3. 修訂規則
-- 既有規則不準：`PATCH /api/rules/<id>` 改 `category_value`／`owner_value`／`necessity_value` 或降 `confidence`。
+- 既有規則不準：`PATCH /api/rules/<id>` 改 `category_value` 或降 `confidence`。
 - 缺規則：`POST /api/rules` 新增，`origin=human_correction`，帶從 correction 學到的值。
 - 修完，**下個月匯入**就會套用新規則。
 
@@ -120,7 +116,7 @@
 ---
 
 ## 不變量（務必遵守）
-1. **金額不可改**（API 無此路徑）。只能改 `owner / category / necessity / memo` 四欄。
+1. **金額不可改**（API 無此路徑）。只能改 `category / memo` 兩欄（owner 事業/個人、necessity 該不該花 是下階段）。
 2. **correction_log 只讀**（append-only，trigger 擋改）。
 3. **匯入不覆蓋人工已改**（`classification_source=human` 的不動）。
 4. `match_key` 永遠用 `GET /api/rules/normalize` 算，別手算。

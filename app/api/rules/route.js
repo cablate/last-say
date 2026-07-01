@@ -23,7 +23,7 @@ export async function GET(request) {
 }
 
 // POST /api/rules — 新增規則（外部 AI 產規則 / UI 手動新增）。
-// body: { match_key, source_type, direction, owner_value, category_value, necessity_value,
+// body: { match_key, source_type, direction, category_value,
 //         confidence, sample_count, origin, enabled, note }
 export async function POST(request) {
   try {
