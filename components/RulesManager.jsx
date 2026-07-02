@@ -10,7 +10,7 @@ import {
   ListChecks, AlertTriangle, RefreshCw, Plus, Pencil, Trash2, Search, Sparkles,
 } from "lucide-react"
 import { useRules, useCreateRule, useUpdateRule, useDeleteRule } from "@/lib/hooks"
-import { confidenceTier, LOW_CONFIDENCE_THRESHOLD } from "@/lib/constants"
+import { confidenceTier, LOW_CONFIDENCE_THRESHOLD, STANDARD_CATEGORIES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -33,6 +33,9 @@ import {
   Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription,
 } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
+} from "@/components/ui/command"
 
 const DIRECTION_LABEL = { in: "轉入", out: "轉出" }
 const ORIGIN_LABEL = { ai_analysis: "AI 分析", human_correction: "人工校正", bootstrap: "冷啟動" }
@@ -99,7 +102,7 @@ function ConditionText({ rule }) {
 
 const EMPTY_FORM = {
   match_key: "", source_type: "", direction: "none",
-  category_value: "",
+  category_value: "", raw_name: "",
   confidence: "0.5", note: "", enabled: true,
 }
 
@@ -110,10 +113,34 @@ function toForm(rule) {
     source_type: rule.source_type || "",
     direction: rule.direction || "none",
     category_value: rule.category_value || "",
+    raw_name: rule.sample_name || "",
     confidence: rule.confidence != null ? String(rule.confidence) : "0.5",
     note: rule.note || "",
     enabled: rule.enabled !== 0,
   }
+}
+
+function CategoryCombobox({ id, value, onValueChange }) {
+  return (
+    <Command className="rounded-md border">
+      <CommandInput id={id} placeholder="搜尋標準分類" />
+      <CommandList>
+        <CommandEmpty>沒有符合的標準分類</CommandEmpty>
+        <CommandGroup>
+          {STANDARD_CATEGORIES.map((option) => (
+            <CommandItem
+              key={option}
+              value={option}
+              data-checked={value === option}
+              onSelect={() => onValueChange(option)}
+            >
+              {option}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
 }
 
 function RuleDialog({ open, onOpenChange, initial, onSave }) {
@@ -125,9 +152,20 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
   }, [open, initial])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+  const nonStandardCategory = form.category_value && !STANDARD_CATEGORIES.includes(form.category_value)
+
+  async function normalizeRawName() {
+    const text = form.raw_name.trim()
+    if (!text) return
+    const res = await fetch(`/api/rules/normalize?text=${encodeURIComponent(text)}`)
+    const data = await res.json()
+    set("match_key", data.match_key || "")
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (!form.note.trim()) return
+    if (form.category_value && !STANDARD_CATEGORIES.includes(form.category_value)) return
     setSaving(true)
     try {
       const body = {
@@ -136,7 +174,7 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
         direction: form.direction === "none" ? null : form.direction,
         category_value: form.category_value.trim() || null,
         confidence: Number(form.confidence) || 0,
-        note: form.note.trim() || null,
+        note: form.note.trim(),
         enabled: form.enabled,
       }
       await onSave(body)
@@ -163,6 +201,13 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
                 <Label htmlFor="f-mk" className="text-xs">名稱比對鍵（match_key，正規化後）</Label>
                 <Input id="f-mk" value={form.match_key} onChange={(e) => set("match_key", e.target.value)} placeholder="例：google*cloud" />
               </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="f-raw-name" className="text-xs">由原始名稱計算</Label>
+                <div className="flex gap-2">
+                  <Input id="f-raw-name" value={form.raw_name} onChange={(e) => set("raw_name", e.target.value)} placeholder="貼上原始交易名稱" />
+                  <Button type="button" variant="outline" onClick={normalizeRawName}>計算</Button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label htmlFor="f-st" className="text-xs">來源 / 帳戶</Label>
@@ -187,7 +232,16 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
             <Label className="text-xs uppercase tracking-wide text-muted-foreground">分類結果（套用值）</Label>
             <div>
               <Label htmlFor="f-cat" className="text-xs">分類</Label>
-              <Input id="f-cat" value={form.category_value} onChange={(e) => set("category_value", e.target.value)} placeholder="例：雲端工具" />
+              {nonStandardCategory ? (
+                <Alert className="mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>非標準分類</AlertTitle>
+                  <AlertDescription>
+                    既有值「{form.category_value}」不在標準分類內，儲存前請改選標準值。
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <CategoryCombobox id="f-cat" value={form.category_value} onValueChange={(v) => set("category_value", v)} />
             </div>
           </div>
 
@@ -205,13 +259,13 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
           </div>
 
           <div>
-            <Label htmlFor="f-note" className="text-xs">附註（為什麼這條規則）</Label>
-            <Textarea id="f-note" value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} />
+            <Label htmlFor="f-note" className="text-xs">附註（為什麼這條規則，必填）</Label>
+            <Textarea id="f-note" value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} required />
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
-            <Button type="submit" disabled={saving}>{saving ? "儲存中…" : "儲存"}</Button>
+            <Button type="submit" disabled={saving || !form.note.trim() || nonStandardCategory}>{saving ? "儲存中…" : "儲存"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -14,7 +14,7 @@
 //   - usePatchTxn() 回 mutate(id, body)（PATCH /api/transactions/{id}，內建 toast）
 //   - useBatchCorrect() 回 mutate(payload)（POST /api/transactions/batch；payload 需為 { corrections: [...] }）
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
@@ -29,9 +29,10 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { postJson } from "@/lib/api-client"
 import { formatTWD, formatDate } from "@/lib/format"
 import { EDITABLE_FIELDS, EDITABLE_LABELS, STANDARD_CATEGORIES } from "@/lib/constants"
-import { useMeta, useTransactions, usePatchTxn, useBatchCorrect, useReviewTxns } from "@/lib/hooks"
+import { useMeta, useTransactions, usePatchTxn, useBatchCorrect, useReviewTxns, useCreateRule } from "@/lib/hooks"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -73,6 +74,22 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 // 一頁筆數。server 端 getTransactions 會將 limit 上限夾在 2000，25 遠低於上限。
 const PAGE_SIZE = 25
@@ -200,8 +217,132 @@ function SortButton({ column, currentSort, currentDir, onSort }) {
   )
 }
 
+function CategoryCombobox({ id, value, onValueChange, options, autoFocus = false }) {
+  return (
+    <Command className="rounded-md border">
+      <CommandInput id={id} placeholder="搜尋分類" autoFocus={autoFocus} />
+      <CommandList>
+        <CommandEmpty>沒有符合的分類</CommandEmpty>
+        <CommandGroup>
+          {options.map((option) => (
+            <CommandItem
+              key={option}
+              value={option}
+              data-checked={value === option}
+              onSelect={() => onValueChange(option)}
+            >
+              {option}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+      </CommandList>
+    </Command>
+  )
+}
+
+function RuleCreateDialog({ open, onOpenChange, seed, onSaved }) {
+  const createRule = useCreateRule()
+  const [form, setForm] = useState({
+    match_key: "",
+    source_type: "",
+    direction: "out",
+    category_value: "",
+    confidence: "0.8",
+    note: "",
+  })
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open || !seed) return
+    let active = true
+    setForm({
+      match_key: "",
+      source_type: seed.source_type || "",
+      direction: seed.direction || "out",
+      category_value: seed.category_primary || "",
+      confidence: "0.8",
+      note: `${seed.name}：人工審查確認為 ${seed.category_primary || "分類"}`,
+    })
+    fetch(`/api/rules/normalize?text=${encodeURIComponent(seed.name || "")}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (active) setForm((f) => ({ ...f, match_key: data.match_key || "" }))
+      })
+      .catch(() => {
+        if (active) toast.error("無法計算 match_key")
+      })
+    return () => { active = false }
+  }, [open, seed])
+
+  const set = (key, value) => setForm((f) => ({ ...f, [key]: value }))
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!form.category_value || !form.note.trim()) {
+      toast.error("分類與 note 必填")
+      return
+    }
+    setSaving(true)
+    try {
+      await createRule({
+        match_key: form.match_key.trim() || null,
+        source_type: form.source_type.trim() || null,
+        direction: form.direction === "none" ? null : form.direction,
+        category_value: form.category_value,
+        confidence: Number(form.confidence) || 0,
+        origin: "human_correction",
+        note: form.note.trim(),
+      })
+      onOpenChange(false)
+      onSaved?.()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>建立分類規則</DialogTitle>
+          <DialogDescription>
+            這條規則會在下次匯入時自動套用到相同 match_key 的交易。
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-2">
+            <Label htmlFor="rule-match-key">match_key</Label>
+            <Input id="rule-match-key" value={form.match_key} onChange={(e) => set("match_key", e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="rule-source">來源</Label>
+            <Input id="rule-source" value={form.source_type} onChange={(e) => set("source_type", e.target.value)} />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="rule-category">分類</Label>
+            <CategoryCombobox
+              id="rule-category"
+              value={form.category_value}
+              onValueChange={(v) => set("category_value", v)}
+              options={STANDARD_CATEGORIES}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="rule-note">note（必填）</Label>
+            <Textarea id="rule-note" value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} required />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
+            <Button type="submit" disabled={saving}>{saving ? "建立中" : "建立規則"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ---- 展開列：行內編輯單筆 ----
-function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
+function TransactionEditPanel({ row, categoryOptions, onSaved, onClose, autoFocusCategory = false }) {
   const patchTxn = usePatchTxn()
   const [draft, setDraft] = useState({
     category_primary: row.category_primary ?? "",
@@ -223,9 +364,9 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      await patchTxn(row.id, draft)
+      const result = await patchTxn(row.id, draft)
       setSavedAt(Date.now())
-      onSaved?.()
+      onSaved?.(result?.transaction || { ...row, ...draft, classification_source: "human", reviewed: 1 })
     } catch {
       // 失敗 toast 已由 usePatchTxn 處理
     } finally {
@@ -237,16 +378,13 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-col gap-1.5">
         <Label htmlFor={`edit-category-${row.id}`}>分類</Label>
-        <Select value={draft.category_primary} onValueChange={set("category_primary")}>
-          <SelectTrigger id={`edit-category-${row.id}`} className="w-full">
-            <SelectValue placeholder="選擇分類" />
-          </SelectTrigger>
-          <SelectContent>
-            {categoryOptions.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <CategoryCombobox
+          id={`edit-category-${row.id}`}
+          value={draft.category_primary}
+          onValueChange={set("category_primary")}
+          options={categoryOptions}
+          autoFocus={autoFocusCategory}
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -450,15 +588,66 @@ export default function TransactionTable() {
   // client state
   const [selectedTxnId, setSelectedTxnId] = useState(null)
   const [batchIds, setBatchIds] = useState([])
+  const [activeTxnId, setActiveTxnId] = useState(null)
+  const [reviewedIds, setReviewedIds] = useState(() => new Set())
+  const [localUpdates, setLocalUpdates] = useState(() => new Map())
+  const [groupByMerchant, setGroupByMerchant] = useState(false)
+  const [ruleSeed, setRuleSeed] = useState(null)
+  const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
 
-  // 分類只能選標準 13 類（STANDARD_CATEGORIES），避免自由文字（如「餐飲」）進 correction_log / 規則。
+  // 分類只能選標準 14 類（STANDARD_CATEGORIES），避免自由文字（如「餐飲」）進 correction_log / 規則。
   // 現有非標準值不在選項內——表格 CategoryBadge 仍顯示原值，但編輯時須改選標準覆蓋。
   const categoryOptions = STANDARD_CATEGORIES
 
-  const rows = data?.rows ?? []
+  const serverRows = data?.rows ?? []
+  const rows = useMemo(
+    () => serverRows.map((row) => ({
+      ...row,
+      ...(localUpdates.get(row.id) || {}),
+      reviewed: reviewedIds.has(row.id) ? 1 : row.reviewed,
+    })),
+    [serverRows, localUpdates, reviewedIds],
+  )
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
+  const activeIndex = rows.findIndex((row) => row.id === activeTxnId)
+
+  useEffect(() => {
+    if (rows.length === 0) {
+      setActiveTxnId(null)
+      return
+    }
+    if (!rows.some((row) => row.id === activeTxnId)) setActiveTxnId(rows[0].id)
+  }, [rows, activeTxnId])
+
+  const moveActive = useCallback((delta) => {
+    if (rows.length === 0) return
+    const current = rows.findIndex((row) => row.id === activeTxnId)
+    const next = Math.min(Math.max((current < 0 ? 0 : current) + delta, 0), rows.length - 1)
+    setActiveTxnId(rows[next].id)
+  }, [rows, activeTxnId])
+
+  const markRowsReviewed = useCallback((ids) => {
+    setReviewedIds((prev) => {
+      const next = new Set(prev)
+      ids.forEach((id) => next.add(id))
+      return next
+    })
+  }, [])
+
+  const patchLocalRow = useCallback((row) => {
+    setLocalUpdates((prev) => {
+      const next = new Map(prev)
+      next.set(row.id, { ...(next.get(row.id) || {}), ...row })
+      return next
+    })
+  }, [])
+
+  const openRuleDialog = useCallback((seed) => {
+    setRuleSeed(seed)
+    setRuleDialogOpen(true)
+  }, [])
 
   // sort 欄首點擊：同欄 toggle 方向；不同欄預設 desc 並回第 1 頁
   const handleSort = useCallback(
@@ -494,23 +683,26 @@ export default function TransactionTable() {
     refetch()
   }, [refetch])
 
-  // 單筆儲存後 refetch
-  const handleSaved = useCallback(() => {
-    refetch()
-  }, [refetch])
+  // 單筆儲存後 optimistic 更新，不重抓整表，避免待審佇列跳動。
+  const handleSaved = useCallback((row) => {
+    patchLocalRow({ ...row, reviewed: 1 })
+    markRowsReviewed([row.id])
+    moveActive(1)
+  }, [markRowsReviewed, moveActive, patchLocalRow])
 
-  // 單筆「確認無誤」：標已審（reviewed=1）後 refetch
+  // 單筆「確認無誤」：標已審（reviewed=1）後保留在列表淡化，翻頁/重載才收斂。
   const reviewTxns = useReviewTxns()
   const handleConfirm = useCallback(
     async (id) => {
       try {
         await reviewTxns([id])
-        refetch()
+        markRowsReviewed([id])
+        moveActive(1)
       } catch {
         // 失敗 toast 已由 useReviewTxns 處理
       }
     },
-    [reviewTxns, refetch],
+    [markRowsReviewed, moveActive, reviewTxns],
   )
 
   const gotoPage = useCallback(
@@ -530,6 +722,92 @@ export default function TransactionTable() {
     }
   }, [view, push])
 
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+
+  useEffect(() => {
+    const typingSelector = "input, textarea, select, [contenteditable='true'], [cmdk-input]"
+    const onKeyDown = (event) => {
+      const target = event.target
+      if (target instanceof Element && target.closest(typingSelector)) {
+        if (event.key === "Escape") target.blur()
+        return
+      }
+      if (event.altKey || event.ctrlKey || event.metaKey) return
+      if (event.key === "j") {
+        event.preventDefault()
+        moveActive(1)
+      } else if (event.key === "k") {
+        event.preventDefault()
+        moveActive(-1)
+      } else if (event.key === "c" && activeTxnId) {
+        event.preventDefault()
+        handleConfirm(activeTxnId)
+      } else if (event.key === "e" && activeTxnId) {
+        event.preventDefault()
+        setSelectedTxnId((current) => current === activeTxnId ? null : activeTxnId)
+      } else if (event.key === "/") {
+        event.preventDefault()
+        document.querySelector("input[type='search'], input[placeholder*='搜尋']")?.focus()
+      } else if (event.key === "?") {
+        event.preventDefault()
+        setShortcutsOpen(true)
+      } else if (event.key === "Escape") {
+        setSelectedTxnId(null)
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [activeTxnId, handleConfirm, moveActive])
+
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const row of rows) {
+      const key = row.import_match_key || row.name
+      const group = map.get(key) || {
+        key,
+        name: row.name,
+        source_type: row.source_type,
+        rows: [],
+      }
+      group.rows.push(row)
+      map.set(key, group)
+    }
+    return Array.from(map.values()).sort((a, b) => b.rows.length - a.rows.length || a.name.localeCompare(b.name))
+  }, [rows])
+
+  const handleGroupApply = useCallback(async (group, category) => {
+    const ids = group.rows.map((row) => row.id)
+    try {
+      await postJson("/api/transactions/batch", {
+        corrections: ids.map((id) => ({ id, category_primary: category })),
+      })
+      group.rows.forEach((row) => patchLocalRow({ ...row, category_primary: category, classification_source: "human" }))
+      toast.success(`已更新 ${ids.length} 筆`)
+      const seed = { ...group.rows[0], category_primary: category, name: group.name, source_type: group.source_type, direction: "out" }
+      toast("建立規則讓下月自動套用？", {
+        action: { label: "建立", onClick: () => openRuleDialog(seed) },
+      })
+    } catch (err) {
+      toast.error(err?.message || "群組更新失敗")
+    }
+  }, [openRuleDialog, patchLocalRow])
+
+  const handleGroupConfirm = useCallback(async (group) => {
+    const ids = group.rows.map((row) => row.id)
+    try {
+      await reviewTxns(ids)
+      markRowsReviewed(ids)
+      toast("建立規則讓下月自動套用？", {
+        action: {
+          label: "建立",
+          onClick: () => openRuleDialog({ ...group.rows[0], name: group.name, source_type: group.source_type, direction: "out" }),
+        },
+      })
+    } catch {
+      // 失敗 toast 已由 hook 處理
+    }
+  }, [markRowsReviewed, openRuleDialog, reviewTxns])
+
   const rangeStart = total === 0 ? 0 : offset + 1
   const rangeEnd = Math.min(offset + rows.length, total)
 
@@ -548,10 +826,61 @@ export default function TransactionTable() {
         </Button>
         {view === "needs-review" && (
           <span className="text-xs text-muted-foreground">
-            未審 + AI 較沒把握的（低信心／待確認／未分析），依信心度升序
+            本次已審 {reviewedIds.size} 筆 · 待審剩 {Math.max(0, (meta?.counts?.needsReview ?? total) - reviewedIds.size)} 筆
           </span>
         )}
+        {view === "needs-review" ? (
+          <Button
+            type="button"
+            variant={groupByMerchant ? "secondary" : "outline"}
+            size="sm"
+            aria-pressed={groupByMerchant}
+            onClick={() => setGroupByMerchant((v) => !v)}
+          >
+            依商家分組
+          </Button>
+        ) : null}
+        <Button type="button" variant="ghost" size="sm" onClick={() => setShortcutsOpen(true)}>
+          ?
+        </Button>
       </div>
+      {view === "needs-review" && groupByMerchant && rows.length > 0 ? (
+        <div className="rounded-md border bg-muted/20">
+          <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">
+            同商家群組審查
+          </div>
+          <div className="divide-y">
+            {groups.map((group) => {
+              const currentCategory = group.rows[0]?.category_primary || ""
+              return (
+                <div key={group.key} className="grid gap-3 p-3 md:grid-cols-[1fr_220px_auto] md:items-center">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium" title={group.name}>{group.name}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      <span>{group.rows.length} 筆</span>
+                      <CategoryBadge row={group.rows[0]} />
+                    </div>
+                  </div>
+                  <CategoryCombobox
+                    id={`group-category-${group.key}`}
+                    value={currentCategory}
+                    onValueChange={(category) => handleGroupApply(group, category)}
+                    options={categoryOptions}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => handleGroupConfirm(group)}>
+                      <CheckIcon /> 整組確認
+                    </Button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => openRuleDialog({ ...group.rows[0], name: group.name, source_type: group.source_type, direction: "out" })}>
+                      建規則
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : null}
       {/* 載入：Skeleton 行 */}
       {loading ? (
         <ScrollArea className="rounded-md border">
@@ -617,11 +946,18 @@ export default function TransactionTable() {
                 {rows.map((row) => {
                   const open = selectedTxnId === row.id
                   const checked = batchIds.includes(row.id)
+                  const active = activeTxnId === row.id
+                  const reviewed = Boolean(row.reviewed)
                   return (
                     <Fragment key={row.id}>
                       <TableRow
                         data-state={open ? "open" : undefined}
-                        className={cn(open && "border-b-0")}
+                        className={cn(
+                          open && "border-b-0",
+                          active && "bg-muted/50",
+                          reviewed && "opacity-65",
+                        )}
+                        onClick={() => setActiveTxnId(row.id)}
                       >
                         <TableCell
                           onClick={(e) => e.stopPropagation()}
@@ -636,8 +972,13 @@ export default function TransactionTable() {
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                           {formatDate(row.transaction_date)}
                         </TableCell>
-                        <TableCell className="max-w-64 truncate font-medium" title={row.name}>
-                          {row.name}
+                        <TableCell className="max-w-80">
+                          <div className="truncate font-medium" title={row.name}>{row.name}</div>
+                          {row.judgment_reason ? (
+                            <div className="mt-1 truncate text-xs text-muted-foreground" title={row.judgment_reason}>
+                              {row.judgment_reason}
+                            </div>
+                          ) : null}
                         </TableCell>
                         <TableCell className="text-right">
                           <AmountCell row={row} />
@@ -656,7 +997,9 @@ export default function TransactionTable() {
                               />
                             )}
                             <SourceBadge row={row} />
-                            {!row.reviewed ? (
+                            {reviewed ? (
+                              <Badge variant="secondary" className="font-normal">已審</Badge>
+                            ) : (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -666,7 +1009,7 @@ export default function TransactionTable() {
                               >
                                 <CheckIcon /> 確認
                               </Button>
-                            ) : null}
+                            )}
                             <Button
                               type="button"
                               variant={open ? "secondary" : "ghost"}
@@ -688,6 +1031,7 @@ export default function TransactionTable() {
                               categoryOptions={categoryOptions}
                               onSaved={handleSaved}
                               onClose={() => setSelectedTxnId(null)}
+                              autoFocusCategory
                             />
                           </TableCell>
                         </TableRow>
@@ -705,8 +1049,14 @@ export default function TransactionTable() {
             {rows.map((row) => {
               const open = selectedTxnId === row.id
               const checked = batchIds.includes(row.id)
+              const active = activeTxnId === row.id
+              const reviewed = Boolean(row.reviewed)
               return (
-                <div key={row.id} className="rounded-md border p-3">
+                <div
+                  key={row.id}
+                  className={cn("rounded-md border p-3", active && "bg-muted/50", reviewed && "opacity-65")}
+                  onClick={() => setActiveTxnId(row.id)}
+                >
                   <div className="flex items-start gap-2">
                     <Checkbox
                       checked={checked}
@@ -719,6 +1069,11 @@ export default function TransactionTable() {
                         <span className="truncate font-medium" title={row.name}>{row.name}</span>
                         <AmountCell row={row} />
                       </div>
+                      {row.judgment_reason ? (
+                        <div className="mt-1 line-clamp-1 text-xs text-muted-foreground" title={row.judgment_reason}>
+                          {row.judgment_reason}
+                        </div>
+                      ) : null}
                       <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                         <span className="whitespace-nowrap">{formatDate(row.transaction_date)}</span>
                         {row.ai_confidence != null && (
@@ -735,7 +1090,9 @@ export default function TransactionTable() {
                     </div>
                   </div>
                   <div className="mt-2 flex justify-end gap-2">
-                    {!row.reviewed ? (
+                    {reviewed ? (
+                      <Badge variant="secondary" className="font-normal">已審</Badge>
+                    ) : (
                       <Button
                         type="button"
                         variant="outline"
@@ -745,7 +1102,7 @@ export default function TransactionTable() {
                       >
                         <CheckIcon /> 確認
                       </Button>
-                    ) : null}
+                    )}
                     <Button
                       type="button"
                       variant={open ? "secondary" : "ghost"}
@@ -764,6 +1121,7 @@ export default function TransactionTable() {
                         categoryOptions={categoryOptions}
                         onSaved={handleSaved}
                         onClose={() => setSelectedTxnId(null)}
+                        autoFocusCategory
                       />
                     </div>
                   ) : null}
@@ -842,6 +1200,27 @@ export default function TransactionTable() {
           onClear={clearBatch}
         />
       ) : null}
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>快捷鍵</DialogTitle>
+            <DialogDescription>交易審查頁可用鍵盤連續處理待審列。</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 text-sm">
+            <div className="flex justify-between gap-4"><kbd>j / k</kbd><span className="text-muted-foreground">上下移動高亮列</span></div>
+            <div className="flex justify-between gap-4"><kbd>c</kbd><span className="text-muted-foreground">確認目前列</span></div>
+            <div className="flex justify-between gap-4"><kbd>e</kbd><span className="text-muted-foreground">展開或收起編輯</span></div>
+            <div className="flex justify-between gap-4"><kbd>/</kbd><span className="text-muted-foreground">聚焦搜尋</span></div>
+            <div className="flex justify-between gap-4"><kbd>Esc</kbd><span className="text-muted-foreground">離開輸入或收起編輯</span></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <RuleCreateDialog
+        open={ruleDialogOpen}
+        onOpenChange={setRuleDialogOpen}
+        seed={ruleSeed}
+        onSaved={refetch}
+      />
     </section>
   )
 }
