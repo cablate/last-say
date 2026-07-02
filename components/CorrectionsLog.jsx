@@ -6,7 +6,7 @@
 // correction_log 是 append-only 的客觀記錄；AI 第二環若要規則候選，自行讀 /api/corrections 的 summary（API 仍提供）。
 
 import { useState } from "react"
-import { History, AlertTriangle, RefreshCw } from "lucide-react"
+import { History, AlertTriangle, RefreshCw, ArrowRight, Bot, CheckCircle2 } from "lucide-react"
 import { useCorrections } from "@/lib/hooks"
 import { EDITABLE_LABELS as FIELD_LABEL } from "@/lib/constants"
 import { formatDate, formatTWD } from "@/lib/format"
@@ -16,6 +16,13 @@ import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import {
   Pagination,
   PaginationContent,
@@ -93,6 +100,56 @@ function ErrorState({ message, onRetry }) {
   )
 }
 
+function FeedbackLoopCard({ feedback, loading }) {
+  if (loading && !feedback) {
+    return <Skeleton className="h-28 w-full rounded-xl" />
+  }
+  const corrections = Number(feedback?.corrections ?? 0)
+  const rules = Number(feedback?.humanCorrectionRules ?? 0)
+  const autoApplied = Number(feedback?.autoApplied ?? 0)
+  return (
+    <Card>
+      <CardHeader>
+        <CardDescription>修正回饋閉環</CardDescription>
+        <CardTitle className="text-xl">你的修正正在累積成規則</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:items-center">
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="text-xs text-muted-foreground">你的修正</p>
+            <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
+              {corrections}
+            </p>
+            <p className="text-xs text-muted-foreground">筆 correction_log</p>
+          </div>
+          <ArrowRight className="hidden h-4 w-4 text-muted-foreground md:block" aria-hidden="true" />
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+              human_correction
+            </p>
+            <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
+              {rules}
+            </p>
+            <p className="text-xs text-muted-foreground">條規則</p>
+          </div>
+          <ArrowRight className="hidden h-4 w-4 text-muted-foreground md:block" aria-hidden="true" />
+          <div className="rounded-lg border bg-muted/30 p-3">
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              自動處理
+            </p>
+            <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
+              {autoApplied}
+            </p>
+            <p className="text-xs text-muted-foreground">筆 applied_count</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function CorrectionsLog() {
   // 純 log：拉全部 correction 逐筆列。不做 matchKey 下鑽（那是 summary 的事，已移除）。
   const { data, loading, error, refetch } = useCorrections("limit=1000")
@@ -100,6 +157,7 @@ export default function CorrectionsLog() {
 
   const rows = data?.rows || []
   const total = data?.total ?? rows.length
+  const feedbackLoop = data?.feedbackLoop ?? null
   const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const pageRows = rows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
@@ -117,6 +175,8 @@ export default function CorrectionsLog() {
             你在交易明細做過的每一次調整，逐筆 log（時間 / 交易 / 欄位 舊→新）。
           </p>
         </header>
+
+        <FeedbackLoopCard feedback={feedbackLoop} loading={loading} />
 
         {error ? (
           <ErrorState message={error?.message} onRetry={refetch} />
