@@ -55,6 +55,12 @@ const BASE_KEYS = [
   "direction",
 ]
 
+const PercentFormatter = new Intl.NumberFormat("zh-TW", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 1,
+  style: "percent",
+})
+
 function pickBaseParams(searchParams) {
   const sp = new URLSearchParams()
   for (const k of BASE_KEYS) {
@@ -176,6 +182,7 @@ export default function Overview() {
   const donutData = spendItems
     .slice(0, 8)
     .map((b) => ({ label: b.label, value: Number(b.spend) }))
+  const monthlyReport = summary?.monthlyReport ?? null
 
   return (
     <div className="flex flex-col gap-6">
@@ -262,6 +269,20 @@ export default function Overview() {
           </div>
         </CardContent>
       </Card>
+
+      <MonthlyReportSection
+        report={monthlyReport}
+        monthLabel={monthLabel}
+        onCategoryClick={drillCategory}
+        onFixedItemClick={(item) =>
+          drill({
+            matchKey: item.matchKeySource === "import_match_key" ? item.matchKey : "",
+            category: "",
+            search: item.matchKeySource === "import_match_key" ? "" : item.sampleName,
+            page: null,
+          })
+        }
+      />
 
       {/* Hero 淨現金流 */}
       <Card>
@@ -593,6 +614,200 @@ export default function Overview() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function formatSignedTWD(amountInCents) {
+  const n = Number(amountInCents) || 0
+  if (n === 0) return formatTWD(0)
+  return `${n > 0 ? "+" : "-"}${formatTWD(Math.abs(n))}`
+}
+
+function formatPercentDelta(value) {
+  if (value === null || value === undefined) return "樣本不足"
+  const n = Number(value)
+  if (!Number.isFinite(n)) return "樣本不足"
+  if (n === 0) return "0%"
+  return `${n > 0 ? "+" : "-"}${PercentFormatter.format(Math.abs(n))}`
+}
+
+function SpendingDeltaBadge({ delta }) {
+  const n = Number(delta) || 0
+  if (n > 0) {
+    return (
+      <Badge variant="destructive">
+        <ArrowUpRight className="h-3 w-3" />
+        比常態多
+      </Badge>
+    )
+  }
+  if (n < 0) {
+    return (
+      <Badge className="border-transparent bg-success/15 text-success">
+        <ArrowDownRight className="h-3 w-3" />
+        比常態少
+      </Badge>
+    )
+  }
+  return <Badge variant="secondary">接近常態</Badge>
+}
+
+function MonthlyReportSection({
+  report,
+  monthLabel,
+  onCategoryClick,
+  onFixedItemClick,
+}) {
+  if (!report) return null
+
+  const comparison = report.comparison ?? {}
+  const previousMonths = comparison.previousMonths ?? []
+  const topMovers = report.topMovers ?? []
+  const fixedBaseline = report.fixedBaseline ?? {}
+  const fixedItems = fixedBaseline.items ?? []
+  const baselineMonthLabel =
+    fixedBaseline.months?.length > 0
+      ? fixedBaseline.months.map(formatMonth).join(" / ")
+      : "樣本不足"
+
+  return (
+    <section className="flex flex-col gap-3" aria-labelledby="monthly-report-title">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="text-sm text-muted-foreground">{monthLabel}</p>
+          <h2 id="monthly-report-title" className="text-xl font-semibold tracking-tight">
+            你的月報
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          排除收入與信用卡繳款/移轉後的支出觀察
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardDescription>本月 vs 常態</CardDescription>
+            <CardTitle className="text-3xl">
+              {formatSignedTWD(comparison.delta)}
+            </CardTitle>
+            <CardAction>
+              <SpendingDeltaBadge delta={comparison.delta} />
+            </CardAction>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">本月支出</p>
+                <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
+                  {formatTWD(comparison.currentSpend)}
+                </p>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="text-xs text-muted-foreground">前三月平均</p>
+                <p className="mt-1 font-mono text-xl font-semibold tabular-nums">
+                  {formatTWD(comparison.previousAverageSpend)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span>差異 {formatSignedTWD(comparison.delta)}</span>
+              <span aria-hidden>·</span>
+              <span>{formatPercentDelta(comparison.percentDelta)}</span>
+              <span aria-hidden>·</span>
+              <span>
+                常態樣本{" "}
+                {previousMonths.length > 0
+                  ? previousMonths.map((row) => formatMonth(row.month)).join(" / ")
+                  : "不足"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>Top movers</CardDescription>
+            <CardTitle>分類波動</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topMovers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                沒有超過門檻的分類變動。
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {topMovers.map((item) => (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      onClick={() => onCategoryClick(item.label)}
+                      className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted active:scale-[0.99]"
+                      aria-label={`查看 ${item.label} 分類交易`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">
+                          {item.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          上月 {formatTWD(item.previousSpend)} → 本月{" "}
+                          {formatTWD(item.currentSpend)}
+                        </span>
+                      </span>
+                      <Badge
+                        variant={Number(item.delta) > 0 ? "destructive" : "secondary"}
+                        className="shrink-0"
+                      >
+                        {formatSignedTWD(item.delta)}
+                      </Badge>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>固定底盤</CardDescription>
+            <CardTitle>連續支出</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {fixedItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {baselineMonthLabel} 沒有連續 {fixedBaseline.monthsRequired ?? 3} 個月出現的支出。
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-1.5 text-sm">
+                {fixedItems.slice(0, 5).map((item) => (
+                  <li key={`${item.matchKeySource}:${item.matchKey}`}>
+                    <button
+                      type="button"
+                      onClick={() => onFixedItemClick(item)}
+                      className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted active:scale-[0.99]"
+                      aria-label={`查看 ${item.sampleName || item.matchKey} 固定支出交易`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">
+                          {item.sampleName || item.matchKey}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          連續 {item.activeMonths} 個月 · 本月 {item.currentRows} 筆
+                        </span>
+                      </span>
+                      <span className="shrink-0 font-mono font-medium tabular-nums text-foreground">
+                        {formatTWD(item.currentTotal)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </section>
   )
 }
 
