@@ -70,17 +70,53 @@ AI 看不到你的資料細節？錯 — **AI 就是你跑的 Codex/Claude Code*
 
 ## 🚀 快速開始 Quick Start
 
+先用隔離的 demo DB 試跑，不會碰正式的 `data/finance.sqlite`：
+
+macOS / Linux / Git Bash：
+
 ```bash
 git clone https://github.com/cablate/finance-viewer
 cd finance-viewer
 npm install
-npm run seed:demo   # 產生示範假資料（通用商家，不含任何真實個資）
-npm run dev         # 啟動 → http://localhost:3127
+FINANCE_DB_PATH=data/dev-demo.sqlite npm run seed:demo
+FINANCE_DB_PATH=data/dev-demo.sqlite npm run dev
 ```
 
-打開 **http://localhost:3127**，你會看到 6 個月、約 200 筆示範交易的完整儀表板。
+Windows PowerShell：
 
-### 匯入你自己的帳單
+```powershell
+git clone https://github.com/cablate/finance-viewer
+cd finance-viewer
+npm install
+$env:FINANCE_DB_PATH="data/dev-demo.sqlite"
+npm run seed:demo
+npm run dev
+```
+
+打開 **http://localhost:3127**，你會看到 6 個月、156 筆示範交易的完整儀表板。
+
+### Demo 畫面
+
+![Finance Viewer demo overview](./docs/screenshots/overview-demo.png)
+
+![Finance Viewer demo automation trend](./docs/screenshots/trend-demo.png)
+
+![Finance Viewer demo needs review](./docs/screenshots/needs-review-demo.png)
+
+### 用你自己的帳單
+
+正式使用時，啟動 server 後把帳單檔案交給你慣用的 AI agent（Codex、Claude Code 等）。如果你剛剛在同一個 PowerShell 視窗跑 demo，先關掉 dev server，另開新終端或清掉 `FINANCE_DB_PATH`，讓正式資料進預設的 `data/finance.sqlite`。
+
+把這段貼給 AI：
+
+```text
+我架好了 Finance Viewer（localhost:3127），請讀專案的 prompts/playbook.md，照流程 A 處理我這份帳單：<檔案路徑>
+```
+
+AI 會依 playbook 解析帳單、補全商家資訊、產生 ledger CSV、匯入本機 API，並把低信心交易留給你在 Web UI 審查。
+
+如果你已經有整理好的 ledger CSV，也可以直接匯入：
+
 ```bash
 npm run seed -- --ledger=path/to/your/ledger.csv
 # 或讓你的 AI agent 打 POST /api/import-ledger
