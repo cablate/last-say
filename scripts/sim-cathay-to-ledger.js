@@ -34,6 +34,8 @@ function classify(name) {
     return { main: '訂閱服務', sub: '軟體', reason: '國際軟體/訂閱', confidence: 0.92 };
   if (/統一超商|全聯|家樂福|超商|迷客夏|寶雅/.test(name))
     return { main: '飲食', sub: '便利商店', reason: '便利商店/量販', confidence: 0.88 };
+  if (/小北|屈臣氏|康是美|生活百貨|五金|洗衣|理髮|寵物/.test(name))
+    return { main: '日常開銷', sub: '日用品', reason: '生活維持型日常消費', confidence: 0.72 };
   if (/麥當勞|漢堡|燒肉|餐|食|飲|咖啡|星巴克|茶|號|屋|廣場/.test(name))
     return { main: '飲食', sub: '餐飲', reason: '餐飲', confidence: 0.7 };
   if (/加油站|中油|台塑/.test(name))

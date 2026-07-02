@@ -15,7 +15,8 @@ const MERCHANTS = [
   { name: 'UBER TRIP', cat: '交通', flow: '信用卡消費', amt: [85, 500] },
   { name: 'STARBUCKS', cat: '飲食', flow: '信用卡消費', amt: [80, 320] },
   { name: '7-ELEVEN', cat: '飲食', flow: '信用卡消費', amt: [30, 400] },
-  { name: 'IKEA', cat: '居家', flow: '信用卡消費', amt: [300, 5000] },
+  { name: 'POYA 寶雅', cat: '日常開銷', flow: '信用卡消費', amt: [120, 900] },
+  { name: 'IKEA', cat: '居住', flow: '信用卡消費', amt: [300, 5000] },
   { name: 'APPLE.COM/BILL', cat: '訂閱服務', flow: '信用卡消費', amt: [90, 1190] },
   { name: 'AMAZON', cat: '購物', flow: '信用卡消費', amt: [200, 3000] },
   { name: 'FX 反映手續費', cat: '金融手續與稅費', flow: '信用卡消費', amt: [2, 60] },
@@ -104,7 +105,7 @@ for (let m = 1; m <= 6; m++) {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
   `).run(
     sKey, sKey, sDate, month, '國泰數位存款', '薪水入帳', '每月薪資',
-    salaryCents, salaryCents, '收入', bankBalance, bankAcc.lastInsertRowid
+    salaryCents, salaryCents, '薪資收入', bankBalance, bankAcc.lastInsertRowid
   );
   count++;
 }
