@@ -2,7 +2,7 @@
 
 This file records statement-format behavior that the database cannot learn. Keep it generic and reusable. Do not store merchant classifications here.
 
-## Cathay Credit Card CSV
+## Credit Card Statement CSV
 
 - Statement month and transaction month are different concepts. A January statement can contain December transactions and older delayed postings.
 - Preserve original statement row order while preparing a ledger. Order helps audit whether rows were skipped or duplicated.
