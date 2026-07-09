@@ -191,6 +191,12 @@ export default function Overview() {
     )
   }
 
+  // 空狀態引導：summary 已載入且當前篩選下完全無交易 → 顯示引導卡，
+  // 不破壞既有渲染（只在最上層攔截，既有分支不受影響）。
+  if (!summaryLoading && summary && processedCount === 0) {
+    return <OverviewEmpty />
+  }
+
   const txRows = txData?.rows ?? []
   const incomeItems = (breakdown ?? []).filter((b) => Number(b.inflow) > 0)
   const spendItems = (breakdown ?? []).filter((b) => Number(b.spend) > 0)
@@ -896,5 +902,27 @@ function OverviewSkeleton() {
         <Skeleton className="h-80 w-full rounded-xl" />
       </div>
     </div>
+  )
+}
+
+// 空狀態引導卡：交易數=0 時提示如何產生示範資料或匯入帳單。
+// 使用與既有 Empty 一致的視覺語言，維持元件庫一致性。
+function OverviewEmpty() {
+  return (
+    <Card>
+      <CardHeader>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Wallet />
+            </EmptyMedia>
+            <EmptyTitle>尚無資料</EmptyTitle>
+            <EmptyDescription>
+              執行 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">npm run seed:demo</code> 產生示範資料，或請 AI 匯入你的帳單。
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </CardHeader>
+    </Card>
   )
 }

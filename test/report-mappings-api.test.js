@@ -22,7 +22,7 @@ function runFixture(setup, op) {
     try {
       result = { ok: true, value: ${op} };
     } catch (e) {
-      result = { ok: false, name: e.constructor.name, message: e.message, notFound: !!e.notFound };
+      result = { ok: false, name: e.constructor.name, message: e.message, notFound: !!e.notFound, badRequest: !!e.badRequest };
     }
     process.stdout.write(JSON.stringify(result));
   `;
@@ -245,4 +245,116 @@ test('mappings: unknown report_line error lists whitelist keys (R2c)', () => {
   assert.match(r.message, /expense:food/);
   assert.match(r.message, /income:salary/);
   assert.match(r.message, /excluded:internal_transfer/);
+});
+
+// ── Unit A：reason / note 獨立寫入（不再合併）──────────────────────────
+// reason=AI 判斷理由、note=證據／出處，各自落欄，互不污染。
+
+test('mappings: writes reason and note into separate columns (Unit A)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-mappings-rn-sep-'));
+  const dbPath = path.join(dir, 'finance.sqlite');
+  const script = `
+    const { getDb } = require('./lib/db');
+    const { upsertTransactionReportMapping } = require('./lib/queries');
+    const db = getDb();
+    const aid = db.prepare("INSERT INTO accounts (name, account_type) VALUES ('A','bank')").run().lastInsertRowid;
+    db.prepare(\`INSERT INTO transactions
+      (dedupe_key, import_match_key, transaction_date, transaction_month,
+       source_type, flow_type, name, amount, inflow, outflow,
+       category_primary, account_id) VALUES ('d1','k1','2026-06-01','2026-06','bank','purchase','Coffee',-100,0,100,'飲食',\${aid})\`).run();
+    upsertTransactionReportMapping({ transaction_id: 1, report_line: 'expense:food', reason: 'AI judged food', note: 'memo: 咖啡' });
+    const row = db.prepare('SELECT reason, note FROM transaction_report_mappings WHERE transaction_id = 1').get();
+    process.stdout.write(JSON.stringify(row));
+  `;
+  let output;
+  try {
+    output = execFileSync(process.execPath, ['-e', script], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, FINANCE_DB_PATH: dbPath, NODE_ENV: 'development' },
+      timeout: 30000,
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const row = JSON.parse(output);
+  assert.equal(row.reason, 'AI judged food', 'reason written to its own column, unmodified');
+  assert.equal(row.note, 'memo: 咖啡', 'note written to its own column, not merged into reason');
+});
+
+test('mappings: providing only note does not touch reason (Unit A)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-mappings-note-only-'));
+  const dbPath = path.join(dir, 'finance.sqlite');
+  const script = `
+    const { getDb } = require('./lib/db');
+    const { upsertTransactionReportMapping } = require('./lib/queries');
+    const db = getDb();
+    const aid = db.prepare("INSERT INTO accounts (name, account_type) VALUES ('A','bank')").run().lastInsertRowid;
+    db.prepare(\`INSERT INTO transactions
+      (dedupe_key, import_match_key, transaction_date, transaction_month,
+       source_type, flow_type, name, amount, inflow, outflow,
+       category_primary, account_id) VALUES ('d1','k1','2026-06-01','2026-06','bank','purchase','Coffee',-100,0,100,'飲食',\${aid})\`).run();
+    upsertTransactionReportMapping({ transaction_id: 1, report_line: 'expense:food', reason: 'R', note: 'N' });
+    upsertTransactionReportMapping({ transaction_id: 1, report_line: 'expense:food', note: 'new note' });
+    const row = db.prepare('SELECT reason, note FROM transaction_report_mappings WHERE transaction_id = 1').get();
+    process.stdout.write(JSON.stringify(row));
+  `;
+  let output;
+  try {
+    output = execFileSync(process.execPath, ['-e', script], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, FINANCE_DB_PATH: dbPath, NODE_ENV: 'development' },
+      timeout: 30000,
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const row = JSON.parse(output);
+  assert.equal(row.reason, 'R', 'reason preserved when only note re-provided');
+  assert.equal(row.note, 'new note', 'note overwritten independently');
+});
+
+// ── Unit A：rule_id 寫入 + 追溯鏈 + 400 ──────────────────────────────
+
+test('mappings: writes rule_id when it exists in report_mapping_rules (Unit A)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-mappings-ruleid-ok-'));
+  const dbPath = path.join(dir, 'finance.sqlite');
+  const script = `
+    const { getDb } = require('./lib/db');
+    const { upsertTransactionReportMapping, createReportMappingRule } = require('./lib/queries');
+    const db = getDb();
+    const aid = db.prepare("INSERT INTO accounts (name, account_type) VALUES ('A','bank')").run().lastInsertRowid;
+    db.prepare(\`INSERT INTO transactions
+      (dedupe_key, import_match_key, transaction_date, transaction_month,
+       source_type, flow_type, name, amount, inflow, outflow,
+       category_primary, account_id) VALUES ('d1','k1','2026-06-01','2026-06','bank','purchase','Coffee',-100,0,100,'飲食',\${aid})\`).run();
+    const { id } = createReportMappingRule({ match_key: 'coffee', report_line: 'expense:food' });
+    upsertTransactionReportMapping({ transaction_id: 1, report_line: 'expense:food', rule_id: id });
+    const row = db.prepare('SELECT rule_id FROM transaction_report_mappings WHERE transaction_id = 1').get();
+    process.stdout.write(JSON.stringify(row));
+  `;
+  let output;
+  try {
+    output = execFileSync(process.execPath, ['-e', script], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, FINANCE_DB_PATH: dbPath, NODE_ENV: 'development' },
+      timeout: 30000,
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const row = JSON.parse(output);
+  assert.equal(row.rule_id, 1, 'rule_id written, tracing chain connected');
+});
+
+test('mappings: rejects non-existent rule_id with 400 (Unit A)', () => {
+  const r = runFixture(
+    seedOneTransaction(),
+    "upsertTransactionReportMapping({ transaction_id: 1, report_line: 'expense:food', rule_id: 9999 })",
+  );
+  assert.equal(r.ok, false);
+  assert.equal(r.badRequest, true);
+  assert.match(r.message, /rule_id 不存在/);
 });

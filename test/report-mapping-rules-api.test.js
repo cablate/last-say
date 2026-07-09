@@ -146,3 +146,32 @@ test('mapping-rules: rejects invalid confidence range', () => {
   assert.equal(r.ok, false);
   assert.match(r.message, /confidence/);
 });
+
+// ── Unit A：reason / note 獨立寫入（不再合併進 note）─────────────────
+
+test('mapping-rules: writes reason and note into separate columns (Unit A)', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-mr-rn-sep-'));
+  const dbPath = path.join(dir, 'finance.sqlite');
+  const script = `
+    const { getDb } = require('./lib/db');
+    const { createReportMappingRule } = require('./lib/queries');
+    const db = getDb();
+    const { id } = createReportMappingRule({ match_key: 'starbucks', report_line: 'expense:food', reason: 'AI judgment', note: 'source: receipt' });
+    const row = db.prepare('SELECT reason, note FROM report_mapping_rules WHERE id = ?').get(id);
+    process.stdout.write(JSON.stringify(row));
+  `;
+  let output;
+  try {
+    output = execFileSync(process.execPath, ['-e', script], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: { ...process.env, FINANCE_DB_PATH: dbPath, NODE_ENV: 'development' },
+      timeout: 30000,
+    });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+  const row = JSON.parse(output);
+  assert.equal(row.reason, 'AI judgment', 'reason in its own column');
+  assert.equal(row.note, 'source: receipt', 'note in its own column, not merged with reason');
+});

@@ -34,7 +34,11 @@ export async function POST(request) {
       return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
     }
     const rule = createRule(body || {});
-    return NextResponse.json({ ok: true, rule }, { status: 201 });
+    // createRule 對非標準 category_value 附 warning（軟校驗）；提升到回應頂層供 AI/UI 顯示。
+    const { warning, ...ruleData } = rule;
+    const response = { ok: true, rule: ruleData };
+    if (warning) response.warning = warning;
+    return NextResponse.json(response, { status: 201 });
   } catch (err) {
     const msg = String((err && err.message) || err);
     // validateRule 的輸入校驗錯誤（條件/結果不足、match_key 正規化後為空）屬使用者輸入問題 → 400
