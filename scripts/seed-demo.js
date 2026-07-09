@@ -11,6 +11,9 @@ const MONTHS = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06'
 const RULE_RATE_TARGETS = [0.2, 0.32, 0.45, 0.58, 0.68, 0.76];
 const SOURCE_CARD = '示範信用卡';
 const SOURCE_BANK = '示範存款帳戶';
+const SOURCE_LOAN = '示範貸款帳戶';
+const SOURCE_INVEST = '示範投資帳戶';
+const SOURCE_SAVINGS = '示範儲蓄帳戶';
 
 const MERCHANTS = [
   { name: 'BLUE BOTTLE DEMO', category: '飲食', sub: '咖啡', amount: 180, rule: true, note: 'Demo coffee shop.' },
@@ -79,6 +82,16 @@ const cardAccountId = db.prepare(
 const bankAccountId = db.prepare(
   'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
 ).run(`${SOURCE_BANK} ****5678`, 'Demo Bank', 'bank_account', '****5678').lastInsertRowid;
+// 示範帳戶類型 loan / investment / savings（spec §785-786 要求 demo 涵蓋）
+const loanAccountId = db.prepare(
+  'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
+).run(`${SOURCE_LOAN} ****2468`, 'Demo Bank', 'loan', '****2468').lastInsertRowid;
+const investAccountId = db.prepare(
+  'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
+).run(`${SOURCE_INVEST} ****3579`, 'Demo Brokerage', 'investment', '****3579').lastInsertRowid;
+const savingsAccountId = db.prepare(
+  'INSERT INTO accounts (name, institution, account_type, masked_number) VALUES (?, ?, ?, ?)'
+).run(`${SOURCE_SAVINGS} ****8080`, 'Demo Bank', 'savings', '****8080').lastInsertRowid;
 
 const sourceIds = new Map();
 for (const month of MONTHS) {
@@ -90,8 +103,23 @@ for (const month of MONTHS) {
     INSERT INTO sources (source_type, source_file, description, statement_month, row_count)
     VALUES (?, ?, ?, ?, ?)
   `).run(SOURCE_BANK, `demo-bank-${month}.csv`, `${month} demo account`, month, 1).lastInsertRowid;
+  const loanSourceId = db.prepare(`
+    INSERT INTO sources (source_type, source_file, description, statement_month, row_count)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(SOURCE_LOAN, `demo-loan-${month}.csv`, `${month} demo loan statement`, month, 2).lastInsertRowid;
+  const investSourceId = db.prepare(`
+    INSERT INTO sources (source_type, source_file, description, statement_month, row_count)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(SOURCE_INVEST, `demo-invest-${month}.csv`, `${month} demo brokerage statement`, month, 1).lastInsertRowid;
+  const savingsSourceId = db.prepare(`
+    INSERT INTO sources (source_type, source_file, description, statement_month, row_count)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(SOURCE_SAVINGS, `demo-savings-${month}.csv`, `${month} demo savings interest`, month, 1).lastInsertRowid;
   sourceIds.set(`${month}:card`, cardSourceId);
   sourceIds.set(`${month}:bank`, bankSourceId);
+  sourceIds.set(`${month}:loan`, loanSourceId);
+  sourceIds.set(`${month}:invest`, investSourceId);
+  sourceIds.set(`${month}:savings`, savingsSourceId);
 }
 
 const ruleIds = new Map();
@@ -229,6 +257,130 @@ for (const [monthIndex, month] of MONTHS.entries()) {
     1,
   );
   bumpRule(salaryRuleId);
+  totalRows += 1;
+
+  // === 示範帳戶類型 loan / investment / savings（spec §785-786）===
+  // loan：示範本金還款（excluded:loan_principal）+ 利息分期（expense:interest）
+  const loanPrincipal = cents(8500 + monthIndex * 50);
+  const loanPrincipalDate = `${month}-15`;
+  insertTx.run(
+    hashKey([SOURCE_LOAN, loanPrincipalDate, 'DEMO LOAN PRINCIPAL', loanPrincipal, monthIndex]),
+    hashKey(['import', SOURCE_LOAN, loanPrincipalDate, 'DEMO LOAN PRINCIPAL', loanPrincipal]),
+    loanPrincipalDate,
+    month,
+    month,
+    SOURCE_LOAN,
+    '貸款本金還款',
+    'DEMO LOAN PRINCIPAL',
+    -loanPrincipal,
+    0,
+    loanPrincipal,
+    '貸款本金',
+    '',
+    0.9,
+    '示範貸款本金還款（報表排除列）。',
+    '',
+    '',
+    cents(480000 - monthIndex * 8500),
+    '1',
+    loanAccountId,
+    sourceIds.get(`${month}:loan`),
+    'rule',
+    null,
+    1,
+  );
+  totalRows += 1;
+
+  const loanInterest = cents(3200);
+  const loanInterestDate = `${month}-15`;
+  insertTx.run(
+    hashKey([SOURCE_LOAN, loanInterestDate, 'DEMO LOAN INTEREST', loanInterest, monthIndex]),
+    hashKey(['import', SOURCE_LOAN, loanInterestDate, 'DEMO LOAN INTEREST', loanInterest]),
+    loanInterestDate,
+    month,
+    month,
+    SOURCE_LOAN,
+    '貸款利息',
+    'DEMO LOAN INTEREST',
+    -loanInterest,
+    0,
+    loanInterest,
+    '金融手續與稅費',
+    '利息支出',
+    0.88,
+    '示範貸款利息支出（分期）。',
+    '',
+    '',
+    null,
+    '2',
+    loanAccountId,
+    sourceIds.get(`${month}:loan`),
+    'rule',
+    null,
+    1,
+  );
+  totalRows += 1;
+
+  // investment：示範定期定額買入（excluded:investment_purchase）
+  const investAmount = cents(5000 + monthIndex * 100);
+  const investDate = `${month}-20`;
+  insertTx.run(
+    hashKey([SOURCE_INVEST, investDate, 'DEMO ETF PURCHASE', investAmount, monthIndex]),
+    hashKey(['import', SOURCE_INVEST, investDate, 'DEMO ETF PURCHASE', investAmount]),
+    investDate,
+    month,
+    month,
+    SOURCE_INVEST,
+    '投資買入',
+    'DEMO ETF PURCHASE',
+    -investAmount,
+    0,
+    investAmount,
+    '投資',
+    'ETF',
+    0.86,
+    '示範投資帳戶定期定額買入（報表排除列）。',
+    '',
+    '',
+    cents(60000 + monthIndex * 5000),
+    '1',
+    investAccountId,
+    sourceIds.get(`${month}:invest`),
+    'rule',
+    null,
+    1,
+  );
+  totalRows += 1;
+
+  // savings：示範存款利息收入（interest income）
+  const savingsInterest = cents(180 + monthIndex * 15);
+  const savingsDate = `${month}-25`;
+  insertTx.run(
+    hashKey([SOURCE_SAVINGS, savingsDate, 'DEMO SAVINGS INTEREST', savingsInterest, monthIndex]),
+    hashKey(['import', SOURCE_SAVINGS, savingsDate, 'DEMO SAVINGS INTEREST', savingsInterest]),
+    savingsDate,
+    month,
+    month,
+    SOURCE_SAVINGS,
+    '存款利息入帳',
+    'DEMO SAVINGS INTEREST',
+    savingsInterest,
+    savingsInterest,
+    0,
+    '利息收入',
+    '存款利息',
+    0.95,
+    '示範儲蓄帳戶利息收入。',
+    '',
+    '',
+    cents(200000 + monthIndex * 12000),
+    '1',
+    savingsAccountId,
+    sourceIds.get(`${month}:savings`),
+    'rule',
+    null,
+    1,
+  );
   totalRows += 1;
 }
 

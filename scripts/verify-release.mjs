@@ -116,6 +116,36 @@ function checkDemoMetrics() {
   }
 }
 
+// Demo seed 遮罩號（****1234 / ****5678 / ****2468 / ****3579 / ****8080）。
+// 這些是 `*` 前綴 + 4 碼尾號，不是真實卡號，掃描時必須排除以免誤判 demo 資料。
+const DEMO_MASKED_TAILS = new Set(['1234', '5678', '2468', '3579', '8080']);
+
+// 偵測疑似真實卡號。回傳匹配說明或 null。
+// 規則：
+//   1. 連續 13-16 碼純數字（但排除 `*` 前綴的 demo 遮罩號 `****<尾4碼>`）
+//   2. 4-4-4-4 格式（1234-5678-9012-3456）
+// 不誤判：日期（YYYY-MM-DD / YYYYMMDD 最多 8 碼）、小數金額、demo `****1234` 遮罩。
+function detectCardNumber(line) {
+  // 4-4-4-4 格式（dash 或 space 分組）
+  const grouped = line.match(/\b(\d{4})[-\s](\d{4})[-\s](\d{4})[-\s](\d{4})\b/);
+  if (grouped) {
+    return `grouped card number ${grouped[0]}`;
+  }
+  // 連續 13-16 碼數字。逐一檢查，排除 demo `****<尾4碼>` 遮罩相鄰形成的長串，
+  // 以及被 `*` 直接前綴的遮罩號。
+  for (const match of line.matchAll(/\d{13,16}/g)) {
+    const digits = match[0];
+    const start = match.index;
+    // 排除：前面緊鄰 `*`（demo 遮罩 ****1234）— 但 ****1234 只有 4 碼不會匹配 13+，
+    // 這裡主要防禦 `****1234****5678` 之類拼接地。只要前一字元是 `*` 就視為遮罩片段。
+    const prevChar = start > 0 ? line[start - 1] : '';
+    const nextChar = start + digits.length < line.length ? line[start + digits.length] : '';
+    if (prevChar === '*' || nextChar === '*') continue;
+    return `card number ${digits}`;
+  }
+  return null;
+}
+
 function checkPersonalizedResidue() {
   const stdout = run('git', ['ls-files'], { label: 'git ls-files', printOutput: false });
   const allowedFiles = new Set(['prompts/playbook.md', '.gitignore']);
@@ -128,12 +158,20 @@ function checkPersonalizedResidue() {
     const lines = text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
       if (/cathay|國泰/i.test(line)) {
-        matches.push(`${file}:${index + 1}:${line}`);
+        matches.push(`${file}:${index + 1}:bank-name:${line}`);
+        continue;
+      }
+      const cardHit = detectCardNumber(line);
+      if (cardHit) {
+        matches.push(`${file}:${index + 1}:${cardHit}:${line}`);
       }
     }
   }
   if (matches.length > 0) fail('personalized-residue', matches.join('\n'));
-  pass('personalized-residue', 'no cathay/國泰 outside prompts/playbook.md and .gitignore');
+  pass(
+    'personalized-residue',
+    'no cathay/國泰, card numbers (13-16 digits / 4-4-4-4) outside prompts/playbook.md and .gitignore',
+  );
 }
 
 function checkScreenshots() {

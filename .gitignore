@@ -26,6 +26,9 @@ server.pid
 
 # screenshots may contain real transaction data — don't commit
 *.png
+# ...but keep committed demo screenshots and brand assets under docs/
+!docs/screenshots/*.png
+!docs/brand/*.jpg
 
 # misc
 .DS_Store
