@@ -207,86 +207,66 @@ export default function Overview() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardDescription>{monthLabel} {statusLabel}</CardDescription>
-          <CardTitle className="text-2xl">AI 已完成初步分類</CardTitle>
-          <CardAction>
-            {closingComplete ? (
+      {/* 首屏關鍵指標列：淨現金流 / 待審數 / 自動化率。一進來就能掌握狀態，不必下滑。 */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <KeyMetric
+          label={`${monthLabel} 淨現金流`}
+          value={formatTWD(netCash)}
+          tone={netCashPositive ? "positive" : netCashNegative ? "negative" : "neutral"}
+          badge={
+            netCashPositive ? (
+              <Badge className="border-transparent bg-success/15 text-success">
+                <ArrowUpRight className="h-3 w-3" />
+                淨流入
+              </Badge>
+            ) : netCashNegative ? (
+              <Badge variant="destructive">
+                <ArrowDownRight className="h-3 w-3" />
+                淨支出
+              </Badge>
+            ) : (
+              <Badge variant="secondary">平衡</Badge>
+            )
+          }
+          loading={summaryLoading}
+        />
+        <KeyMetric
+          label="待審數"
+          value={String(needsReviewCount)}
+          tone={needsReviewCount > 0 ? "warning" : "neutral"}
+          badge={
+            closingComplete ? (
               <Badge variant="secondary">
                 <CheckCircle2 className="h-3 w-3" />
                 {completeLabel}
               </Badge>
             ) : (
-              <Badge variant="outline">{needsReviewCount} 筆待審</Badge>
-            )}
-          </CardAction>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
-            <span>
-              <span className="font-medium text-foreground">
-                {processedCount}
-              </span>{" "}
-              筆已處理
-            </span>
-            <span aria-hidden>·</span>
-            <span>
-              <span className="font-medium text-foreground">
-                {automationPercent}%
-              </span>{" "}
-              規則自動
-            </span>
-            <span aria-hidden>·</span>
-            <span>
-              <span className="font-medium text-foreground">
-                {needsReviewCount}
-              </span>{" "}
-              筆待你審
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {classificationLabel}：已確認{" "}
-            <span className="font-medium text-foreground">
-              {reviewedPercent}%
-            </span>{" "}
-            · 高信心{" "}
-            <span className="font-medium text-foreground">
-              {highConfidencePercent}%
-            </span>{" "}
-            · 低信心{" "}
-            <span className="font-medium text-foreground">
-              {lowConfidencePercent}%
-            </span>
-          </p>
-          <div className="grid gap-3 border-y py-3 sm:grid-cols-3 sm:divide-x">
-            <div className="sm:pr-3">
-              <p className="text-xs text-muted-foreground">規則分類</p>
-              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
-                {ruleCount}
-              </p>
-            </div>
-            <div className="sm:px-3">
-              <p className="text-xs text-muted-foreground">AI 判斷</p>
-              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
-                {aiCount}
-              </p>
-            </div>
-            <div className="sm:pl-3">
-              <p className="text-xs text-muted-foreground">人工確認</p>
-              <p className="mt-1 font-mono text-lg font-semibold tabular-nums">
-                {humanCount}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              {closingComplete
-                ? "目前篩選月份沒有待審交易。"
-                : "先處理低信心項目，月結數字才會更穩。"}
-            </p>
+              <Badge variant="outline">待你確認</Badge>
+            )
+          }
+          loading={summaryLoading}
+        />
+        <KeyMetric
+          label="自動化率"
+          value={`${automationPercent}%`}
+          tone="neutral"
+          badge={
+            <Badge variant="outline">
+              {processedCount} 筆已處理
+            </Badge>
+          }
+          loading={summaryLoading}
+        />
+      </div>
+
+      {/* AI 分類進度（緊湊版）：保留所有資訊，但不再是佔滿首屏的大卡。 */}
+      <Card>
+        <CardHeader>
+          <CardDescription>{monthLabel} {statusLabel} · AI 已完成初步分類</CardDescription>
+          <CardAction>
             <Button
               type="button"
+              size="sm"
               variant={needsReviewCount > 0 ? "default" : "outline"}
               onClick={() =>
                 drill({
@@ -301,6 +281,34 @@ export default function Overview() {
               前往審查
               <ArrowRight data-icon="inline-end" />
             </Button>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <span>
+              規則自動 <span className="font-medium text-foreground">{automationPercent}%</span>
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              待你審 <span className="font-medium text-foreground">{needsReviewCount}</span>
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              {classificationLabel}已確認{" "}
+              <span className="font-medium text-foreground">{reviewedPercent}%</span>
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              高信心 <span className="font-medium text-foreground">{highConfidencePercent}%</span>
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              低信心 <span className="font-medium text-foreground">{lowConfidencePercent}%</span>
+            </span>
+            <span aria-hidden className="hidden sm:inline">·</span>
+            <span className="font-mono tabular-nums">
+              規則 {ruleCount} / AI {aiCount} / 人工 {humanCount}
+            </span>
           </div>
         </CardContent>
       </Card>
@@ -320,48 +328,27 @@ export default function Overview() {
         }
       />
 
-      {/* Hero 淨現金流 */}
+      {/* 淨現金流明細：金額已移至首屏指標列，此卡保留流入/流出/筆數的細項。 */}
       <Card>
-        <CardHeader>
-          <CardDescription>{monthLabel} 淨現金流</CardDescription>
-          <CardTitle className="text-3xl">{formatTWD(netCash)}</CardTitle>
-          <CardAction>
-            {netCashPositive ? (
-              <Badge className="border-transparent bg-success/15 text-success">
-                <ArrowUpRight className="h-3 w-3" />
-                流入大於支出
-              </Badge>
-            ) : netCashNegative ? (
-              <Badge variant="destructive">
-                <ArrowDownRight className="h-3 w-3" />
-                支出超過流入
-              </Badge>
-            ) : (
-              <Badge variant="secondary">收支平衡</Badge>
-            )}
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <span>
-              流入{" "}
-              <span className="font-medium text-foreground">
-                {formatTWD(summary?.inflow)}
-              </span>
+        <CardContent className="flex flex-wrap items-center gap-x-6 gap-y-2 pt-6 text-sm text-muted-foreground">
+          <span>
+            流入{" "}
+            <span className="font-medium text-success">
+              {formatTWD(summary?.inflow)}
             </span>
-            <span>
-              流出{" "}
-              <span className="font-medium text-foreground">
-                {formatTWD(summary?.outflow)}
-              </span>
+          </span>
+          <span>
+            流出{" "}
+            <span className="font-medium text-foreground">
+              {formatTWD(summary?.outflow)}
             </span>
-            <span>
-              交易筆數{" "}
-              <span className="font-medium text-foreground">
-                {summary?.rows ?? 0}
-              </span>
+          </span>
+          <span>
+            交易筆數{" "}
+            <span className="font-medium text-foreground">
+              {summary?.rows ?? 0}
             </span>
-          </div>
+          </span>
         </CardContent>
       </Card>
 
@@ -852,6 +839,34 @@ function MonthlyReportSection({
         </Card>
       </div>
     </section>
+  )
+}
+
+// 首屏關鍵指標卡：緊湊、強調單一數字，語意色由 tone 帶。
+// 與 MetricCard（可點下鑽）不同，這是純展示的狀態指標，不放 onClick。
+function KeyMetric({ label, value, tone = "neutral", badge, loading }) {
+  const toneClass =
+    tone === "positive"
+      ? "text-success"
+      : tone === "negative"
+        ? "text-destructive"
+        : tone === "warning"
+          ? "text-warning"
+          : "text-foreground"
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-1.5 pt-5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">{label}</p>
+          {badge}
+        </div>
+        <p
+          className={`font-mono text-2xl font-semibold tabular-nums ${toneClass}`}
+        >
+          {loading ? <Skeleton className="h-8 w-28" /> : value}
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 

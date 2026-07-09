@@ -9,6 +9,7 @@ import { useIncomeStatement } from "@/lib/hooks"
 import CoverageBadge from "@/components/reports/CoverageBadge"
 import CoveragePanel from "@/components/reports/CoveragePanel"
 import IncomeStatement from "@/components/reports/IncomeStatement"
+import ReportSummary from "@/components/reports/ReportSummary"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -316,11 +317,11 @@ export default function ReportsView() {
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        目前報表科目對應（report mapping）尚未由外部 AI 產生，以下數字僅來自內建規則與 category 推斷；接通 playbook 流程 C 後將由 AI 產生 mapping。
-      </p>
-
       {statement === "income" ? <CoveragePanel coverage={data?.coverage} /> : null}
+
+      {statement === "income" && status !== "empty" ? (
+        <ReportSummary report={data} />
+      ) : null}
 
       <Tabs value={statement} onValueChange={setStatement} className="gap-4">
         <TabsList className="grid h-auto w-full grid-cols-3 sm:w-fit">

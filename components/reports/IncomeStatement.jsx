@@ -1,8 +1,10 @@
 "use client"
 
-import { ArrowRight, FileText, ReceiptText } from "lucide-react"
+import { useState } from "react"
+import { ArrowRight, ChevronDown, ChevronRight, FileText, ReceiptText } from "lucide-react"
 
 import { formatTWD } from "@/lib/format"
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -90,11 +92,28 @@ function LineButton({ line, onLineClick }) {
   )
 }
 
-function SectionHeaderRow({ title }) {
+function SectionHeaderRow({ title, open, onToggle, total }) {
   return (
     <TableRow className="bg-muted/60 hover:bg-muted/60">
-      <TableCell colSpan={5} className="font-semibold text-foreground">
-        {title}
+      <TableCell colSpan={5} className="p-0">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex w-full items-center gap-1.5 px-4 py-2.5 text-left font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
+          {open ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+          )}
+          <span>{title}</span>
+          {!open && typeof total === "number" ? (
+            <span className="ml-auto font-mono text-sm font-normal tabular-nums text-muted-foreground">
+              {formatTWD(total)}
+            </span>
+          ) : null}
+        </button>
       </TableCell>
     </TableRow>
   )
@@ -161,24 +180,51 @@ function NetRow({ amount }) {
   )
 }
 
-function StatementRows({ title, lines, emptyLabel, subtotalLabel, total, onLineClick }) {
+function StatementRows({
+  title,
+  lines,
+  emptyLabel,
+  subtotalLabel,
+  total,
+  onLineClick,
+  defaultOpen = true,
+}) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <>
-      <SectionHeaderRow title={title} />
-      {lines.length === 0 ? (
-        <EmptySectionRow label={emptyLabel} />
-      ) : (
-        lines.map((line) => (
-          <LineRow key={line.line} line={line} onLineClick={onLineClick} />
-        ))
-      )}
-      <SubtotalRow label={subtotalLabel} amount={total} />
+      <SectionHeaderRow
+        title={title}
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        total={total}
+      />
+      {open ? (
+        <>
+          {lines.length === 0 ? (
+            <EmptySectionRow label={emptyLabel} />
+          ) : (
+            lines.map((line) => (
+              <LineRow key={line.line} line={line} onLineClick={onLineClick} />
+            ))
+          )}
+          <SubtotalRow label={subtotalLabel} amount={total} />
+        </>
+      ) : null}
     </>
   )
 }
 
+const REVIEW_PREVIEW_COUNT = 5
+
 function ReviewItemsTable({ items }) {
+  const [expanded, setExpanded] = useState(false)
   if (!items?.length) return null
+
+  const totalCount = items.length
+  const showToggle = totalCount > REVIEW_PREVIEW_COUNT
+  const visibleItems = expanded || !showToggle
+    ? items
+    : items.slice(0, REVIEW_PREVIEW_COUNT)
 
   return (
     <Card>
@@ -199,7 +245,7 @@ function ReviewItemsTable({ items }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="whitespace-nowrap font-mono text-xs">
                     {item.transaction_date}
@@ -216,6 +262,28 @@ function ReviewItemsTable({ items }) {
             </TableBody>
           </Table>
         </div>
+        {showToggle ? (
+          <div className="mt-3 flex justify-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+            >
+              {expanded
+                ? `只顯示前 ${REVIEW_PREVIEW_COUNT} 筆`
+                : `顯示全部 ${totalCount} 筆`}
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  expanded && "rotate-180",
+                )}
+                aria-hidden="true"
+              />
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   )
@@ -282,6 +350,7 @@ export default function IncomeStatement({ report, onLineClick }) {
                   subtotalLabel="不列入損益小計"
                   total={report.excluded_total_cents}
                   onLineClick={onLineClick}
+                  defaultOpen={false}
                 />
               </TableBody>
             </Table>
