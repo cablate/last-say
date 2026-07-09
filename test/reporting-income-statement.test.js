@@ -193,6 +193,24 @@ test('unmapped or unreviewed rows make the P&L partial without hiding computed t
   assert.equal(report.coverage.blockers.length, 2);
 });
 
+// R2(b)：reviewItem 回傳 transaction_id（值 = id），讓 AI POST review 時可直接取用。
+test('review_items expose transaction_id equal to id for AI to POST (R2b)', () => {
+  const report = runFixture([
+    {
+      name: 'Ambiguous counterparty',
+      amount: -34000,
+      outflow: 34000,
+      category_primary: 'Mystery',
+      reviewed: 0,
+      ai_confidence: 0.3,
+    },
+  ]);
+  assert.equal(report.review_items.length, 1);
+  const ri = report.review_items[0];
+  assert.ok('transaction_id' in ri, 'review_items must carry transaction_id');
+  assert.equal(ri.transaction_id, ri.id, 'transaction_id equals id');
+});
+
 test('explicit transaction report mappings override built-in category mapping', () => {
   const report = runFixture([
     {

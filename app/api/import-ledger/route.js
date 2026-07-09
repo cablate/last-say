@@ -79,6 +79,20 @@ export async function POST(request) {
     const stats = await seedMain({ ledgerPath: csvPath, sourcePath });
     return NextResponse.json({ ok: true, csvPath, stats });
   } catch (err) {
+    // CSV 缺欄位值（整欄標題缺失或某欄 undefined）會讓 node:sqlite 拋不可解的
+    // 'Provided value cannot be bound to SQLite parameter N'。這裡轉譯成可讀訊息，
+    // 指引外部 AI 每欄都必須有值（空字串可、undefined 不行）。
+    const msg = String((err && err.message) || err);
+    if (msg.includes('cannot be bound')) {
+      console.error(err);
+      return NextResponse.json(
+        {
+          error:
+            'CSV 某欄缺值或格式不符——每欄都必須有值（空字串可、undefined 不行）；欄位順序與必填性見 prompts/playbook.md A5'
+        },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { error: safeErrorMessage(err) },
       { status: 500 }

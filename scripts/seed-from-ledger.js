@@ -62,11 +62,28 @@ function parseCsv(text) {
   return rows.filter((items) => items.some((item) => item !== ''));
 }
 
+// \u5E33\u672C/\u4F86\u6E90\u7D22\u5F15\u7684\u5DF2\u77E5\u6B04\u4F4D\u767D\u540D\u55AE\u3002CSV \u7F3A\u67D0\u4E9B\u6B04\u4F4D\u6A19\u984C\u6642\uFF08\u5982\u53EA\u7D66 4 \u6B04\u7121\u300C\u6708\u4EFD\u300D\uFF09\uFF0C
+// Object.fromEntries \u4E0D\u6703\u5EFA\u7ACB\u8A72\u9375 \u2192 row['\u6708\u4EFD'] \u70BA undefined\uFF0C\u76F4\u9001 SQLite \u7D81\u5B9A\u6703\u62CB
+// \u4E0D\u53EF\u89E3\u7684 'Provided value cannot be bound to SQLite parameter N'\u3002
+// \u9019\u88E1\u7D71\u4E00\u515C\u5E95\uFF1A\u6240\u6709\u5DF2\u77E5\u6B04\u4F4D\u4FDD\u8B49\u70BA\u5B57\u4E32\uFF08\u7A7A\u5B57\u4E32\u53EF\u7D81\u5B9A\uFF0Cundefined \u4E0D\u884C\uFF09\u3002
+const LEDGER_FIELDS = [
+  '\u4F86\u6E90\u985E\u578B', '\u4F86\u6E90\u8AAA\u660E', '\u65E5\u671F', '\u6708\u4EFD', '\u540D\u7A31', '\u91D1\u984D', '\u6D41\u5165', '\u6D41\u51FA',
+  '\u5E33\u6236\u9918\u984D', '\u5E33\u6236\u539F\u59CB\u6392\u5E8F', '\u539F\u59CB\u4EA4\u6613\u8CC7\u8A0A', '\u9019\u7B46\u662F\u4EC0\u9EBC', '\u5206\u985E', '\u5B50\u985E\u5225',
+  '\u4FE1\u5FC3\u5EA6', '\u5224\u65B7\u7406\u7531', '\u5099\u8A3B', 'id'
+];
+
 function readCsv(filePath) {
   const text = fs.readFileSync(filePath, 'utf8');
   const [rawHeader, ...rows] = parseCsv(text);
   const header = rawHeader.map((column) => column.replace(/^\uFEFF/, '').trim());
-  return rows.map((values) => Object.fromEntries(header.map((column, index) => [column, values[index] ?? ''])));
+  return rows.map((values) => {
+    const row = Object.fromEntries(header.map((column, index) => [column, values[index] ?? '']));
+    // \u7F3A\u6B04\u4F4D\u6A19\u984C\u515C\u5E95\uFF1A\u78BA\u4FDD\u6240\u6709\u5DF2\u77E5\u6B04\u4F4D\u7686\u70BA\u5B57\u4E32\uFF0C\u907F\u514D undefined \u76F4\u9001 SQLite \u7D81\u5B9A\u3002
+    for (const field of LEDGER_FIELDS) {
+      if (row[field] === undefined) row[field] = '';
+    }
+    return row;
+  });
 }
 
 function toNumber(value) {
@@ -280,12 +297,12 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
   `).run(
     keys.dedupeKey,
     keys.importMatchKey,
-    row['日期'],
-    row['月份'],
+    row['日期'] ?? '',
+    row['月份'] ?? '',
     statementMonth,
-    row['來源類型'],
-    row['這筆是什麼'],
-    row['名稱'],
+    row['來源類型'] ?? '',
+    row['這筆是什麼'] ?? '',
+    row['名稱'] ?? '',
     amount,
     inflow,
     outflow,

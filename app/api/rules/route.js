@@ -37,8 +37,8 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, rule }, { status: 201 });
   } catch (err) {
     const msg = String((err && err.message) || err);
-    // validateRule 的條件/結果不足錯誤屬使用者輸入問題 → 400
-    const status = msg.includes('至少需') ? 400 : 500;
+    // validateRule 的輸入校驗錯誤（條件/結果不足、match_key 正規化後為空）屬使用者輸入問題 → 400
+    const status = (msg.includes('至少需') || msg.includes('match_key 正規化後為空')) ? 400 : 500;
     return NextResponse.json({ error: msg }, { status });
   }
 }

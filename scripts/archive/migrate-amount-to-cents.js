@@ -1,5 +1,8 @@
 // scripts/migrate-amount-to-cents.js
 //
+// ⚠️ 此腳本會變更 DB（UPDATE transactions 金額欄位 ×100）。預設連真實 DB
+// （data/finance.sqlite），正式執行前請先用 FINANCE_DB_PATH 指測試庫驗證。
+//
 // 金額 cents migration（方案3 最小改動）。
 // 將 transactions.amount / inflow / outflow / balance 從「元（REAL）」改存「cents（REAL 存整數）」。
 // schema 型別不變（仍是 REAL），只改「值」與「顯示」。
@@ -9,13 +12,19 @@
 // 跑前後各印 COUNT 與固定 5 筆抽樣（取前 5 筆 id）對帳。
 //
 // 用法：node scripts/migrate-amount-to-cents.js
+//       FINANCE_DB_PATH=data/test.sqlite node scripts/migrate-amount-to-cents.js
 
 'use strict';
 
 const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 
-const DB_PATH = path.join(process.cwd(), 'data', 'finance.sqlite');
+// DB 路徑可由 FINANCE_DB_PATH 覆寫（絕對路徑或相對專案根）；預設 data/finance.sqlite。
+// 與 lib/db.js 一致。⚠️ 此腳本會變更 DB，預設連真實 DB，請先用 FINANCE_DB_PATH 指測試庫。
+const PROJECT_ROOT = process.cwd();
+const DB_PATH = process.env.FINANCE_DB_PATH
+  ? (path.isAbsolute(process.env.FINANCE_DB_PATH) ? process.env.FINANCE_DB_PATH : path.join(PROJECT_ROOT, process.env.FINANCE_DB_PATH))
+  : path.join(PROJECT_ROOT, 'data', 'finance.sqlite');
 
 // 已是 cents 的閾值。原始資料最大約 10 萬元，乘 100 後 > 1000 萬，
 // 故 MAX(amount) > 1_000_000 表示資料已遷移過。

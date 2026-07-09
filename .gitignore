@@ -13,9 +13,19 @@ build/
 data/*
 !data/.gitkeep
 
+# 全域：任何位置的 sqlite DB 與備份變體都擋（根目錄 scratch DB、任意子目錄的備份）
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.sqlite.bak*
+
 # imports (uploaded CSV may contain real statements)
 uploads/
 outputs/
+
+# 全域：非 cathay 銀行原始 CSV 也擋（真實帳單應放 uploads/），但保留 docs 範例
+*.csv
+!docs/**/*.csv
 
 # root 帳單原始 CSV（真實財務，應放 uploads/；若放 root 也要忽略，避免 git add -A 誤 commit）
 cathay-credit-card-*.csv
