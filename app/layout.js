@@ -4,7 +4,7 @@ import { Toaster } from '@/components/ui/sonner';
 
 export const metadata = {
   title: 'Finance Viewer',
-  description: 'Local-first finance review workspace for statement import and classification.',
+  description: '本機優先的財務資料審核、匯入與分類工作台。',
 };
 
 export default function RootLayout({ children }) {

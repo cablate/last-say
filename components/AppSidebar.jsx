@@ -26,6 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useBreakdown } from "@/lib/hooks"
 import { formatTWD } from "@/lib/format"
 import {
+  ChartNoAxesColumnIncreasing,
   History,
   LayoutDashboard,
   ListChecks,
@@ -35,8 +36,9 @@ import {
 } from "lucide-react"
 
 const NAV = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/", label: "總覽", icon: LayoutDashboard },
   { href: "/transactions", label: "交易明細", icon: ReceiptText },
+  { href: "/reports", label: "報表", icon: ChartNoAxesColumnIncreasing },
   { href: "/trend", label: "走勢", icon: TrendingUp },
   { href: "/corrections", label: "修正紀錄", icon: History },
   { href: "/rules", label: "分類規則", icon: ListChecks },
@@ -52,7 +54,8 @@ export default function AppSidebar({ children }) {
   // 跨 route 保留 month / scope（皆具跨頁意義）；其他 view 專屬 param 不帶，避免跨頁污染。
   function withScope(href, extra = {}) {
     const p = new URLSearchParams()
-    if (month) p.set("month", month)
+    if (href === "/") p.set("month", "all")
+    else if (month) p.set("month", month)
     if (scope && scope !== "all") p.set("scope", scope)
     for (const [k, v] of Object.entries(extra)) {
       if (v == null || v === "") p.delete(k)

@@ -141,3 +141,61 @@ test('ledger import dedupes repeated rows and does not overwrite human classific
     fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
   }
 });
+
+test('ledger import preserves repeated identical card transactions within one source', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-import-duplicates-'));
+  const dbPath = path.join(dir, 'finance.sqlite');
+  const ledgerPath = path.join(dir, 'ledger.csv');
+  const sourceIndexPath = path.join(dir, 'source-index.csv');
+
+  try {
+    const repeated = {
+      來源類型: '示範信用卡',
+      來源說明: 'credit-card-2026-07 unbilled details',
+      日期: '2026-06-20',
+      月份: '2026-06',
+      名稱: 'Demo Game',
+      金額: '-170',
+      流入: '0',
+      流出: '170',
+      帳戶餘額: '',
+      原始交易資訊: '',
+      這筆是什麼: '信用卡消費',
+      分類: '休閒娛樂',
+      子類別: '遊戲',
+      信心度: '0.88',
+      判斷理由: '遊戲扣款，歸為休閒娛樂。',
+      備註: '',
+    };
+    writeLedger(ledgerPath, [
+      { ...repeated, 帳戶原始排序: '1' },
+      { ...repeated, 帳戶原始排序: '2' },
+      { ...repeated, 帳戶原始排序: '3' },
+    ]);
+    fs.writeFileSync(
+      sourceIndexPath,
+      [
+        '來源類型,說明,來源檔,筆數',
+        '示範信用卡,credit-card-2026-07 unbilled details,demo-credit-card-2026-07.csv,3',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const first = runImport({ ledgerPath, sourceIndexPath, dbPath, reset: true });
+    assert.equal(first.ledger_rows_seen, 3);
+    assert.equal(first.transactions_in_database, 3);
+
+    const second = runImport({ ledgerPath, sourceIndexPath, dbPath, reset: false });
+    assert.equal(second.ledger_rows_seen, 3);
+    assert.equal(second.transactions_in_database, 3);
+
+    const row = queryDb(dbPath, `
+      SELECT COUNT(*) AS count, COUNT(DISTINCT dedupe_key) AS dedupeKeys
+      FROM transactions
+      WHERE name = 'Demo Game'
+    `);
+    assert.deepEqual(row, { count: 3, dedupeKeys: 3 });
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+  }
+});

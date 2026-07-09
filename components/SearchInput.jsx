@@ -23,10 +23,12 @@ export default function SearchInput() {
   // debounce push：value 變動後 300ms 更新 URL。
   useEffect(() => {
     const handle = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString())
+      const params = new URLSearchParams(window.location.search)
       const v = value.trim()
+      if ((params.get("search") || "") === v) return
       if (v) params.set("search", v)
       else params.delete("search")
+      params.delete("page")
       const qs = params.toString()
       // 非交易頁輸入搜尋 → 帶到 /transactions 顯示結果；交易頁原地更新；清空則留在當前頁。
       if (v && pathname !== "/transactions") {
@@ -36,10 +38,10 @@ export default function SearchInput() {
       }
     }, 300)
     return () => clearTimeout(handle)
-  }, [value, searchParams, router, pathname])
+  }, [value, router, pathname])
 
   return (
-    <div className="relative w-full max-w-xs">
+    <div className="relative w-full sm:w-72 lg:w-80">
       <Search
         className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"

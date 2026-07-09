@@ -567,7 +567,7 @@ export default function TransactionTable() {
   }, [sp.toString(), offset])
 
   const { data, loading, error, refetch } = useTransactions(queryParams)
-  const { data: meta } = useMeta()
+  const { data: meta, refetch: refetchMeta } = useMeta()
 
   // client state
   const [selectedTxnId, setSelectedTxnId] = useState(null)
@@ -584,14 +584,14 @@ export default function TransactionTable() {
   const categoryOptions = STANDARD_CATEGORIES
 
   const serverRows = data?.rows ?? []
-  const rows = useMemo(
-    () => serverRows.map((row) => ({
+  const rows = useMemo(() => {
+    const mergedRows = serverRows.map((row) => ({
       ...row,
       ...(localUpdates.get(row.id) || {}),
       reviewed: reviewedIds.has(row.id) ? 1 : row.reviewed,
-    })),
-    [serverRows, localUpdates, reviewedIds],
-  )
+    }))
+    return view === "needs-review" ? mergedRows.filter((row) => !row.reviewed) : mergedRows
+  }, [serverRows, localUpdates, reviewedIds, view])
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
@@ -665,14 +665,23 @@ export default function TransactionTable() {
   const handleBatchDone = useCallback(() => {
     clearBatch()
     refetch()
-  }, [refetch])
+    refetchMeta()
+  }, [refetch, refetchMeta])
 
   // 單筆儲存後 optimistic 更新，不重抓整表，避免待審佇列跳動。
+  // 仿 handleGroupApply：儲存成功後推 toast 引導建立規則，讓下月自動套用。
+  // 種子用剛儲存的 row（已含修正後 category_primary / source_type 等）。
   const handleSaved = useCallback((row) => {
     patchLocalRow({ ...row, reviewed: 1 })
     markRowsReviewed([row.id])
     moveActive(1)
-  }, [markRowsReviewed, moveActive, patchLocalRow])
+    refetch()
+    refetchMeta()
+    const seed = { ...row, direction: Number(row.inflow) > 0 ? "in" : "out" }
+    toast("建立規則讓下月自動套用？", {
+      action: { label: "建立", onClick: () => openRuleDialog(seed) },
+    })
+  }, [markRowsReviewed, moveActive, openRuleDialog, patchLocalRow, refetch, refetchMeta])
 
   // 單筆「確認無誤」：標已審（reviewed=1）後保留在列表淡化，翻頁/重載才收斂。
   const reviewTxns = useReviewTxns()
@@ -682,11 +691,13 @@ export default function TransactionTable() {
         await reviewTxns([id])
         markRowsReviewed([id])
         moveActive(1)
+        refetch()
+        refetchMeta()
       } catch {
         // 失敗 toast 已由 useReviewTxns 處理
       }
     },
-    [markRowsReviewed, moveActive, reviewTxns],
+    [markRowsReviewed, moveActive, refetch, refetchMeta, reviewTxns],
   )
 
   const gotoPage = useCallback(
@@ -765,7 +776,10 @@ export default function TransactionTable() {
       await postJson("/api/transactions/batch", {
         corrections: ids.map((id) => ({ id, category_primary: category })),
       })
-      group.rows.forEach((row) => patchLocalRow({ ...row, category_primary: category, classification_source: "human" }))
+      group.rows.forEach((row) => patchLocalRow({ ...row, category_primary: category, classification_source: "human", reviewed: 1 }))
+      markRowsReviewed(ids)
+      refetch()
+      refetchMeta()
       toast.success(`已更新 ${ids.length} 筆`)
       const seed = { ...group.rows[0], category_primary: category, name: group.name, source_type: group.source_type, direction: "out" }
       toast("建立規則讓下月自動套用？", {
@@ -774,13 +788,15 @@ export default function TransactionTable() {
     } catch (err) {
       toast.error(err?.message || "群組更新失敗")
     }
-  }, [openRuleDialog, patchLocalRow])
+  }, [markRowsReviewed, openRuleDialog, patchLocalRow, refetch, refetchMeta])
 
   const handleGroupConfirm = useCallback(async (group) => {
     const ids = group.rows.map((row) => row.id)
     try {
       await reviewTxns(ids)
       markRowsReviewed(ids)
+      refetch()
+      refetchMeta()
       toast("建立規則讓下月自動套用？", {
         action: {
           label: "建立",
@@ -790,7 +806,7 @@ export default function TransactionTable() {
     } catch {
       // 失敗 toast 已由 hook 處理
     }
-  }, [markRowsReviewed, openRuleDialog, reviewTxns])
+  }, [markRowsReviewed, openRuleDialog, refetch, refetchMeta, reviewTxns])
 
   const rangeStart = total === 0 ? 0 : offset + 1
   const rangeEnd = Math.min(offset + rows.length, total)
@@ -973,6 +989,20 @@ export default function TransactionTable() {
                         <TableCell><CategoryBadge row={row} /></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {/* needs-review 視圖：未審列把「確認」放最左且改實心，
+                                讓連續審查時目光固定落在同一位置，不用每筆重新定位按鈕。 */}
+                            {view === "needs-review" && !reviewed ? (
+                              <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                className="shrink-0"
+                                aria-label={`確認 ${row.name} 分類無誤（快速鍵 c）`}
+                                onClick={() => handleConfirm(row.id)}
+                              >
+                                <CheckIcon /> 確認
+                              </Button>
+                            ) : null}
                             {row.ai_confidence != null && (
                               <span
                                 className={cn("size-2 rounded-full", row.ai_confidence >= 0.8 ? "bg-success" : row.ai_confidence >= 0.5 ? "bg-warning" : "bg-danger")}
@@ -983,7 +1013,7 @@ export default function TransactionTable() {
                             <SourceBadge row={row} />
                             {reviewed ? (
                               <Badge variant="secondary" className="font-normal">已審</Badge>
-                            ) : (
+                            ) : view !== "needs-review" ? (
                               <Button
                                 type="button"
                                 variant="outline"
@@ -993,7 +1023,7 @@ export default function TransactionTable() {
                               >
                                 <CheckIcon /> 確認
                               </Button>
-                            )}
+                            ) : null}
                             <Button
                               type="button"
                               variant={open ? "secondary" : "ghost"}
@@ -1078,7 +1108,7 @@ export default function TransactionTable() {
                     ) : (
                       <Button
                         type="button"
-                        variant="outline"
+                        variant={view === "needs-review" ? "default" : "outline"}
                         size="sm"
                         aria-label={`確認 ${row.name} 分類無誤`}
                         onClick={() => handleConfirm(row.id)}

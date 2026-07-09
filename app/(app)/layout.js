@@ -10,13 +10,20 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 
 import AppSidebar from "@/components/AppSidebar"
 import SearchInput from "@/components/SearchInput"
+import MonthSelector, { shouldShowMonthSelector } from "@/components/MonthSelector"
 import AIBanner from "@/components/AIBanner"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useMeta } from "@/lib/hooks"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// month 不影響渲染的 route（規則 / 修正紀錄是跨月累積資產，不必等補月）。
-const NO_MONTH_ROUTES = ["/rules", "/corrections"]
+const SECTION_TITLES = {
+  "/": "總覽",
+  "/transactions": "交易明細",
+  "/reports": "報表",
+  "/trend": "歷月走勢",
+  "/corrections": "修正紀錄",
+  "/rules": "分類規則",
+}
 
 // 從 useMeta 取最新月份（months.transaction 已由小到大排序）。
 function latestMonth(meta) {
@@ -33,26 +40,43 @@ function ShellContent({ children }) {
   const { data: meta } = useMeta()
 
   const month = searchParams.get("month") || ""
+  const monthRoute = shouldShowMonthSelector(pathname)
 
-  // 補月：URL 無 month 時補最新月（相對 query → 維持當前 route，只改 search params）。
+  // 期間預設：總覽看全部期間；交易明細預設最新月份；規則、修正紀錄、走勢不被月份鎖住。
   useEffect(() => {
+    if (!monthRoute) return
     if (month) return
     if (!meta) return
+    if (pathname === "/") {
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("month", "all")
+      router.replace(`?${params.toString()}`, { scroll: false })
+      return
+    }
     const lm = latestMonth(meta)
     if (!lm) return
     const params = new URLSearchParams(searchParams.toString())
     params.set("month", lm)
     router.replace(`?${params.toString()}`, { scroll: false })
-  }, [month, meta, searchParams, router])
+  }, [monthRoute, month, meta, searchParams, router])
 
   const lm = latestMonth(meta)
-  const noMonthNeeded = NO_MONTH_ROUTES.includes(pathname)
-  const isReady = noMonthNeeded || month !== "" || (meta && !lm)
+  const isReady = !monthRoute || month !== "" || (meta && !lm)
+  const sectionTitle = SECTION_TITLES[pathname] || "Finance Viewer"
 
   return (
     <AppSidebar>
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-        <SearchInput />
+      <header className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs text-muted-foreground">Finance Viewer</p>
+          <h1 className="truncate text-lg font-semibold tracking-tight">
+            {sectionTitle}
+          </h1>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
+          <MonthSelector />
+          <SearchInput />
+        </div>
       </header>
       <AIBanner />
       <main className="p-4">

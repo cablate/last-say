@@ -117,18 +117,25 @@ function maskedNumber(sourceType, rawInfo) {
   return rawMask ? rawMask[1] : null;
 }
 
-function buildKeys(row) {
+function buildKeys(row, occurrence = 1) {
   const sourceType = row['來源類型'] || '';
   const family = sourceFamily(sourceType);
   const date = row['日期'];
   const name = normalizeForDedupe(row['名稱']);
   const amount = toNumber(row['金額']) ?? 0;
-  const importMatchKey = hashKey([family, date, name, amount]);
+  const occurrenceSuffix = occurrence > 1 ? occurrence : null;
+  const importMatchKey = hashKey(
+    occurrenceSuffix ? [family, date, name, amount, occurrenceSuffix] : [family, date, name, amount]
+  );
 
   if (family === 'card') {
     return {
       importMatchKey,
-      dedupeKey: hashKey(['card', sourceType, date, name, amount])
+      dedupeKey: hashKey(
+        occurrenceSuffix
+          ? ['card', sourceType, date, name, amount, occurrenceSuffix]
+          : ['card', sourceType, date, name, amount]
+      )
     };
   }
 
@@ -139,6 +146,15 @@ function buildKeys(row) {
     importMatchKey,
     dedupeKey: hashKey(['bank', sourceType, date, name, amount, balance || order || rawInfo])
   };
+}
+
+function duplicateOccurrenceKey(row) {
+  const sourceType = row['來源類型'] || '';
+  if (sourceFamily(sourceType) !== 'card') return null;
+  const date = row['日期'];
+  const name = normalizeForDedupe(row['名稱']);
+  const amount = toNumber(row['金額']) ?? 0;
+  return ['card', sourceType, date, name, amount].join('|');
 }
 
 const palette = [
@@ -334,6 +350,7 @@ function main(opts = {}) {
   let insertedOrMatched = 0;
   let rulesApplied = 0;
   const importMatchCounts = new Map();
+  const duplicateOccurrenceCounts = new Map();
   const transactionIds = new Set();
 
   db.exec('BEGIN;');
@@ -341,7 +358,12 @@ function main(opts = {}) {
     for (const row of ledger) {
       const accountId = upsertAccount(db, row['來源類型'], row['原始交易資訊']);
       const source = upsertSource(db, row, sourcesByDescription);
-      const keys = buildKeys(row);
+      const occurrenceKey = duplicateOccurrenceKey(row);
+      const occurrence = occurrenceKey
+        ? (duplicateOccurrenceCounts.get(occurrenceKey) || 0) + 1
+        : 1;
+      if (occurrenceKey) duplicateOccurrenceCounts.set(occurrenceKey, occurrence);
+      const keys = buildKeys(row, occurrence);
       importMatchCounts.set(keys.importMatchKey, (importMatchCounts.get(keys.importMatchKey) || 0) + 1);
       const res = insertOrUpdateTransaction(db, row, accountId, source, keys);
       transactionIds.add(res.id);

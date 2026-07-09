@@ -131,9 +131,15 @@ export default function Overview() {
     [drill],
   )
 
-  const monthLabel = summary?.selectedMonth
-    ? formatMonth(summary.selectedMonth)
-    : "本月"
+  const isAllPeriod = searchParams.get("month") === "all"
+  const monthLabel = isAllPeriod
+    ? "全部期間"
+    : summary?.selectedMonth
+      ? formatMonth(summary.selectedMonth)
+      : "本月"
+  const statusLabel = isAllPeriod ? "整體審查狀態" : "月結狀態"
+  const completeLabel = isAllPeriod ? "全部期間已全數確認" : "本月已全數確認"
+  const classificationLabel = isAllPeriod ? "全部期間分類" : "本月分類"
 
   const netCash = Number(summary?.netCashMovement ?? 0)
   const netCashPositive = netCash > 0
@@ -197,13 +203,13 @@ export default function Overview() {
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
-          <CardDescription>{monthLabel} 月結狀態</CardDescription>
+          <CardDescription>{monthLabel} {statusLabel}</CardDescription>
           <CardTitle className="text-2xl">AI 已完成初步分類</CardTitle>
           <CardAction>
             {closingComplete ? (
               <Badge variant="secondary">
                 <CheckCircle2 className="h-3 w-3" />
-                本月已全數確認
+                {completeLabel}
               </Badge>
             ) : (
               <Badge variant="outline">{needsReviewCount} 筆待審</Badge>
@@ -234,7 +240,7 @@ export default function Overview() {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            本月分類：已確認{" "}
+            {classificationLabel}：已確認{" "}
             <span className="font-medium text-foreground">
               {reviewedPercent}%
             </span>{" "}
@@ -403,7 +409,7 @@ export default function Overview() {
                   <EmptyMedia variant="icon">
                     <Wallet />
                   </EmptyMedia>
-                  <EmptyTitle>本月無支出</EmptyTitle>
+                  <EmptyTitle>{isAllPeriod ? "目前無支出" : "本月無支出"}</EmptyTitle>
                   <EmptyDescription>
                     當前篩選條件下沒有可顯示的支出分類。
                   </EmptyDescription>
@@ -462,7 +468,7 @@ export default function Overview() {
                   </EmptyMedia>
                   <EmptyTitle>無收入紀錄</EmptyTitle>
                   <EmptyDescription>
-                    本月目前沒有流入項目。
+                    {isAllPeriod ? "目前沒有流入項目。" : "本月目前沒有流入項目。"}
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
