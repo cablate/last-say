@@ -30,6 +30,7 @@ Finance Viewer 是一個**本機財務資料伺服器**（SQLite + REST API + We
 - **審查為中心的工作流** — 低信心交易優先排序、每筆附 AI 判斷理由、鍵盤連續審查、同商家分組一次處理
 - **修正會複利** — 人工修正寫入 append-only 的 `correction_log`，AI 據此進化分類規則，自動化率逐月上升
 - **月結報告** — 已處理量／自動化率／待審數、本月 vs 常態、Top movers、固定支出底盤
+- **管理用損益表（Reports）** — 結構化 P&L report 已上線：收入／支出／排除三群、淨利、覆蓋率（coverage），AI 可建逐筆映射與規則把未對到的交易補進報表列
 - **100% 本機** — SQLite 在你電腦，金額欄位無任何寫入路徑，資料不離開
 
 <p align="center">
@@ -94,7 +95,7 @@ Next.js 15 · React 19 · shadcn/ui · Recharts · `node:sqlite`（Node ≥ 22.5
 
 ## Roadmap
 
-個人／事業維度 · AI 月度洞察報告 · 分類清單可配置化 · 銀行別帳單格式 adapter（歡迎以 PR 貢獻你的銀行格式經驗）
+個人／事業維度 · AI 月度洞察報告（在已上線的**結構化 P&L report** 之上，由外部 AI 生成自然語言洞察——閒置訂閱、佔比異動、可優化清單，read-only 不寫回 DB）· 分類清單可配置化 · 銀行別帳單格式 adapter（歡迎以 PR 貢獻你的銀行格式經驗）
 
 ## License
 

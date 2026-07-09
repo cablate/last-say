@@ -6,7 +6,7 @@
 
 ## 架構一句話
 
-外部 AI（讀帳單、分類、websearch、建規則）→ REST API → SQLite；人類在 Web UI 終審。工具只做 CRUD ＋ 匯入時機械式套用規則。關鍵路徑：`app/api/*`（route）→ `lib/queries/*`（SQL）→ `lib/db.js`（schema 單例）；`lib/constants.js` 前後端共用常數；`lib/normalize.js` 是規則比對鍵演算法。
+外部 AI（讀帳單、分類、websearch、建規則、報表映射）→ REST API → SQLite；人類在 Web UI 終審。工具只做 CRUD ＋ 匯入時機械式套用規則 ＋ 報表列映射。關鍵路徑：`app/api/*`（route）→ `lib/queries/*`（SQL）→ `lib/db.js`（schema 單例）；`lib/constants.js` 前後端共用常數；`lib/normalize.js` 是規則比對鍵演算法；報表映射另走 `lib/reporting/*`（report-lines 的 `REPORT_LINE_DEFINITIONS` 白名單 + coverage）+ `lib/queries/reports/*`（income-statement / mappings）+ `app/api/reports/*`（route）。
 
 ## 系統不變量（任何改動都必須保持）
 
@@ -36,7 +36,7 @@
 
 1. **文件宣稱 ≠ 現實**：任何「已完成／已移除／0 殘留」的說法，用 grep / `git status` / `git diff` 驗過再信。交接文件記的 bug 歸因，**先重現再修**——某層有 try/catch 不代表錯誤來自那層。
 2. **隱私紅線掃描**：真實財務資料會流經 `uploads/`、`data/`、`outputs/`（import 路徑白名單的三個目錄 = 高風險點）。改動任何資料流前，用 `git check-ignore` 確認落地路徑被 gitignore 覆蓋。
-3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / `prompts/playbook.md` / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ playbook。改完 grep 舊值歸零才算完成。
+3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / `prompts/playbook.md` / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ playbook。改 **report_line 白名單**（`lib/reporting/report-lines.js` 的 `REPORT_LINE_DEFINITIONS`）→ 同步 `prompts/playbook.md`（流程 C 的白名單表 + 附錄一）／ `components/reports/ReportsView`（UI 顯示）—— 這是另一個多點同步觸點，漏一處外部 AI 會拿著過期白名單打 `POST /api/reports/mappings` 被 400 擋。改完 grep 舊值歸零才算完成。
 4. **契約文件是介面**：`prompts/playbook.md` 是外部 AI 的操作契約——任何 API、資料模型、normalize 行為的改動，playbook 附錄必須同步，否則操作員 AI 會拿著過期契約打 API。
 
 ### 問題拆層（「分類分不準」類問題的固定解法）

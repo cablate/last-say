@@ -33,7 +33,8 @@
 
 ### A1. 讀懂帳單格式（非固定 Excel／CSV）
 - 掃前幾行找 header，辨識欄位：「消費日／交易日期」「交易說明／摘要」「金額／新臺幣金額」「卡號／來源」。
-- **國泰信用卡帳單常見特性**（誤判地雷）：
+- **國泰信用卡帳單常見特性**（誤判地雷）。
+  > 以下為國泰信用卡範例，僅示範帳單特性判讀；其他銀行依實際欄位調整，歡迎貢獻 `prompts/banks/<你的銀行>.md`。
   - 「交易說明」欄有長度限制 → 商家名會**截斷**（如 `漢堡大師(左營店` 括號沒閉合）。**這是原始資料，原樣保留**，不要自己補字。
   - `連加*` / `連支*` 開頭 = 國泰支付通路前綴（正常，保留，是穩定來源標記）。
   - 金額：**負數 = 繳款／退款**（inflow，歸「移轉不算 / 不列入」）；**正數 = 消費**（outflow）。
@@ -172,6 +173,72 @@
 
 ---
 
+## 流程 C：報表映射（管理用損益表）
+
+> **觸發**：使用者要「出月報／P&L／損益表」「看本月淨利」「這個月哪些沒對到報表列」。
+> 報表（`GET /api/reports/income-statement`）把每筆交易映射到一條 **report_line**（如 `expense:food`、`income:salary`），再依 `revenue / expense / excluded` 三群加總。映射來源優先序：逐筆 mapping > 規則 > built-in（category / 關鍵字）。沒對到的進 `review_items`。
+
+### C0. 先查現況
+`GET /api/reports/income-statement?month=2026-06` —— 看：
+- `total_revenue_cents / total_expense_cents / net_income_cents`：損益數字（cents，除 100 顯示）。
+- `review_items`：**沒對到 report_line 的交易**（前 25 筆）——這些是你的工作區。
+- `coverage`：覆蓋率、已審比例、basis / 期間等詮釋資料。
+
+### C1. 處理未映射交易（逐筆 mapping）
+`review_items` 裡每筆未映射的，判斷它該歸哪條 report_line（白名單見下表），打 `POST /api/reports/mappings`，body：
+```json
+{
+  "transaction_id": 123,
+  "report_line": "expense:food",
+  "confidence": 0.8,
+  "reason": "連鎖手搖飲，飲食（category 餐飲對不上 built-in 對照表，補 mapping）",
+  "note": "websearch 確認「五十嵐 左營店」"
+}
+```
+- `transaction_id`（必填，正整數）、`report_line`（必填，須在白名單）。
+- `mapping_source` 選填，預設 `ai`。
+- `confidence` 選填 0~1；`reason` / `note` 選填（note 會附加到 reason）。
+- 寫入為 **INSERT OR REPLACE**（同一 transaction_id 重寫即覆蓋）。回 `{ok, transaction_id, report_line}`。
+
+**report_line 白名單**（只能用這些，完整清單以 `lib/reporting/report-lines.js` 為準；改清單 = 多點同步，見 AGENTS.md）：
+
+| group | report_line | label |
+|---|---|---|
+| revenue | `income:salary` `income:business_revenue` `income:interest_income` `income:refunds_gains` `income:other_income` | 薪資 / 業務收入 / 利息 / 退款收益 / 其他 |
+| expense | `expense:food` `expense:daily_living` `expense:housing` `expense:transportation` `expense:shopping` `expense:leisure_entertainment` `expense:subscription_software` `expense:insurance` `expense:medical` `expense:education` `expense:fees_taxes` `expense:interest` `expense:business_operating` `expense:other_expense` | 飲食 / 日常 / 居住 / 交通 / 購物 / 休閒 / 訂閱軟體 / 保險 / 醫療 / 教育 / 手續稅費 / 利息支出 / 業務營運 / 其他 |
+| excluded | `excluded:internal_transfer` `excluded:credit_card_payment` `excluded:loan_principal` `excluded:investment_purchase` `excluded:owner_equity` | 內部轉帳 / 卡款 / 貸款本金 / 投資買入 / 業主提領 |
+
+> 不在表上的 report_line 會被 400 擋下（白名單校驗）。
+
+### C2. 建報表映射規則（給未來月份用）
+判斷後若某商家/來源會重複出現，建規則讓以後自動映射，打 `POST /api/reports/mapping-rules`，body：
+```json
+{
+  "match_key": "<GET /api/rules/normalize 算出>",
+  "source_type": "國泰信用卡 *XXXX",
+  "direction": "out",
+  "report_line": "expense:subscription_software",
+  "confidence": 0.85,
+  "reason": "Netflix 月費",
+  "note": "訂閱服務，歸訂閱與軟體"
+}
+```
+- `report_line`（必填，白名單）；比對條件 `match_key` / `source_type` / `direction` 至少填一個（`direction` 只允許 `in`/`out`）。
+- `confidence` 選填（預設 0）；`enabled` 選填（預設 true）；`reason` / `note` 選填（合併進 note 欄）。
+- 回 `{ok, id}`。規則套用發生在 `GET /api/reports/income-statement` 查詢當下（優先序低於逐筆 mapping，高於 built-in）。
+
+### C3. 標記已審（批次認可）
+人類認可規則自動套用的交易後，批次標 reviewed 區分「看過／沒看過」：
+`POST /api/transactions/review`，body `{ "ids": [1,2,3] }`（上限 500）。回 `{ok, updated}`。
+這是隱性正向信號，不影響分類，只降 `unreviewed_transaction_count`。
+
+### C4. 回報
+- 損益三數（淨利、總收入、總支出）。
+- 處理了幾筆未映射（建了幾條 mapping、幾條規則）、覆蓋率從 X→Y。
+- 回報前自查：每條 mapping / 規則都有 reason（覆蓋率 100%）。
+
+---
+
 ## 不變量（務必遵守）
 1. **金額不可改**（API 無此路徑）。只能改 `category / memo` 兩欄（owner 事業/個人、necessity 該不該花 是下階段）。
 2. **correction_log 只讀**（append-only，trigger 擋改）。
@@ -218,6 +285,10 @@ server：使用者已架設 `http://localhost:3127`（同源 `/api/*`）。先 `
 | PATCH | `/api/rules/:id` | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
 | DELETE | `/api/rules/:id` | 刪除規則（已套用的交易保留，僅斷連結） |
 | GET | `/api/rules/normalize?text=` | 正規化預覽（產規則前驗證 match_key） |
+| GET | `/api/reports/income-statement?month=&entity_id=&basis=&currency=` | 管理用損益表（回 `revenue`/`expenses`/`excluded` 各列、`total_revenue_cents`/`total_expense_cents`/`net_income_cents`、`coverage`、未映射的 `review_items`；basis=`card_accrual_management`\|`cash`，見流程 C） |
+| POST | `/api/reports/mappings` | 寫逐筆報表映射（body `{transaction_id, report_line, mapping_source?, confidence?, reason?, note?}`；report_line 白名單見流程 C） |
+| POST | `/api/reports/mapping-rules` | 建報表映射規則（body `{match_key?, source_type?, direction?, report_line, confidence?, reason?, note?, enabled?}`） |
+| POST | `/api/transactions/review` | 批次標 reviewed（body `{ids:[...]}`，上限 500；隱性正向信號，不影響分類） |
 
 ### 可編輯欄位白名單（PATCH / batch）
 
@@ -265,3 +336,13 @@ GET /api/breakdown?dimension=category&month=2026-06
 GET /api/trend
 → 整理成自然語言月報
 ```
+
+**管理用損益表（P&L）查詢範例**：
+```
+GET /api/reports/income-statement?month=2026-06&basis=card_accrual_management
+```
+- 回應含 `revenue` / `expenses` / `excluded` 各列、`net_income_cents`（= 總收入 − 總支出）、`coverage`（覆蓋率 / 已審比例 / 期間詮釋）、以及未映射的 `review_items`（前 25 筆，你的工作區）。
+- 處理 `review_items` 與建 mapping / 規則見**流程 C**。
+
+**`basis=card_accrual_management` 的信用卡繳款排除語意**：
+此預設 basis 採「刷卡沖銷管理」觀點——信用卡**繳款**（`excluded:credit_card_payment`）與帳戶間**內部轉帳**被歸到 `excluded` 群，**不進損益的支出**，避免「刷卡消費」與「繳卡款」重複計入支出。也就是：消費已在刷卡當下計入費用列，繳款只是帳戶間移轉，再計一次會虛增支出。若你要看「現金何時流出」改用 `basis=cash`。built-in 會依關鍵字（card payment / 信用卡繳款 / autopay card 等）自動排除，查不到時靠逐筆 mapping 或規則補。
