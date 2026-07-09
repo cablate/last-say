@@ -1,8 +1,7 @@
 # Finance Viewer 操作 Playbook（給 Claude / Codex）
 
 > **何時用**：使用者請你處理一張帳單（分類／匯入），或說「我改了一些分類，幫我更新規則」「規則不準，幫我調」。
-> **你的角色**：Finance Viewer（本機伺服器）的外部 AI 操作員。**工具本身只做 CRUD + 機械式規則套用；所有「讀格式、理解、分類、判斷」由你做。**
-> **port**：以實際 dev 啟動訊息印出的 port 為準（非寫死 3127——port 可能被佔而換到別的）。所有文件中 `http://localhost:3127` 僅為示意，實作時替換成當前實際 port。
+> **你的角色**：Finance Viewer（本機 `http://localhost:3127`）的外部 AI 操作員。**工具本身只做 CRUD + 機械式規則套用；所有「讀格式、理解、分類、判斷」由你做。**
 > 本檔自含**完整系統契約**（附錄一～三：API 表、資料模型、規則契約）＋ 操作 SOP。若你的任務是**修改這包程式碼**（開發／審查／規劃功能），改讀 `AGENTS.md`。
 
 ## 核心心智模型
@@ -29,18 +28,12 @@
 
 ### A0. 前置確認
 - `GET /api/health` — 確認 server + DB 連線。
-- `GET /api/meta` — 看現有月份、已用分類選項。回應結構：
-  - `standardCategories`：**標準 14 類白名單**（AI 分類須對齊此清單，只能選、不能造；與 A3 表格一致）。
-  - `filters.categories`：DB 實際出現過的 distinct category（現況，可能含偏離 14 類的舊值）。
-  - `filters.sources` / `filters.flows`：來源 / flow_type 的 distinct 值。
-  - `counts.needsReview`：待人類處理的筆數（**數字**，未審 + AI 沒把握：`reviewed=0 AND (ai_confidence<0.5 OR ai_confidence IS NULL OR classification_source='pending')`）。
-  - `months.transaction`：已有資料的月份清單。
+- `GET /api/meta` — 看現有月份、已用分類選項。
 - `GET /api/rules` — 拉既有規則（A2 要對照套用）。
 
 ### A1. 讀懂帳單格式（非固定 Excel／CSV）
 - 掃前幾行找 header，辨識欄位：「消費日／交易日期」「交易說明／摘要」「金額／新臺幣金額」「卡號／來源」。
-- **國泰信用卡帳單常見特性**（誤判地雷）。
-  > 以下為國泰信用卡範例，僅示範帳單特性判讀；其他銀行依實際欄位調整，歡迎貢獻 `prompts/banks/<你的銀行>.md`。
+- **國泰信用卡帳單常見特性**（誤判地雷）：
   - 「交易說明」欄有長度限制 → 商家名會**截斷**（如 `漢堡大師(左營店` 括號沒閉合）。**這是原始資料，原樣保留**，不要自己補字。
   - `連加*` / `連支*` 開頭 = 國泰支付通路前綴（正常，保留，是穩定來源標記）。
   - 金額：**負數 = 繳款／退款**（inflow，歸「移轉不算 / 不列入」）；**正數 = 消費**（outflow）。
@@ -57,7 +50,7 @@
 對沒被規則覆蓋的每筆：
 
 1. **分類**：
-   - `category`：用標準 14 類（見下方，只能選這些）。⚠ **工具不做 category 白名單硬校驗**——你傳任何字串都會被接受（建規則時非標準值會附 `warning` 但仍成功建立），但偏離 14 類會讓後續報表映射、統計彙總失效。**AI 須自行對齊 14 類**；14 類清單以 `GET /api/meta` 回應的 `standardCategories` 為準（與下方表格一致）。
+   - `category`：用標準 14 類（見下方，只能選這些）
    - `category_sub`：自由文字子類別，但先 `GET /api/meta` 看既有子類別，能複用就複用（「咖啡」不要又造「咖啡廳」「咖啡店」）。新商家型態才造新詞，2-4 字名詞。
 2. **信心度** 0~1：沒把握就給低（0.3~0.5），低信心會排到人類審查前面讓人複核。
 
@@ -111,6 +104,19 @@
 
 ※ 支出永遠不歸「其他收入與收益」。對不上就走第 5 步 + 低信心，讓人類審。
 
+#### flow_type 必須標對（非消費 vs 消費）——工具會自動排除出 Overview 消費統計
+**非消費 outflow**（錢沒有真的花掉，只是換形式/帳戶）必須標對應 flow_type，工具會自動排除出消費統計（與 reports excluded 同口徑，權威清單見 `lib/constants.js` `NON_SPEND_FLOW_TYPES`）：
+
+| 情境 | flow_type | 為什麼不算消費 |
+|---|---|---|
+| 信用卡繳款 / 帳戶移轉 / 儲值 | `信用卡繳款/移轉` | 錢只是從帳戶搬到卡/另一帳戶，對應 reports `excluded:credit_card_payment` / `excluded:internal_transfer` |
+| 貸款本金還款 | `貸款本金還款` | 還的是負債本金，非費用；對應 reports `excluded:loan_principal`（利息另計，走 `金融手續與稅費` + `expense:interest`） |
+| 投資買入（基金/ETF/股票） | `投資買入` | 換成資產，非費用；對應 reports `excluded:investment_purchase` |
+
+**消費**（錢真的花掉換到商品/服務）則標消費性 flow_type，例如 `信用卡消費`、`轉帳消費` 等——這些會**計入** Overview 消費統計。
+
+⚠ 標錯 flow_type 會直接汙染 Overview 消費數字：把非消費標成消費 → 數字虛高；把消費標成上述三個 → 數字虛低。category 歸對但 flow_type 標錯仍會出問題。
+
 ### A4. 建規則（第一環）
 - 把 A3 裡**有把握（信心 ≥ 0.6）**的每個 **distinct match_key**（distinct 商家），各建一條規則：
   `POST /api/rules`，body：
@@ -127,15 +133,13 @@
   ```
 - 這些規則給**未來月份**用。信心 < 0.6 的不建規則，留給人類審。
 - ⚠ **泛名／銀行操作不建規則**：「電子轉出」「轉帳」「繳費」「利息」「手續費」等**非商家描述**（match_key 無區別力，建規則會誤套到所有同名交易）。這類用 `flow_type`（移轉／繳款／非消費）區分，不靠商家規則；匯入時就標對 flow_type 排除出消費統計。
-- ⚠ **空 match_key 不可建規則**：normalize 結果若為**空字串**（如 `7-11`→`711` 再去數字後變空、純數字、純符號名稱），建規則會被系統 **400 拒絕**（空比對鍵無區別力）。這類商家改在 **CSV 匯入時直接分類**（ledger CSV 填好 category/信心度），不靠規則。產規則前用 `GET /api/rules/normalize?text=...` 先確認 match_key 非空。
 - 兩側各至少一項（至少一個條件 + 一個結果值），否則 POST 400。
 
 ### A5. 產 CSV 匯入
-產 ledger CSV，欄位順序（每筆一行，共 17 欄）：
+產 ledger CSV，欄位順序（每筆一行）：
 ```
 來源類型,來源說明,日期,月份,名稱,金額,流入,流出,帳戶餘額,帳戶原始排序,原始交易資訊,這筆是什麼,分類,子類別,信心度,判斷理由,備註
 ```
-**必填欄位（值不可為空 / undefined）**：`日期`、`月份`、`名稱`、`金額`。空字串可、`undefined`/缺欄不行。`來源類型`強烈建議填（規則比對與來源追溯都靠它）。
 - `日期` = `YYYY-MM-DD`、`月份` = `YYYY-MM`
 - `金額`：消費寫 `-金額`、流入=`金額`、流出=`0`；繳款反過來（流入=正、流出=0）
 - `分類` = category 主類別、`子類別` = 自由文字（如「便利商店」「餐飲」）、`信心度` = 你的信心
@@ -181,72 +185,6 @@
 
 ---
 
-## 流程 C：報表映射（管理用損益表）
-
-> **觸發**：使用者要「出月報／P&L／損益表」「看本月淨利」「這個月哪些沒對到報表列」。
-> 報表（`GET /api/reports/income-statement`）把每筆交易映射到一條 **report_line**（如 `expense:food`、`income:salary`），再依 `revenue / expense / excluded` 三群加總。映射來源優先序：逐筆 mapping > 規則 > built-in（category / 關鍵字）。沒對到的進 `review_items`。
-
-### C0. 先查現況
-`GET /api/reports/income-statement?month=2026-06` —— 看：
-- `total_revenue_cents / total_expense_cents / net_income_cents`：損益數字（cents，除 100 顯示）。
-- `review_items`：**沒對到 report_line 的交易**（前 25 筆）——這些是你的工作區。⚠ `review_items[].id` **即為 `POST /api/reports/mappings` 的 `transaction_id`**（同一個值，直接帶入，不必另查）。
-- `coverage`：覆蓋率、已審比例、basis / 期間等詮釋資料。
-
-### C1. 處理未映射交易（逐筆 mapping）
-`review_items` 裡每筆未映射的，判斷它該歸哪條 report_line（白名單見下表），打 `POST /api/reports/mappings`，body：
-```json
-{
-  "transaction_id": 123,
-  "report_line": "expense:food",
-  "confidence": 0.8,
-  "reason": "連鎖手搖飲，飲食（category 餐飲對不上 built-in 對照表，補 mapping）",
-  "note": "websearch 確認「五十嵐 左營店」"
-}
-```
-- `transaction_id`（必填，正整數；即 `review_items[].id`）、`report_line`（必填，須在白名單）。
-- `mapping_source` 選填，預設 `ai`。
-- `confidence` 選填 0~1；`reason` / `note` 選填（note 會附加到 reason）。
-- 寫入為 **INSERT OR REPLACE**（同一 transaction_id 重寫即覆蓋）。⚠ **重寫時欄位為合併語意**：未重新帶入的 `confidence` / `reason` / `note` 會**保留原值**（部分更新，非整筆替換）。若要清空某欄，需顯式帶空值。回 `{ok, transaction_id, report_line}`。
-
-**report_line 白名單**（只能用這些，完整清單以 `lib/reporting/report-lines.js` 為準；改清單 = 多點同步，見 AGENTS.md）：
-
-| group | report_line | label |
-|---|---|---|
-| revenue | `income:salary` `income:business_revenue` `income:interest_income` `income:refunds_gains` `income:other_income` | 薪資 / 業務收入 / 利息 / 退款收益 / 其他 |
-| expense | `expense:food` `expense:daily_living` `expense:housing` `expense:transportation` `expense:shopping` `expense:leisure_entertainment` `expense:subscription_software` `expense:insurance` `expense:medical` `expense:education` `expense:fees_taxes` `expense:interest` `expense:business_operating` `expense:other_expense` | 飲食 / 日常 / 居住 / 交通 / 購物 / 休閒 / 訂閱軟體 / 保險 / 醫療 / 教育 / 手續稅費 / 利息支出 / 業務營運 / 其他 |
-| excluded | `excluded:internal_transfer` `excluded:credit_card_payment` `excluded:loan_principal` `excluded:investment_purchase` `excluded:owner_equity` | 內部轉帳 / 卡款 / 貸款本金 / 投資買入 / 業主提領 |
-
-> 不在表上的 report_line 會被 400 擋下（白名單校驗）。
-
-### C2. 建報表映射規則（給未來月份用）
-判斷後若某商家/來源會重複出現，建規則讓以後自動映射，打 `POST /api/reports/mapping-rules`，body：
-```json
-{
-  "match_key": "<GET /api/rules/normalize 算出>",
-  "source_type": "國泰信用卡 *XXXX",
-  "direction": "out",
-  "report_line": "expense:subscription_software",
-  "confidence": 0.85,
-  "reason": "Netflix 月費",
-  "note": "訂閱服務，歸訂閱與軟體"
-}
-```
-- `report_line`（必填，白名單）；比對條件 `match_key` / `source_type` / `direction` 至少填一個（`direction` 只允許 `in`/`out`）。
-- `confidence` 選填（預設 0）；`enabled` 選填（預設 true）；`reason` / `note` 選填（合併進 note 欄）。
-- 回 `{ok, id}`。規則套用發生在 `GET /api/reports/income-statement` 查詢當下（優先序低於逐筆 mapping，高於 built-in）。
-
-### C3. 標記已審（批次認可）
-人類認可規則自動套用的交易後，批次標 reviewed 區分「看過／沒看過」：
-`POST /api/transactions/review`，body `{ "ids": [1,2,3] }`（上限 500）。回 `{ok, updated}`。
-這是隱性正向信號，不影響分類，只降 `unreviewed_transaction_count`。
-
-### C4. 回報
-- 損益三數（淨利、總收入、總支出）。
-- 處理了幾筆未映射（建了幾條 mapping、幾條規則）、覆蓋率從 X→Y。
-- 回報前自查：每條 mapping / 規則都有 reason（覆蓋率 100%）。
-
----
-
 ## 不變量（務必遵守）
 1. **金額不可改**（API 無此路徑）。只能改 `category / memo` 兩欄（owner 事業/個人、necessity 該不該花 是下階段）。
 2. **correction_log 只讀**（append-only，trigger 擋改）。
@@ -269,36 +207,30 @@
 
 ## 附錄一：API 契約
 
-server：使用者已架設本機伺服器（port 以 dev 啟動訊息為準，非寫死 3127；同源 `/api/*`）。先 `GET /api/health` 確認連線。所有 API 回 JSON，統一錯誤 `{error}` envelope。
+server：使用者已架設 `http://localhost:3127`（同源 `/api/*`）。先 `GET /api/health` 確認連線。所有 API 回 JSON，統一錯誤 `{error}` envelope。
 
-| Method | Route | Status | 用途 |
-|---|---|---|---|
-| GET | `/api/health` | 200 | 確認 server + DB（回 `{ok, transactions, corrections}`） |
-| GET | `/api/meta` | 200 | 篩選選項與詮釋資料：`standardCategories`（標準 14 類）、`filters`（sources/categories/flows 的 distinct 值）、`counts.needsReview`（待人類審核筆數，數字）、`months.transaction`（已有月份）。詳見 A0 |
-| GET | `/api/summary?month=&scope=&view=` | 200 | 月度摘要（各類支出、淨現金流、儲蓄率） |
-| GET | `/api/transactions?month=&scope=&category=&search=&sort=&limit=&offset=` | 200 | 交易列表（limit 上限 2000） |
-| GET | `/api/transactions/:id` | 200 | 單筆明細 |
-| PATCH | `/api/transactions/:id` | 200 | 單筆修正（body 見白名單） |
-| POST | `/api/transactions/batch` | 200 | 批次修正（body `{corrections:[{id, ...fields}]}`，上限 500） |
-| GET | `/api/corrections?field=&matchKey=&limit=` | 200 | 修正歷史明細 + summary（你的「學習資產」原料） |
-| GET | `/api/transactions?view=needs-review&sort=confidence&direction=asc` | 200 | 低信心／未審交易（你沒把握的，依信心升序） |
-| GET | `/api/spending?month=&category=&scope=` | 200 | 消費統計 |
-| GET | `/api/breakdown?dimension=&month=` | 200 | 分類 維度分布 |
-| GET | `/api/trend?scope=` | 200 | 月趨勢 |
-| GET | `/api/balance-history` | 200 | 歷月帳戶餘額 |
-| POST | `/api/import-ledger` | 200 | 匯入 CSV（body `{csvPath\|csvContent, sourcePath}`；csvPath 限 `uploads/`、`data/`、`outputs/` 子目錄） |
-| GET | `/api/rules?enabled=&maxConfidence=&origin=&q=` | 200 | 列分類規則（給 UI / 你檢視） |
-| POST | `/api/rules` | **201** | 新增規則（body 見 A4；匯入時自動套用）。回 `{ok, rule}`；若 `category_value` 非標準 14 類另附頂層 `warning`（仍成功建立，軟校驗不硬擋） |
-| GET | `/api/rules/:id` | 200 | 單筆規則 |
-| PATCH | `/api/rules/:id` | 200 | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
-| DELETE | `/api/rules/:id` | 200 | 刪除規則（已套用的交易保留，僅斷連結） |
-| GET | `/api/rules/normalize?text=` | 200 | 正規化預覽（產規則前驗證 match_key） |
-| GET | `/api/reports/income-statement?month=&entity_id=&basis=&currency=` | 200 | 管理用損益表（回 `revenue`/`expenses`/`excluded` 各列、`total_revenue_cents`/`total_expense_cents`/`net_income_cents`、`coverage`、未映射的 `review_items`；basis=`card_accrual_management`\|`cash`，見流程 C） |
-| POST | `/api/reports/mappings` | **201** | 寫逐筆報表映射（body `{transaction_id, report_line, mapping_source?, confidence?, reason?, note?}`；report_line 白名單見流程 C） |
-| POST | `/api/reports/mapping-rules` | **201** | 建報表映射規則（body `{match_key?, source_type?, direction?, report_line, confidence?, reason?, note?, enabled?}`） |
-| POST | `/api/transactions/review` | 200 | 批次標 reviewed（body `{ids:[...]}`，上限 500；隱性正向信號，不影響分類） |
-
-> **成功判斷**：用 `resp.ok`（2xx 即成功），**勿 hardcode `=== 200`**——`POST /api/rules`、`/api/reports/mappings`、`/api/reports/mapping-rules` 成功回 **201**，hardcode 200 會把這些新增誤判為失敗。錯誤回 4xx/5xx + `{error}`。
+| Method | Route | 用途 |
+|---|---|---|
+| GET | `/api/health` | 確認 server + DB（回 `{ok, transactions, corrections}`） |
+| GET | `/api/meta` | 月份 / 分類 等篩選選項（含 needsReview 待審計數） |
+| GET | `/api/summary?month=&scope=&view=` | 月度摘要（各類支出、淨現金流、儲蓄率） |
+| GET | `/api/transactions?month=&scope=&category=&search=&sort=&limit=&offset=` | 交易列表（limit 上限 2000） |
+| GET | `/api/transactions/:id` | 單筆明細 |
+| PATCH | `/api/transactions/:id` | 單筆修正（body 見白名單） |
+| POST | `/api/transactions/batch` | 批次修正（body `{corrections:[{id, ...fields}]}`，上限 500） |
+| GET | `/api/corrections?field=&matchKey=&limit=` | 修正歷史明細 + summary（你的「學習資產」原料） |
+| GET | `/api/transactions?view=needs-review&sort=confidence&direction=asc` | 低信心／未審交易（你沒把握的，依信心升序） |
+| GET | `/api/spending?month=&category=&scope=` | 消費統計 |
+| GET | `/api/breakdown?dimension=&month=` | 分類 維度分布 |
+| GET | `/api/trend?scope=` | 月趨勢 |
+| GET | `/api/balance-history` | 歷月帳戶餘額 |
+| POST | `/api/import-ledger` | 匯入 CSV（body `{csvPath\|csvContent, sourcePath}`；csvPath 限 `uploads/`、`data/`、`outputs/` 子目錄） |
+| GET | `/api/rules?enabled=&maxConfidence=&origin=&q=` | 列分類規則（給 UI / 你檢視） |
+| POST | `/api/rules` | 新增規則（body 見 A4；匯入時自動套用） |
+| GET | `/api/rules/:id` | 單筆規則 |
+| PATCH | `/api/rules/:id` | 更新規則（body 僅 `{enabled}` → 快速啟停；否則部分更新） |
+| DELETE | `/api/rules/:id` | 刪除規則（已套用的交易保留，僅斷連結） |
+| GET | `/api/rules/normalize?text=` | 正規化預覽（產規則前驗證 match_key） |
 
 ### 可編輯欄位白名單（PATCH / batch）
 
@@ -346,13 +278,3 @@ GET /api/breakdown?dimension=category&month=2026-06
 GET /api/trend
 → 整理成自然語言月報
 ```
-
-**管理用損益表（P&L）查詢範例**：
-```
-GET /api/reports/income-statement?month=2026-06&basis=card_accrual_management
-```
-- 回應含 `revenue` / `expenses` / `excluded` 各列、`net_income_cents`（= 總收入 − 總支出）、`coverage`（覆蓋率 / 已審比例 / 期間詮釋）、以及未映射的 `review_items`（前 25 筆，你的工作區）。
-- 處理 `review_items` 與建 mapping / 規則見**流程 C**。
-
-**`basis=card_accrual_management` 的信用卡繳款排除語意**：
-此預設 basis 採「刷卡沖銷管理」觀點——信用卡**繳款**（`excluded:credit_card_payment`）與帳戶間**內部轉帳**被歸到 `excluded` 群，**不進損益的支出**，避免「刷卡消費」與「繳卡款」重複計入支出。也就是：消費已在刷卡當下計入費用列，繳款只是帳戶間移轉，再計一次會虛增支出。若你要看「現金何時流出」改用 `basis=cash`。built-in 會依關鍵字（card payment / 信用卡繳款 / autopay card 等）自動排除，查不到時靠逐筆 mapping 或規則補。
