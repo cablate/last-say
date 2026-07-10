@@ -3,8 +3,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
 
 export const metadata = {
-  title: 'Finance Viewer',
-  description: '本機優先的財務資料審核、匯入與分類工作台。',
+  title: 'Last Say',
+  description: 'AI 先整理，最後由你決定的本機財務審查工作台。',
 };
 
 export default function RootLayout({ children }) {

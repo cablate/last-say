@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="./docs/brand/finance-viewer-banner.jpg" alt="Finance Viewer - AI-assisted local finance review">
+  <img src="./docs/brand/last-say-banner.jpg" alt="Last Say - AI-assisted local finance review">
 </p>
 
-<h1 align="center">Finance Viewer</h1>
+<h1 align="center">Last Say</h1>
 
 <p align="center">
-  <strong>AI 負責整理，人負責判斷，系統負責記住。</strong><br>
+  <strong>AI 先整理，最後由你決定。</strong><br>
   把銀行帳單變成可審查、可追溯、會累積經驗的本機財務工作流。
 </p>
 
 <p align="center">
-  <a href="https://github.com/cablate/finance-viewer/actions/workflows/ci.yml"><img src="https://github.com/cablate/finance-viewer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/cablate/last-say/actions/workflows/ci.yml"><img src="https://github.com/cablate/last-say/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/license-MIT-0f766e" alt="MIT License"></a>
   <img src="https://img.shields.io/badge/data-local--first-0891b2" alt="Local-first">
   <img src="https://img.shields.io/badge/AI-bring%20your%20own-f59e0b" alt="Bring your own AI">
@@ -30,15 +30,15 @@
 
 ---
 
-Finance Viewer 是一個 **local-first、human-in-the-loop 的財務審查工作台**。它不內建模型，而是讓你把 Claude Code、Codex 或其他 AI agent 帶進來：AI 讀帳單、補全商家、提出分類與信心度；你只審需要判斷的部分；Finance Viewer 則保存規則、修正與稽核軌跡，讓下一個月不用重頭再來。
+Last Say 是一個 **local-first、human-in-the-loop 的財務審查工作台**。它不內建模型，而是讓你把 Claude Code、Codex 或其他 AI agent 帶進來：AI 讀帳單、補全商家、提出分類與信心度；你只審需要判斷的部分；Last Say 則保存規則、修正與稽核軌跡，讓下一個月不用重頭再來。
 
-> A local-first finance review workspace where your AI prepares, you decide, and the system remembers.
+> Your AI prepares. You have the last say. The system remembers.
 
 ## 為什麼做這個
 
 試算表能存數字，但不會記得你為什麼這樣分類；一般 AI 對話能整理帳單，但下一次常常忘了；雲端記帳服務方便，卻要求你把最敏感的財務資料交出去。
 
-Finance Viewer 補的是中間那一層：
+Last Say 補的是中間那一層：
 
 - **資料留在本機**：SQLite、原始帳單與輸出都在你的電腦。
 - **AI 可替換**：不綁模型、不內建 API key，使用你已經信任的 agent。
@@ -53,14 +53,14 @@ Finance Viewer 補的是中間那一層：
 ```mermaid
 flowchart LR
     U["你的帳單"] --> A["外部 AI Agent\n解析、檢索、分類"]
-    A --> F["Finance Viewer\nAPI + SQLite"]
+    A --> F["Last Say\nAPI + SQLite"]
     F --> R["待審工作台"]
     R --> H["你確認或修正"]
     H --> L["修正紀錄與規則經驗"]
     L --> A
 ```
 
-1. AI 依專案內的 [Finance Viewer Skill](./.claude/skills/finance-viewer-ops/SKILL.md) 逐筆讀取帳單。
+1. AI 依專案內的 [Last Say Skill](./.claude/skills/last-say-ops/SKILL.md) 逐筆讀取帳單。
 2. 已知商家由規則處理；未知商家先查人工修正與相似案例，必要時才 web search。
 3. 每筆 AI 判斷都帶分類、信心度與人話理由；信心不足就留給你審。
 4. 你的修正寫入 append-only evidence；AI 在下次匯入前執行 Flow B，建立或修訂有依據的精確規則。
@@ -82,8 +82,8 @@ flowchart LR
 需要 [Node.js 22.5+](https://nodejs.org/) 與 Git。
 
 ```bash
-git clone https://github.com/cablate/finance-viewer.git
-cd finance-viewer
+git clone https://github.com/cablate/last-say.git
+cd last-say
 npm ci
 npm run seed:demo
 npm run dev
@@ -104,8 +104,8 @@ npx next dev -H 127.0.0.1 -p 3128
 啟動服務後，把下面這段交給你的 AI agent，並附上 CSV、PDF 或其他帳單檔案：
 
 ```text
-我已啟動 Finance Viewer（http://127.0.0.1:3127）。
-請只讀專案內 .claude/skills/finance-viewer-ops/SKILL.md 與它路由的 references，
+我已啟動 Last Say（http://127.0.0.1:3127）。
+請只讀專案內 .claude/skills/last-say-ops/SKILL.md 與它路由的 references，
 依 Flow A 處理這份帳單：<檔案路徑>。
 匯入一個月份後停止，回報資料品質與待審入口，不要自行繼續下個月。
 ```
@@ -131,8 +131,8 @@ npx next dev -H 127.0.0.1 -p 3128
 這個專案最需要的不是更多裝飾功能，而是真實使用情境：不同銀行格式、難判斷的商家、審查摩擦，以及規則長期使用後的偏差。
 
 - 覺得方向有用，請在 GitHub **Star**，讓更多需要 local-first 財務工具的人找到它。
-- 遇到錯誤或缺少銀行格式，請[建立 Issue](https://github.com/cablate/finance-viewer/issues/new/choose)。
-- 想討論使用流程、AI operator 或產品方向，請到 [Discussions](https://github.com/cablate/finance-viewer/discussions)。
+- 遇到錯誤或缺少銀行格式，請[建立 Issue](https://github.com/cablate/last-say/issues/new/choose)。
+- 想討論使用流程、AI operator 或產品方向，請到 [Discussions](https://github.com/cablate/last-say/discussions)。
 - 準備送 PR 前先讀 [CONTRIBUTING.md](./CONTRIBUTING.md)，切勿附上真實帳單或交易截圖。
 
 ## 開發與驗證

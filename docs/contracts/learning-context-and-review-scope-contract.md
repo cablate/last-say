@@ -8,7 +8,7 @@ change_context:
   type: feature
   reason: 外部 AI 必須在分類前取得過去修正與相似案例，且 UI 必須以目前月份顯示同一個待審數量。
   non_goals:
-    - 不在 Finance Viewer 伺服器內呼叫 LLM。
+    - 不在 Last Say 伺服器內呼叫 LLM。
     - 不改變既有 match_key 正規化演算法或規則命中語意。
     - 不自動把相似案例寫成規則或覆寫交易分類。
     - 不新增或遷移資料庫 schema。
@@ -27,7 +27,7 @@ change_context:
 - `GET /api/learning/context`
 - `GET /api/learning/context?name=&sourceType=&direction=&limit=`
 - `POST /api/learning/context` with `{ items: [...] }`
-- `.claude/skills/finance-viewer-ops/`
+- `.claude/skills/last-say-ops/`
 - `/transactions?month=YYYY-MM&view=needs-review`
 - `components/AIBanner.jsx`
 - `components/TransactionTable.jsx`
@@ -59,7 +59,7 @@ change_context:
 
 ## Invariants
 
-- Finance Viewer does not call an LLM.
+- Last Say does not call an LLM.
 - `correction_log` remains append-only.
 - `normalizeForRule` remains unchanged.
 - Similar historical cases never mutate transactions or rules.

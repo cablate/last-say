@@ -1,6 +1,6 @@
 # Lessons
 
-This file stores operating lessons for Finance Viewer AI runs. It should not contain private transaction details or merchant classification facts.
+This file stores operating lessons for Last Say AI runs. It should not contain private transaction details or merchant classification facts.
 
 ## Phase 3 Redo Lesson
 

@@ -194,7 +194,7 @@ function checkScreenshots() {
 }
 
 function main() {
-  console.log('Finance Viewer release verification');
+  console.log('Last Say release verification');
   console.log(`cwd=${ROOT}`);
   console.log(`demoDb=${DEMO_DB}`);
   console.log(`buildDb=${BUILD_DB}`);

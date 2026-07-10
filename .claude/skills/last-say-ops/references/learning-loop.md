@@ -1,6 +1,6 @@
 # Learning Loop
 
-Finance Viewer does not retrain an AI model. Durable AI-side learning is retrieval-augmented reasoning: persist human evidence in the database, retrieve it before classification, and make the external AI cite that evidence when it decides.
+Last Say does not retrain an AI model. Durable AI-side learning is retrieval-augmented reasoning: persist human evidence in the database, retrieve it before classification, and make the external AI cite that evidence when it decides.
 
 ## Evidence Retrieval Order
 

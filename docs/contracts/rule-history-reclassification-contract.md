@@ -32,7 +32,7 @@ change_context:
 - `lib/queries/rules.js`
 - `components/RulesManager.jsx`
 - `classification_rules`、`transactions`、`rule_change_log`
-- `.claude/skills/finance-viewer-ops/`
+- `.claude/skills/last-say-ops/`
 - `/transactions?view=needs-review` 與報表統計讀取端
 
 ## Inputs And State

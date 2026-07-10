@@ -1,15 +1,15 @@
 ---
-name: finance-viewer-ops
-description: "Operate Finance Viewer as the external AI: process bank statements, classify and import monthly ledgers, create or repair classification rules, use web search for ambiguous merchants, learn from correction_log, and report aggregate QA. Use for monthly statement imports, rule evolution, low-confidence review support, Phase 3-style validation, and Finance Viewer operations."
+name: last-say-ops
+description: "Operate Last Say as the external AI: process bank statements, classify and import monthly ledgers, create or repair classification rules, use web search for ambiguous merchants, learn from correction_log, and report aggregate QA. Use for monthly statement imports, rule evolution, low-confidence review support, Phase 3-style validation, and Last Say operations."
 ---
 
-# Finance Viewer Ops
+# Last Say Ops
 
-This directory is the complete operator contract. An AI must be able to operate Finance Viewer by reading this `SKILL.md` and the routed files under `references/`; do not require project files outside this skill for normal data operations.
+This directory is the complete operator contract. An AI must be able to operate Last Say by reading this `SKILL.md` and the routed files under `references/`; do not require project files outside this skill for normal data operations.
 
 ## Operating Model
 
-Finance Viewer is not an AI app. It stores data, exposes local REST APIs, and provides the review UI. The external AI operator reads statements, classifies rows, builds rules, imports ledgers, studies correction history, and reports QA.
+Last Say is not an AI app. It stores data, exposes local REST APIs, and provides the review UI. The external AI operator reads statements, classifies rows, builds rules, imports ledgers, studies correction history, and reports QA.
 
 Use the tool in two loops:
 
@@ -32,7 +32,7 @@ Before operating on statements or rules, read the required references below. `AG
 - Do not edit `correction_log`; treat it as append-only evidence.
 - Before changing classification semantics, disabling, or deleting a rule, read that rule's `linked_rows`, `unreviewed_rows`, and `reviewed_rows`; never bypass reclassification with direct DB edits.
 - After a rule mutation, verify the returned `impact` and re-read the rule plus needs-review queue. A 2xx response alone is not completion.
-- Do not store merchant dictionaries in this skill. Merchant facts belong in Finance Viewer rules and notes.
+- Do not store merchant dictionaries in this skill. Merchant facts belong in Last Say rules and notes.
 - Use aggregate DB/API checks for acceptance whenever possible.
 
 ## Reference Routing

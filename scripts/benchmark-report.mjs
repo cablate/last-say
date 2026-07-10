@@ -302,7 +302,7 @@ function fmtMs(ms) {
 
 // === 主流程 ===
 function main() {
-  console.log('=== Finance Viewer — Query Performance Benchmark ===\n');
+  console.log('=== Last Say — Query Performance Benchmark ===\n');
   console.log(`Target rows: ${TARGET_ROWS.toLocaleString()}`);
   console.log(`DB path:     ${BENCHMARK_DB_PATH}`);
   console.log(`Keep DB:     ${KEEP_DB}\n`);

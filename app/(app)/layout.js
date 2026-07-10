@@ -62,13 +62,13 @@ function ShellContent({ children }) {
 
   const lm = latestMonth(meta)
   const isReady = !monthRoute || month !== "" || (meta && !lm)
-  const sectionTitle = SECTION_TITLES[pathname] || "Finance Viewer"
+  const sectionTitle = SECTION_TITLES[pathname] || "Last Say"
 
   return (
     <AppSidebar>
       <header className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Finance Viewer</p>
+          <p className="text-xs text-muted-foreground">Last Say</p>
           <h1 className="truncate text-lg font-semibold tracking-tight">
             {sectionTitle}
           </h1>

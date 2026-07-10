@@ -1,6 +1,6 @@
 # Operator Contract
 
-Finance Viewer is a local database, REST API, and human review UI. It does not call an LLM. You are the external AI operator responsible for reading user files, reasoning, searching when needed, writing structured results, and leaving reviewable evidence.
+Last Say is a local database, REST API, and human review UI. It does not call an LLM. You are the external AI operator responsible for reading user files, reasoning, searching when needed, writing structured results, and leaving reviewable evidence.
 
 ## Before Writes
 

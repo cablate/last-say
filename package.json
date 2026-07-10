@@ -1,9 +1,24 @@
 {
-  "name": "finance-viewer",
-  "version": "0.2.0",
+  "name": "last-say",
+  "version": "0.2.1",
   "private": true,
-  "description": "Local-first finance viewer for bank statement import, review, and rule-based classification.",
+  "description": "Local-first, human-in-the-loop finance review where AI prepares and you have the last say.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cablate/last-say.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cablate/last-say/issues"
+  },
+  "homepage": "https://github.com/cablate/last-say#readme",
+  "keywords": [
+    "local-first",
+    "human-in-the-loop",
+    "personal-finance",
+    "ai-agent",
+    "sqlite"
+  ],
   "scripts": {
     "dev": "next dev -H 127.0.0.1 -p 3127",
     "build": "next build",

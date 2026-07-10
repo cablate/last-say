@@ -77,7 +77,7 @@ export default function AppSidebar({ children }) {
         <SidebarHeader>
           <div className="flex items-center gap-2 px-2 py-1.5">
             <PieChart className="size-5 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">Finance Viewer</span>
+            <span className="text-sm font-semibold">Last Say</span>
           </div>
         </SidebarHeader>
 
@@ -144,7 +144,7 @@ export default function AppSidebar({ children }) {
         {/* 行動頂部列：漢堡鈕開啟側欄 Sheet；桌面隱藏 */}
         <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
           <SidebarTrigger />
-          <span className="text-sm font-medium">Finance Viewer</span>
+          <span className="text-sm font-medium">Last Say</span>
         </div>
         {children}
       </SidebarInset>

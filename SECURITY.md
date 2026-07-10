@@ -1,12 +1,12 @@
 # Security Policy
 
-Finance Viewer 處理高度敏感的個人財務資料。安全問題請不要公開貼出可利用細節或真實資料。
+Last Say 處理高度敏感的個人財務資料。安全問題請不要公開貼出可利用細節或真實資料。
 
 ## 回報漏洞
 
 請使用 GitHub repository 的 **Security → Report a vulnerability** 建立 private security advisory：
 
-https://github.com/cablate/finance-viewer/security/advisories/new
+https://github.com/cablate/last-say/security/advisories/new
 
 請提供受影響版本、重現步驟、可能影響與不含個資的最小證據。確認前請勿公開揭露。
 

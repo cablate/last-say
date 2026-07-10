@@ -1,12 +1,12 @@
 # Accounting Reports Architecture Spec
 
 > Status: planning-only architecture spec.
-> This document defines how Finance Viewer can evolve from transaction review into
+> This document defines how Last Say can evolve from transaction review into
 > scoped management reporting. It does not implement schema, API routes, or UI.
 
 ## Stage 0 Intent
 
-Finance Viewer should stay a local-first finance data server where external AI
+Last Say should stay a local-first finance data server where external AI
 operators prepare data, humans review it, and the tool preserves durable state:
 rules, corrections, imports, and report mappings. The accounting-report work is
 not a rewrite and not a compliance accounting system. It is an additive path from
@@ -26,7 +26,7 @@ trusted workflow that can say:
 
 - The app remains a local SQLite + REST API + Web UI tool.
 - The server must not call an LLM. AI work remains external and follows the
-  self-contained Finance Viewer Skill under `.claude/skills/finance-viewer-ops/`.
+  self-contained Last Say Skill under `.claude/skills/last-say-ops/`.
 - Real financial data in `data/`, `uploads/`, and `outputs/` must not be
   committed, copied into public docs, or exposed in screenshots.
 - Existing transaction amount, date, source, and dedupe semantics must remain
@@ -47,7 +47,7 @@ uncommitted UI/import changes unrelated to this planning file.
 | Area | Current evidence | Planning implication |
 |---|---|---|
 | Developer rules | `AGENTS.md` defines the tool as CRUD/import/rule application only; external AI handles bill parsing, classification, websearch, and rule maintenance. | Accounting reports must not introduce server-side AI. |
-| External AI contract | `.claude/skills/finance-viewer-ops/` is self-contained and documents current API routes, ledger CSV schema, rule contract, and correction loop. | Any new operator fields or APIs require Skill reference updates in the same phase. |
+| External AI contract | `.claude/skills/last-say-ops/` is self-contained and documents current API routes, ledger CSV schema, rule contract, and correction loop. | Any new operator fields or APIs require Skill reference updates in the same phase. |
 | Runtime | `package.json` uses Next.js, React, `node:sqlite`, and `node --test`; `FINANCE_DB_PATH` can point tests at a non-real DB. | Tests and demos must use temp/demo DB paths, never `data/finance.sqlite`. |
 | Existing schema | `lib/db.js` creates `accounts`, `sources`, `classification_rules`, `transactions`, `transaction_sources`, `tags`, `transaction_tags`, and append-only `correction_log`. | New report tables should be additive; do not replace `transactions`. |
 | Existing migrations | `lib/db.js` runs an idempotent `migrateSchema(db)` (internal, not exported) with `ALTER TABLE` checks via `initializeDatabase`/`getDb`, but has no versioned migration ledger. | Multi-table accounting work needs a migration convention before schema growth. Do not call `migrateSchema` directly — it is not in `module.exports`; trigger it through `initializeDatabase`/`getDb`. |
@@ -448,7 +448,7 @@ Open implementation choice:
 
 ## External AI Contract Additions
 
-When implementation reaches report mapping and snapshots, the Finance Viewer
+When implementation reaches report mapping and snapshots, the Last Say
 Skill must be updated so an external AI operator can provide:
 
 - entity;
@@ -489,13 +489,13 @@ current bookkeeping product and the future accounting-report extension.
 
 The AI operator may use spreadsheet viewers, local file reads, and API calls to
 understand user-provided files. It must not create a blind parser that bypasses
-the judgment steps in the Finance Viewer Skill. Unknown bank formats require manual
+the judgment steps in the Last Say Skill. Unknown bank formats require manual
 format inspection before transformation.
 
 ### AI Operator Flow
 
 1. Preflight:
-   - Read `.claude/skills/finance-viewer-ops/SKILL.md` and its routed references.
+   - Read `.claude/skills/last-say-ops/SKILL.md` and its routed references.
    - Call `GET /api/health`, `GET /api/meta`, and `GET /api/rules`.
    - Confirm the target entity, period, and whether the files are official
      statements or provisional current transactions.
@@ -831,7 +831,7 @@ Files likely touched:
   report-mapping review affordances to existing transaction review
 - `components/Overview.jsx` only if adding report entrypoints or report coverage
   summary to the current overview
-- Finance Viewer Skill references if external AI is asked to create mappings
+- Last Say Skill references if external AI is asked to create mappings
 - `test/reporting-income-statement.test.js`
 
 Compatibility rules:
@@ -901,7 +901,7 @@ Files likely touched:
 - `components/reports/*`
 - account metadata review UI, either under Reports Review or a dedicated account
   settings surface
-- Finance Viewer Skill references for statement ending balances
+- Last Say Skill references for statement ending balances
 - `test/reporting-balance-sheet.test.js`
 
 Compatibility rules:
@@ -1211,7 +1211,7 @@ Execution risks:
 - Inferring balance sheet values from transaction rows will create false
   completeness.
 - Auto-matching transfers without human review can corrupt cash flow.
-- Adding report APIs without updating the Finance Viewer Skill will leave external
+- Adding report APIs without updating the Last Say Skill will leave external
   AI operators using stale contracts.
 
 Repo checks to rerun before each phase:
@@ -1219,7 +1219,7 @@ Repo checks to rerun before each phase:
 ```powershell
 git status --short
 rg -n "CREATE TABLE|ALTER TABLE|migrateSchema" lib/db.js
-rg -n "EDITABLE_FIELDS|STANDARD_CATEGORIES" lib/constants.js .claude/skills/finance-viewer-ops
+rg -n "EDITABLE_FIELDS|STANDARD_CATEGORIES" lib/constants.js .claude/skills/last-say-ops
 rg -n "summary|transactions|corrections|rules|balance-history" app/api lib/queries
 npm test
 npm run build

@@ -6,7 +6,7 @@
 
 ## Purpose
 
-Finance Viewer does not run server-side LLM calls. An external AI operator may
+Last Say does not run server-side LLM calls. An external AI operator may
 read user-provided files, reason about statements, use web search when needed,
 and write structured data through local APIs. The tool stores facts, review
 state, rules, mappings, snapshots, and correction evidence.

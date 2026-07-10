@@ -13,4 +13,4 @@
 - [ ] `npm run verify:release`
 - [ ] 沒有使用 `data/finance.sqlite` 做開發或測試
 - [ ] 沒有提交真實帳單、交易、卡號、餘額、截圖或 log
-- [ ] API／資料模型／AI operator 行為有變更時，已同步 Finance Viewer Skill
+- [ ] API／資料模型／AI operator 行為有變更時，已同步 Last Say Skill

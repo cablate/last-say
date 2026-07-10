@@ -1,6 +1,6 @@
 # Contributing
 
-感謝你想改善 Finance Viewer。這個專案優先處理能降低真實財務審查成本的改動：資料正確性、銀行格式、規則品質、待審效率、報表可信度與隱私安全。
+感謝你想改善 Last Say。這個專案優先處理能降低真實財務審查成本的改動：資料正確性、銀行格式、規則品質、待審效率、報表可信度與隱私安全。
 
 ## 開始前
 
@@ -43,6 +43,6 @@ npm run verify:release
 - 變更範圍與刻意不處理的項目。
 - 測試指令與實際結果。
 - UI 變更的 demo 資料截圖，桌面與手機至少各一張。
-- API、資料模型或 operator 行為改變時，同步 `.claude/skills/finance-viewer-ops/`。
+- API、資料模型或 operator 行為改變時，同步 `.claude/skills/last-say-ops/`。
 
 銀行格式貢獻請附去識別化 fixture、欄位／正負號說明與特殊列處理方式，不要只附解析程式。
