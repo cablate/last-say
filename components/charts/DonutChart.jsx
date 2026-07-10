@@ -61,7 +61,7 @@ export default function DonutChart({ data = [], ariaLabel = "分類圓餅圖" })
     <div role="figure" aria-label={ariaLabel}>
       <ChartContainer
         config={config}
-        className="mx-auto aspect-square max-h-[320px]"
+        className="mx-auto aspect-square min-h-[280px] w-full max-w-[320px]"
       >
         <PieChart>
           <ChartTooltip

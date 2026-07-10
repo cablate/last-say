@@ -214,6 +214,64 @@ function StatementRows({
   )
 }
 
+function MobileStatementSection({
+  title,
+  lines,
+  emptyLabel,
+  subtotalLabel,
+  total,
+  onLineClick,
+  defaultOpen = true,
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="border-t first:border-t-0">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex min-h-12 w-full items-center gap-2 py-3 text-left font-semibold active:scale-[0.99]"
+      >
+        {open ? (
+          <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        ) : (
+          <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        )}
+        <span>{title}</span>
+        <span className="ml-auto font-mono tabular-nums">{formatTWD(total)}</span>
+      </button>
+      {open ? (
+        <div className="pb-3">
+          {lines.length === 0 ? (
+            <p className="py-3 text-sm text-muted-foreground">{emptyLabel}</p>
+          ) : (
+            <ul className="divide-y">
+              {lines.map((line) => (
+                <li key={line.line} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{line.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {line.transaction_count} 筆 · {(line.mapping_sources || []).map(mappingSourceLabel).join("、")}
+                    </p>
+                  </div>
+                  <p className="font-mono font-medium tabular-nums">{formatTWD(line.amount_cents)}</p>
+                  <div className="col-span-2 -ml-3">
+                    <LineButton line={line} onLineClick={onLineClick} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-center justify-between border-t pt-3 text-sm font-medium">
+            <span>{subtotalLabel}</span>
+            <span className="font-mono tabular-nums">{formatTWD(total)}</span>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  )
+}
+
 const REVIEW_PREVIEW_COUNT = 5
 
 function ReviewItemsTable({ items }) {
@@ -311,7 +369,7 @@ export default function IncomeStatement({ report, onLineClick }) {
           </CardAction>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableCaption>
                 損益表以報表科目彙總收入、支出與不列入損益項目；點「查看」可回到交易明細。
@@ -354,6 +412,42 @@ export default function IncomeStatement({ report, onLineClick }) {
                 />
               </TableBody>
             </Table>
+          </div>
+          <div className="md:hidden">
+            <MobileStatementSection
+              title="收入"
+              lines={report.revenue || []}
+              emptyLabel="這個範圍沒有收入科目。"
+              subtotalLabel="收入小計"
+              total={report.total_revenue_cents}
+              onLineClick={onLineClick}
+            />
+            <MobileStatementSection
+              title="支出"
+              lines={report.expenses || []}
+              emptyLabel="這個範圍沒有支出科目。"
+              subtotalLabel="支出小計"
+              total={report.total_expense_cents}
+              onLineClick={onLineClick}
+            />
+            <div className="flex items-center justify-between border-y-2 py-3 font-semibold">
+              <span>本期淨損益</span>
+              <span className={cn(
+                "font-mono tabular-nums",
+                netIncome >= 0 ? "text-success" : "text-destructive",
+              )}>
+                {signedTWD(netIncome)}
+              </span>
+            </div>
+            <MobileStatementSection
+              title="不列入損益"
+              lines={report.excluded || []}
+              emptyLabel="這個範圍沒有需排除的轉帳、繳款、本金或資產移轉。"
+              subtotalLabel="不列入損益小計"
+              total={report.excluded_total_cents}
+              onLineClick={onLineClick}
+              defaultOpen={false}
+            />
           </div>
         </CardContent>
       </Card>

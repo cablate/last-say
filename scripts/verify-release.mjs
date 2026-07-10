@@ -90,7 +90,11 @@ function checkDemoMetrics() {
       SELECT COUNT(*) AS count
       FROM transactions
       WHERE reviewed = 0
-        AND (ai_confidence < 0.5 OR ai_confidence IS NULL OR classification_source = 'pending')
+        AND (
+          classification_source IS NULL
+          OR classification_source = 'pending'
+          OR (classification_source = 'ai' AND (ai_confidence < 0.5 OR ai_confidence IS NULL))
+        )
     `).count;
     const humanRules = getRow(db, `
       SELECT COUNT(*) AS count

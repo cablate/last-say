@@ -35,16 +35,16 @@ export async function PATCH(request, { params }) {
     } catch {
       return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
     }
-    let rule;
+    let mutation;
     const onlyEnabled =
       body && Object.prototype.hasOwnProperty.call(body, 'enabled') && Object.keys(body).length === 1;
     if (onlyEnabled) {
-      rule = setRuleEnabled(ruleId, body.enabled);
+      mutation = setRuleEnabled(ruleId, body.enabled);
     } else {
-      rule = updateRule(ruleId, body || {});
+      mutation = updateRule(ruleId, body || {});
     }
-    if (!rule) return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
-    return NextResponse.json({ ok: true, rule });
+    if (!mutation) return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
+    return NextResponse.json({ ok: true, ...mutation });
   } catch (err) {
     const msg = String((err && err.message) || err);
     const status = msg.includes('至少需') ? 400 : 500;
@@ -52,7 +52,7 @@ export async function PATCH(request, { params }) {
   }
 }
 
-// DELETE /api/rules/:id — 刪除規則。transactions.rule_id 因 ON DELETE SET NULL 自動清空。
+// DELETE /api/rules/:id — 刪除規則並重新校正目前仍由該規則負責的歷史交易。
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
@@ -60,9 +60,9 @@ export async function DELETE(request, { params }) {
     if (!Number.isFinite(ruleId)) {
       return NextResponse.json({ error: 'Invalid rule id' }, { status: 400 });
     }
-    const ok = deleteRule(ruleId);
-    if (!ok) return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
-    return NextResponse.json({ ok: true });
+    const mutation = deleteRule(ruleId);
+    if (!mutation) return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
+    return NextResponse.json({ ok: true, ...mutation });
   } catch (err) {
     return NextResponse.json(
       { error: safeErrorMessage(err) },

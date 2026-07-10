@@ -5,14 +5,7 @@ description: "Operate Finance Viewer as the external AI: process bank statements
 
 # Finance Viewer Ops
 
-This skill is the operator entrypoint for using Finance Viewer. Keep the source of truth in the project playbook:
-
-- Main contract and SOP: `prompts/playbook.md`
-- Flow A monthly import: `prompts/playbook.md` sections "流程 A" and "附錄一～三"
-- Flow B correction learning: `prompts/playbook.md` section "流程 B"
-- API/data/rule contract: `prompts/playbook.md` "關鍵 API 速查" and "附錄一～三"
-
-Do not duplicate API tables, category lists, ledger schemas, or workflow steps here. If the playbook and this skill disagree, follow `prompts/playbook.md` and then fix this skill.
+This directory is the complete operator contract. An AI must be able to operate Finance Viewer by reading this `SKILL.md` and the routed files under `references/`; do not require project files outside this skill for normal data operations.
 
 ## Operating Model
 
@@ -23,7 +16,7 @@ Use the tool in two loops:
 - Flow A: new monthly statement import.
 - Flow B: learn from user corrections in `correction_log`.
 
-Before operating on statements or rules, read the relevant playbook section. Do not use `AGENTS.md` for data operations; it is for code modification work.
+Before operating on statements or rules, read the required references below. `AGENTS.md` is only for code modification work and is not part of this operating contract.
 
 ## Hard Rules
 
@@ -33,7 +26,12 @@ Before operating on statements or rules, read the relevant playbook section. Do 
 - Every AI-classified transaction needs a non-empty human-readable `judgment_reason`.
 - Every created rule needs a non-empty `note`.
 - Do not create rules with `confidence < 0.6`.
+- Before web search or classifying an uncovered merchant, retrieve learning context from the API.
+- Never use unreviewed AI classifications as learning evidence.
+- Similarity is retrieval relevance, not classification confidence.
 - Do not edit `correction_log`; treat it as append-only evidence.
+- Before changing classification semantics, disabling, or deleting a rule, read that rule's `linked_rows`, `unreviewed_rows`, and `reviewed_rows`; never bypass reclassification with direct DB edits.
+- After a rule mutation, verify the returned `impact` and re-read the rule plus needs-review queue. A 2xx response alone is not completion.
 - Do not store merchant dictionaries in this skill. Merchant facts belong in Finance Viewer rules and notes.
 - Use aggregate DB/API checks for acceptance whenever possible.
 
@@ -43,11 +41,12 @@ Read only the files needed for the current task:
 
 - `references/bank-quirks.md`: bank statement format behavior that DB rules cannot learn.
 - `references/search-playbook.md`: web search tactics and confidence calibration support.
+- `references/learning-loop.md`: mandatory retrieval order, evidence weighting, alias rules, and Flow B closure.
 - `references/lessons.md`: operating failures, QA habits, and user reporting preferences.
-- `references/api-contract.md`: thin route to the playbook API contract.
-- `references/category-guide.md`: thin route to the playbook category and confidence rules.
-- `references/monthly-workflow.md`: thin route to Flow A and Flow B in the playbook.
-- `references/operator-contract.md`: thin route to the playbook role, privacy, and completion contract.
+- `references/api-contract.md`: local API routes, payloads, data invariants, and report write paths.
+- `references/category-guide.md`: complete category boundaries and confidence policy.
+- `references/monthly-workflow.md`: executable Flow A and Flow B checklists, ledger schema, and acceptance output.
+- `references/operator-contract.md`: role, privacy, source handling, and completion contract.
 
 ## Self-Update Protocol
 

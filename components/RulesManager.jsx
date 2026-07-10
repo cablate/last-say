@@ -9,7 +9,9 @@ import { useEffect, useMemo, useState } from "react"
 import {
   ListChecks, AlertTriangle, RefreshCw, Plus, Pencil, Trash2, Search, Sparkles,
 } from "lucide-react"
-import { useRules, useCreateRule, useUpdateRule, useDeleteRule } from "@/lib/hooks"
+import {
+  useRules, useCreateRule, useUpdateRule, useDeleteRule, useReclassifyRuleHistory,
+} from "@/lib/hooks"
 import { confidenceTier, LOW_CONFIDENCE_THRESHOLD, STANDARD_CATEGORIES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import ErrorBoundary from "@/components/ErrorBoundary"
@@ -117,6 +119,46 @@ function toForm(rule) {
   }
 }
 
+function normalizedFormSemantics(form) {
+  return {
+    match_key: form.match_key.trim() || null,
+    source_type: form.source_type.trim() || null,
+    direction: form.direction === "none" ? null : form.direction,
+    category_value: form.category_value.trim() || null,
+    enabled: form.enabled ? 1 : 0,
+  }
+}
+
+function changesClassificationSemantics(rule, form) {
+  if (!rule) return false
+  const next = normalizedFormSemantics(form)
+  return Object.entries(next).some(([field, value]) =>
+    String(rule[field] ?? "") !== String(value ?? ""),
+  )
+}
+
+function RuleImpactCounts({ rule, compact = false }) {
+  const linked = Number(rule?.linked_rows) || 0
+  const unreviewed = Number(rule?.unreviewed_rows) || 0
+  const reviewed = Number(rule?.reviewed_rows) || 0
+
+  if (compact) {
+    return (
+      <span className={cn("text-xs tabular-nums", linked > 0 ? "font-medium text-foreground" : "text-muted-foreground")}>
+        {linked > 0 ? `${linked} 筆連結中` : "無歷史連結"}
+      </span>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-3 gap-2 rounded-md border bg-muted/30 p-3 text-center text-xs tabular-nums">
+      <div><strong className="block text-base text-foreground">{linked}</strong><span className="text-muted-foreground">目前連結</span></div>
+      <div><strong className="block text-base text-foreground">{unreviewed}</strong><span className="text-muted-foreground">未確認</span></div>
+      <div><strong className="block text-base text-foreground">{reviewed}</strong><span className="text-muted-foreground">已確認</span></div>
+    </div>
+  )
+}
+
 function CategoryPicker({ id, value, onValueChange }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
@@ -142,6 +184,9 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
   const nonStandardCategory = form.category_value && !STANDARD_CATEGORIES.includes(form.category_value)
+  const willReclassifyHistory = Boolean(
+    initial && Number(initial.linked_rows) > 0 && changesClassificationSemantics(initial, form),
+  )
 
   async function normalizeRawName() {
     const text = form.raw_name.trim()
@@ -174,12 +219,12 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => !saving && onOpenChange(nextOpen)}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{initial ? "編輯規則" : "新增規則"}</DialogTitle>
           <DialogDescription>
-            條件與結果均為選填，但兩側各至少需一項。條件留空 = 不限；結果留空 = 不動該欄。
+            至少設定一個比對條件，並選擇要套用的標準分類。附註需說明規則依據。
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -194,7 +239,7 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
                 <Label htmlFor="f-raw-name" className="text-xs">由原始名稱計算</Label>
                 <div className="flex gap-2">
                   <Input id="f-raw-name" value={form.raw_name} onChange={(e) => set("raw_name", e.target.value)} placeholder="貼上原始交易名稱" />
-                  <Button type="button" variant="outline" onClick={normalizeRawName}>計算</Button>
+                  <Button type="button" variant="outline" onClick={normalizeRawName} disabled={saving}>計算</Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -252,9 +297,22 @@ function RuleDialog({ open, onOpenChange, initial, onSave }) {
             <Textarea id="f-note" value={form.note} onChange={(e) => set("note", e.target.value)} rows={2} required />
           </div>
 
+          {willReclassifyHistory && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>這次修改會重新校正歷史交易</AlertTitle>
+              <AlertDescription className="space-y-2">
+                <p>未確認交易會重新比對全部啟用規則；找不到替代規則的交易會送回待審。已確認分類不會被覆寫。</p>
+                <RuleImpactCounts rule={initial} />
+              </AlertDescription>
+            </Alert>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
-            <Button type="submit" disabled={saving || !form.note.trim() || nonStandardCategory}>{saving ? "儲存中…" : "儲存"}</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>取消</Button>
+            <Button type="submit" disabled={saving || !form.note.trim() || nonStandardCategory}>
+              {saving ? "儲存中…" : willReclassifyHistory ? "儲存並重新校正" : "儲存"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -283,7 +341,8 @@ export default function RulesManager() {
   const [filter, setFilter] = useState({ lowOnly: false, enabled: "all", q: "" })
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [deleting, setDeleting] = useState(null)
+  const [confirmation, setConfirmation] = useState(null)
+  const [mutatingRuleId, setMutatingRuleId] = useState(null)
 
   const params = useMemo(() => {
     const sp = new URLSearchParams()
@@ -297,6 +356,7 @@ export default function RulesManager() {
   const createRule = useCreateRule()
   const updateRule = useUpdateRule()
   const deleteRule = useDeleteRule()
+  const reclassifyRuleHistory = useReclassifyRuleHistory()
 
   const rules = data?.rules || []
   const lowCount = rules.filter((r) => r.confidence < LOW_CONFIDENCE_THRESHOLD).length
@@ -311,16 +371,55 @@ export default function RulesManager() {
   }
 
   async function handleToggle(rule) {
-    await updateRule(rule.id, { enabled: rule.enabled === 1 ? false : true })
-    refetch()
+    if (rule.enabled === 1) {
+      setConfirmation({ action: "disable", rule })
+      return
+    }
+    setMutatingRuleId(rule.id)
+    try {
+      await updateRule(rule.id, { enabled: true })
+      refetch()
+    } finally {
+      setMutatingRuleId(null)
+    }
   }
 
-  async function confirmDelete() {
-    if (!deleting) return
-    await deleteRule(deleting.id)
-    setDeleting(null)
-    refetch()
+  async function confirmRuleAction() {
+    if (!confirmation) return
+    const { action, rule } = confirmation
+    setMutatingRuleId(rule.id)
+    try {
+      if (action === "disable") await updateRule(rule.id, { enabled: false })
+      if (action === "delete") await deleteRule(rule.id)
+      if (action === "reclassify") await reclassifyRuleHistory(rule.id)
+      setConfirmation(null)
+      refetch()
+    } finally {
+      setMutatingRuleId(null)
+    }
   }
+
+  const confirmationRule = confirmation?.rule
+  const confirmationCopy = confirmation?.action === "disable"
+    ? {
+        title: "停用規則並重新校正？",
+        description: "未確認交易會重新比對其他啟用規則；找不到替代規則的會送回待審。已確認分類會保留並轉成人工權威。",
+        label: "停用並重新校正",
+        destructive: false,
+      }
+    : confirmation?.action === "reclassify"
+      ? {
+          title: "校正舊資料？",
+          description: "規則會保持停用。仍連結此規則的舊交易會重新比對其他啟用規則，或送回待審。",
+          label: "校正舊資料",
+          destructive: false,
+        }
+      : {
+          title: "刪除規則並重新校正？",
+          description: "規則會永久移除。未確認交易會改套其他啟用規則或送回待審；已確認分類不會被覆寫。",
+          label: "刪除並重新校正",
+          destructive: true,
+        }
 
   return (
     <ErrorBoundary>
@@ -389,7 +488,7 @@ export default function RulesManager() {
               <EmptyDescription>
                 {filter.q || filter.enabled !== "all" || filter.lowOnly
                   ? "調整篩選條件試試。"
-                  : "AI 分析帳單後會透過 API 寫入規則（見 prompts/playbook.md）；或按「新增規則」手動建立。"}
+                  : "AI 分析帳單並檢索既有經驗後，會透過 API 寫入規則；也可按「新增規則」手動建立。"}
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -404,6 +503,7 @@ export default function RulesManager() {
                     <TableHead>分類結果</TableHead>
                     <TableHead className="text-right">信心</TableHead>
                     <TableHead className="text-right">套用 / 準確率</TableHead>
+                    <TableHead className="text-right">歷史影響</TableHead>
                     <TableHead>來源</TableHead>
                     <TableHead className="text-right">操作</TableHead>
                   </TableRow>
@@ -420,16 +520,28 @@ export default function RulesManager() {
                       <TableCell><ResultBadges rule={rule} /></TableCell>
                       <TableCell className="text-right"><Confidence value={rule.confidence} /></TableCell>
                       <TableCell className="text-right"><Accuracy rule={rule} className="tabular-nums text-xs" /></TableCell>
+                      <TableCell className="text-right"><RuleImpactCounts rule={rule} compact /></TableCell>
                       <TableCell><Badge variant="secondary" className="font-normal">{ORIGIN_LABEL[rule.origin] || rule.origin}</Badge></TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleToggle(rule)}>
-                            {rule.enabled === 1 ? "停用" : "啟用"}
+                        <div className="flex flex-wrap justify-end gap-1">
+                          {rule.enabled === 0 && Number(rule.linked_rows) > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => setConfirmation({ action: "reclassify", rule })}
+                              disabled={mutatingRuleId !== null}
+                            >
+                              <RefreshCw className="mr-1 h-3.5 w-3.5" />校正舊資料
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleToggle(rule)} disabled={mutatingRuleId !== null}>
+                            {mutatingRuleId === rule.id ? "處理中…" : rule.enabled === 1 ? "停用" : "啟用"}
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(rule)} aria-label="編輯">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(rule)} aria-label="編輯" disabled={mutatingRuleId !== null}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleting(rule)} aria-label="刪除">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setConfirmation({ action: "delete", rule })} aria-label="刪除" disabled={mutatingRuleId !== null}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -452,14 +564,20 @@ export default function RulesManager() {
                         <Confidence value={rule.confidence} />
                         <Badge variant="secondary" className="font-normal">{ORIGIN_LABEL[rule.origin] || rule.origin}</Badge>
                         <Accuracy rule={rule} className="text-xs" />
+                        <RuleImpactCounts rule={rule} compact />
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col gap-1">
-                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => handleToggle(rule)}>
-                        {rule.enabled === 1 ? "停用" : "啟用"}
+                      {rule.enabled === 0 && Number(rule.linked_rows) > 0 && (
+                        <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setConfirmation({ action: "reclassify", rule })} disabled={mutatingRuleId !== null}>
+                          <RefreshCw className="mr-1 h-3.5 w-3.5" />校正舊資料
+                        </Button>
+                      )}
+                      <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => handleToggle(rule)} disabled={mutatingRuleId !== null}>
+                        {mutatingRuleId === rule.id ? "處理中…" : rule.enabled === 1 ? "停用" : "啟用"}
                       </Button>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEdit(rule)}>編輯</Button>
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive" onClick={() => setDeleting(rule)}>刪除</Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={() => openEdit(rule)} disabled={mutatingRuleId !== null}>編輯</Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-destructive" onClick={() => setConfirmation({ action: "delete", rule })} disabled={mutatingRuleId !== null}>刪除</Button>
                     </div>
                   </div>
                 </div>
@@ -470,28 +588,31 @@ export default function RulesManager() {
 
         <RuleDialog open={dialogOpen} onOpenChange={setDialogOpen} initial={editing} onSave={handleSave} />
 
-        <Dialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <Dialog open={!!confirmation} onOpenChange={(open) => !open && mutatingRuleId === null && setConfirmation(null)}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>刪除規則？</DialogTitle>
-              <DialogDescription>
-                規則將從表中移除；已套用該規則的交易會保留（rule_id 自動清空，分類值不變）。
-              </DialogDescription>
+              <DialogTitle>{confirmationCopy.title}</DialogTitle>
+              <DialogDescription>{confirmationCopy.description}</DialogDescription>
             </DialogHeader>
-            {deleting && (
-              <div className="space-y-1 rounded-md bg-muted/50 p-3 text-sm">
-                <div><span className="text-muted-foreground">比對鍵：</span>{deleting.match_key || "（不限名稱）"}</div>
-                {(deleting.source_type || deleting.direction) && (
+            {confirmationRule && (
+              <div className="space-y-3">
+                <div className="space-y-1 rounded-md bg-muted/50 p-3 text-sm">
+                <div><span className="text-muted-foreground">比對鍵：</span>{confirmationRule.match_key || "（不限名稱）"}</div>
+                {(confirmationRule.source_type || confirmationRule.direction) && (
                   <div className="text-xs text-muted-foreground">
-                    {deleting.source_type}{deleting.direction ? ` · ${DIRECTION_LABEL[deleting.direction]}` : ""}
+                    {confirmationRule.source_type}{confirmationRule.direction ? ` · ${DIRECTION_LABEL[confirmationRule.direction]}` : ""}
                   </div>
                 )}
-                <div><span className="text-muted-foreground">樣本數：</span>{deleting.sample_count}</div>
+                <div><span className="text-muted-foreground">分類：</span>{confirmationRule.category_value}</div>
+                </div>
+                <RuleImpactCounts rule={confirmationRule} />
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeleting(null)}>取消</Button>
-              <Button variant="destructive" onClick={confirmDelete}>刪除</Button>
+              <Button variant="outline" onClick={() => setConfirmation(null)} disabled={mutatingRuleId !== null}>取消</Button>
+              <Button variant={confirmationCopy.destructive ? "destructive" : "default"} onClick={confirmRuleAction} disabled={mutatingRuleId !== null}>
+                {mutatingRuleId !== null ? "處理中…" : confirmationCopy.label}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

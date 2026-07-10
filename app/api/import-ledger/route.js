@@ -88,7 +88,7 @@ export async function POST(request) {
       return NextResponse.json(
         {
           error:
-            'CSV 某欄缺值或格式不符——每欄都必須有值（空字串可、undefined 不行）；欄位順序與必填性見 prompts/playbook.md A5'
+            'CSV 某欄缺值或格式不符——每欄都必須有值（空字串可、undefined 不行）；欄位順序與必填性見 Finance Viewer Skill 的 references/monthly-workflow.md'
         },
         { status: 400 }
       );

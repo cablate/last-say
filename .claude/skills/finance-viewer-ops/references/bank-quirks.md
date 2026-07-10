@@ -8,7 +8,7 @@ This file records statement-format behavior that the database cannot learn. Keep
 - Preserve original statement row order while preparing a ledger. Order helps audit whether rows were skipped or duplicated.
 - Truncated merchant names are common. Treat them as incomplete evidence, not as final merchant facts.
 - Names containing `*`, mixed English, or shortened descriptors often need normalization through `GET /api/rules/normalize?text=...` before rule matching.
-- Negative values and payment rows must be interpreted through the playbook's inflow/outflow rules, not by category intuition alone.
+- Negative values and payment rows must be interpreted from the source contract and `operator-contract.md`, not by category intuition alone.
 - Fees, rebates, payments, and transfers should be checked against `flow_type` and direction before creating category rules.
 
 ## General Rules

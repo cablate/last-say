@@ -203,7 +203,7 @@ function StatementReadinessTable({ icon: Icon, title, description, caption, rows
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto md:block">
           <Table>
             <TableCaption>{caption}</TableCaption>
             <TableHeader>
@@ -230,6 +230,29 @@ function StatementReadinessTable({ icon: Icon, title, description, caption, rows
             </TableBody>
           </Table>
         </div>
+        <ul className="divide-y md:hidden">
+          {rows.map((row) => (
+            <li key={`${row.group}:${row.item}`} className="space-y-2 py-4 first:pt-0 last:pb-0">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-muted-foreground">{row.group}</p>
+                  <p className="font-medium">{row.item}</p>
+                </div>
+                {statusBadge(row.status)}
+              </div>
+              <dl className="grid gap-2 text-sm">
+                <div>
+                  <dt className="text-xs text-muted-foreground">現有依據</dt>
+                  <dd>{row.currentBasis}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">還缺什麼</dt>
+                  <dd>{row.gap}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
       </CardContent>
     </Card>
   )

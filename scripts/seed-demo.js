@@ -409,7 +409,11 @@ const summary = db.prepare(`
   SELECT statement_month AS month,
          COUNT(*) AS total,
          SUM(CASE WHEN classification_source = 'rule' THEN 1 ELSE 0 END) AS rule_count,
-         SUM(CASE WHEN reviewed = 0 AND (ai_confidence < 0.5 OR ai_confidence IS NULL OR classification_source = 'pending') THEN 1 ELSE 0 END) AS needs_review
+         SUM(CASE WHEN reviewed = 0 AND (
+           classification_source IS NULL
+           OR classification_source = 'pending'
+           OR (classification_source = 'ai' AND (ai_confidence < 0.5 OR ai_confidence IS NULL))
+         ) THEN 1 ELSE 0 END) AS needs_review
   FROM transactions
   GROUP BY statement_month
   ORDER BY statement_month

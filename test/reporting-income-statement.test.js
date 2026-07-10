@@ -193,6 +193,57 @@ test('unmapped or unreviewed rows make the P&L partial without hiding computed t
   assert.equal(report.coverage.blockers.length, 2);
 });
 
+test('ordinary report rules cannot turn deterministic card-payment exclusions into expenses', () => {
+  const report = runFixture([
+    {
+      name: '本行自動扣繳',
+      flow_type: '信用卡繳款/移轉',
+      amount: -3913200,
+      inflow: 3913200,
+      outflow: 0,
+      category_primary: '轉帳/內部移轉',
+      reviewed: 0,
+      ai_confidence: 0.95,
+    },
+  ], 'month=2026-06', `
+    INSERT INTO report_mapping_rules (
+      match_key, report_line, confidence, origin, note
+    ) VALUES (
+      '本行自動扣繳', 'expense:education', 0.9, 'ai_analysis', 'rule test'
+    );
+  `);
+
+  assert.equal(report.total_expense_cents, 0);
+  assert.equal(report.unreviewed_transaction_count, 0);
+  assert.equal(findLine(report.expenses, 'expense:education'), undefined);
+  assert.equal(findLine(report.excluded, 'excluded:internal_transfer').amount_cents, 3913200);
+});
+
+test('report review coverage matches the low-confidence transaction review queue', () => {
+  const report = runFixture([
+    {
+      name: 'High-confidence known expense',
+      amount: -12000,
+      outflow: 12000,
+      category_primary: 'Food',
+      reviewed: 0,
+      ai_confidence: 0.72,
+    },
+    {
+      name: 'Low-confidence known expense',
+      amount: -34000,
+      outflow: 34000,
+      category_primary: 'Food',
+      reviewed: 0,
+      ai_confidence: 0.35,
+    },
+  ]);
+
+  assert.equal(report.unreviewed_transaction_count, 1);
+  assert.equal(report.coverage.blockers.length, 1);
+  assert.equal(report.coverage.blockers[0].kind, 'unreviewed_transaction');
+});
+
 // R2(b)：reviewItem 回傳 transaction_id（值 = id），讓 AI POST review 時可直接取用。
 test('review_items expose transaction_id equal to id for AI to POST (R2b)', () => {
   const report = runFixture([

@@ -1,12 +1,12 @@
 # AGENTS.md — 給 AI 編程助手的開發規則（Codex / Claude Code）
 
 > Finance Viewer 是**使用者本機架設的財務資料伺服器**（SQLite + REST API + Web UI）。
-> **這個工具本身不做 AI。** 帳單處理、分類、規則維護由外部 AI 依 `prompts/playbook.md` 操作（該檔自含完整 API 契約與 SOP）。
-> **本檔給「修改這包程式碼」的 AI 遵守。** 如果你的任務是處理帳單／操作資料 → 改讀 `prompts/playbook.md`，不是這裡。
+> **這個工具本身不做 AI。** 帳單處理、分類、規則維護由外部 AI 依 `.claude/skills/finance-viewer-ops/SKILL.md` 操作（該 Skill 目錄自含完整 API 契約與 SOP）。
+> **本檔給「修改這包程式碼」的 AI 遵守。** 如果你的任務是處理帳單／操作資料 → 改讀 Finance Viewer Skill，不是這裡。`prompts/playbook.md` 只保留為舊入口轉址。
 
 ## 架構一句話
 
-外部 AI（讀帳單、分類、websearch、建規則、報表映射）→ REST API → SQLite；人類在 Web UI 終審。工具只做 CRUD ＋ 匯入時機械式套用規則 ＋ 報表列映射。關鍵路徑：`app/api/*`（route）→ `lib/queries/*`（SQL）→ `lib/db.js`（schema 單例）；`lib/constants.js` 前後端共用常數；`lib/normalize.js` 是規則比對鍵演算法；報表映射另走 `lib/reporting/*`（report-lines 的 `REPORT_LINE_DEFINITIONS` 白名單 + coverage）+ `lib/queries/reports/*`（income-statement / mappings）+ `app/api/reports/*`（route）。
+外部 AI（讀帳單、檢索歷史證據、分類、websearch、建規則、報表映射）→ REST API → SQLite；人類在 Web UI 終審。工具只做 CRUD ＋ 唯讀經驗檢索 ＋ 匯入時機械式套用規則 ＋ 報表列映射。關鍵路徑：`app/api/*`（route）→ `lib/queries/*`（SQL）→ `lib/db.js`（schema 單例）；`lib/constants.js` 前後端共用常數；`lib/normalize.js` 是規則比對鍵演算法；AI 經驗檢索走 `lib/queries/learning.js`，只排序證據、不自行分類；報表映射另走 `lib/reporting/*`（report-lines 的 `REPORT_LINE_DEFINITIONS` 白名單 + coverage）+ `lib/queries/reports/*`（income-statement / mappings）+ `app/api/reports/*`（route）。
 
 ## 系統不變量（任何改動都必須保持）
 
@@ -16,6 +16,7 @@
 4. **匯入不覆蓋人工修正**（`classification_source=human` 的不動）。
 5. **工具不內建 AI** — 任何「在 server 裡呼叫 LLM」的功能都不要做，那是外部 agent 的職責。
 6. **match_key 正規化（`lib/normalize.js`）是系統命脈** — 演算法或步驟順序的改動會讓既有規則全部失配；動它 = 需要規則遷移計畫，不是普通 refactor。
+7. **規則生命週期必須連動歷史資料** — 修改比對條件／分類／啟用狀態或刪除規則時，只能透過 rules query/API 在同一 transaction 重新校正目前仍連結的交易；已確認與 `classification_source=human` 的人工判斷不可覆寫。系統重算只寫 append-only `rule_change_log`，不得冒充人工修正寫入 `correction_log`。
 
 ## 重要：真實財務資料
 
@@ -36,8 +37,8 @@
 
 1. **文件宣稱 ≠ 現實**：任何「已完成／已移除／0 殘留」的說法，用 grep / `git status` / `git diff` 驗過再信。交接文件記的 bug 歸因，**先重現再修**——某層有 try/catch 不代表錯誤來自那層。
 2. **隱私紅線掃描**：真實財務資料會流經 `uploads/`、`data/`、`outputs/`（import 路徑白名單的三個目錄 = 高風險點）。改動任何資料流前，用 `git check-ignore` 確認落地路徑被 gitignore 覆蓋。
-3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / `prompts/playbook.md` / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ playbook。改 **report_line 白名單**（`lib/reporting/report-lines.js` 的 `REPORT_LINE_DEFINITIONS`）→ 同步 `prompts/playbook.md`（流程 C 的白名單表 + 附錄一）／ `components/reports/ReportsView`（UI 顯示）—— 這是另一個多點同步觸點，漏一處外部 AI 會拿著過期白名單打 `POST /api/reports/mappings` 被 400 擋。改完 grep 舊值歸零才算完成。
-4. **契約文件是介面**：`prompts/playbook.md` 是外部 AI 的操作契約——任何 API、資料模型、normalize 行為的改動，playbook 附錄必須同步，否則操作員 AI 會拿著過期契約打 API。
+3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / Finance Viewer Skill / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ Skill。改 **report_line 白名單**（`lib/reporting/report-lines.js` 的 `REPORT_LINE_DEFINITIONS`）→ 同步 Skill 的 API／月度流程 references／`components/reports/ReportsView`（UI 顯示）——漏一處外部 AI 會拿著過期白名單打 `POST /api/reports/mappings` 被 400 擋。改完 grep 舊值歸零才算完成。
+4. **契約文件是介面**：`.claude/skills/finance-viewer-ops/` 是外部 AI 的唯一操作契約——任何 API、資料模型、normalize 或學習證據行為的改動，Skill references 必須同步，否則操作員 AI 會拿著過期契約打 API。
 
 ### 問題拆層（「分類分不準」類問題的固定解法）
 

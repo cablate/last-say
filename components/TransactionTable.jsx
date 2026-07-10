@@ -593,6 +593,13 @@ export default function TransactionTable() {
     return view === "needs-review" ? mergedRows.filter((row) => !row.reviewed) : mergedRows
   }, [serverRows, localUpdates, reviewedIds, view])
   const total = data?.total ?? 0
+  // mutation 成功到 server refetch 完成之間，server total 仍包含 optimistic 已審列；
+  // refetch 後那些列已不在 serverRows，不能再重複扣除。
+  const reviewedStillInServer = serverRows.reduce(
+    (count, row) => count + (reviewedIds.has(row.id) ? 1 : 0),
+    0,
+  )
+  const remainingReviewCount = Math.max(0, total - reviewedStillInServer)
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const currentPage = Math.min(page, totalPages)
   const activeIndex = rows.findIndex((row) => row.id === activeTxnId)
@@ -826,7 +833,7 @@ export default function TransactionTable() {
         </Button>
         {view === "needs-review" && (
           <span className="text-xs text-muted-foreground">
-            本次已審 {reviewedIds.size} 筆 · 待審剩 {Math.max(0, (meta?.counts?.needsReview ?? total) - reviewedIds.size)} 筆
+            本次已審 {reviewedIds.size} 筆 · 目前範圍待審剩 {remainingReviewCount} 筆
           </span>
         )}
         {view === "needs-review" ? (
@@ -917,9 +924,11 @@ export default function TransactionTable() {
             <EmptyMedia variant="icon">
               <CheckIcon />
             </EmptyMedia>
-            <EmptyTitle>沒有符合條件的交易</EmptyTitle>
+            <EmptyTitle>{view === "needs-review" ? "目前範圍已審完" : "沒有符合條件的交易"}</EmptyTitle>
             <EmptyDescription>
-              調整月份、範圍或搜尋條件，或清除篩選重新查看。
+              {view === "needs-review"
+                ? "這個月份與篩選條件下已沒有需要確認的交易。"
+                : "調整月份、範圍或搜尋條件，或清除篩選重新查看。"}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
