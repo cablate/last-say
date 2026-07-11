@@ -160,7 +160,10 @@ function checkPersonalizedResidue() {
   for (const file of stdout.split(/\r?\n/).filter(Boolean)) {
     if (!exts.has(extname(file))) continue;
     if (allowedFiles.has(file)) continue;
-    const text = readFileSync(resolve(ROOT, file), 'utf8');
+    const path = resolve(ROOT, file);
+    // Deleted tracked files remain in `git ls-files` until staged.
+    if (!existsSync(path)) continue;
+    const text = readFileSync(path, 'utf8');
     const lines = text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
       if (/cathay|國泰/i.test(line)) {
