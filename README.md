@@ -150,6 +150,8 @@ npm run verify:release
 
 ## Roadmap
 
+長期產品方向以 [Last Say Long-Term Goal](./docs/long-term-goal.md) 為準；近期先依 [財務資料基礎建設 Master Plan](./docs/plans/financial-data-foundation-master-plan.md) 完成可追溯資料與缺口判斷，再推進預測與主動財務控制。功能必須能改善可信財務全貌、提早風險控制或人類與 AI 的長期協作成本。
+
 - 帳戶角色與餘額快照，完成可對帳的資產負債表。
 - 轉帳配對與 direct-method 現金流量表。
 - 個人／事業等客觀維度與可配置分類。

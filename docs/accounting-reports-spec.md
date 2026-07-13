@@ -3,6 +3,8 @@
 > Status: planning-only architecture spec.
 > This document defines how Last Say can evolve from transaction review into
 > scoped management reporting. It does not implement schema, API routes, or UI.
+> Upstream canonical data owner: [Financial Data Foundation Master Plan](./plans/financial-data-foundation-master-plan.md).
+> This spec owns statement projection, coverage, and presentation semantics; it must not create parallel account, balance, liability, investment, or reconciliation facts.
 
 ## Stage 0 Intent
 
@@ -40,9 +42,10 @@ trusted workflow that can say:
 
 ## Repo Reality Evidence
 
-These facts were checked against the current repo and must be rechecked before
-any implementation phase, especially because the working tree currently contains
-uncommitted UI/import changes unrelated to this planning file.
+These facts were checked against the repo state when this spec was written and
+must be rechecked before any implementation phase. Preserve any user-owned
+working-tree changes found at execution time; do not treat this planning snapshot
+as authority over newer code.
 
 | Area | Current evidence | Planning implication |
 |---|---|---|
@@ -50,7 +53,7 @@ uncommitted UI/import changes unrelated to this planning file.
 | External AI contract | `.claude/skills/last-say-ops/` is self-contained and documents current API routes, ledger CSV schema, rule contract, and correction loop. | Any new operator fields or APIs require Skill reference updates in the same phase. |
 | Runtime | `package.json` uses Next.js, React, `node:sqlite`, and `node --test`; `FINANCE_DB_PATH` can point tests at a non-real DB. | Tests and demos must use temp/demo DB paths, never `data/finance.sqlite`. |
 | Existing schema | `lib/db.js` creates `accounts`, `sources`, `classification_rules`, `transactions`, `transaction_sources`, `tags`, `transaction_tags`, and append-only `correction_log`. | New report tables should be additive; do not replace `transactions`. |
-| Existing migrations | `lib/db.js` runs an idempotent `migrateSchema(db)` (internal, not exported) with `ALTER TABLE` checks via `initializeDatabase`/`getDb`, but has no versioned migration ledger. | Multi-table accounting work needs a migration convention before schema growth. Do not call `migrateSchema` directly — it is not in `module.exports`; trigger it through `initializeDatabase`/`getDb`. |
+| Existing migrations | `lib/db.js` runs an idempotent, exported compatibility helper `migrateSchema(db)` with `ALTER TABLE` checks via `initializeDatabase`/`getDb`, but has no versioned migration ledger. | Multi-table accounting work needs a migration convention before schema growth. Normal runtime and tests should still enter through `initializeDatabase`/`getDb`; the upstream foundation plan decides how the exported compatibility helper is wrapped or retired. |
 | Current account model | `accounts` has `name`, `institution`, `account_type`, and `masked_number`. | It is not enough for statement reporting; account kind, role, entity, active flag, and currency are needed. |
 | Transaction model | `transactions` already has transaction date/month, statement month, source type, flow type, amount/inflow/outflow, category, confidence, reason, memo, balance, account, classification source, rule id, and reviewed flag. | Phase 1 P&L can start from reviewed transaction rows plus report-line mappings. |
 | Category constants | `lib/constants.js` defines 14 user-facing categories and only `category_primary`/`memo` as editable. | Accounting report lines must be separate from user-facing categories. |
@@ -201,7 +204,9 @@ Do not fake accrual output from cash-only data.
 
 ### Account Register
 
-Existing `accounts` should be extended additively unless migration risk grows.
+The foundation plan owns additive `accounts` evolution plus aliases. If its
+migration spike finds unacceptable risk, only the upstream ADR can change that
+owner design.
 Required semantics:
 
 - reporting entity;
@@ -374,7 +379,7 @@ Rules:
 
 | Dimension | Coverage in this spec | Required action |
 |---|---|---|
-| Data persistence | Covered through additive tables and snapshots. | Add migration convention before creating report tables. |
+| Data persistence | Covered through additive tables and snapshots. | Consume the accepted foundation migration runner before creating report-owned tables. |
 | Data asset independence | Covered. Reports have mappings/snapshots/runs instead of embedding data in UI. | Do not store report JSON only in browser state. |
 | Schema self-containment | Partially covered. | Each report table must carry enough fields for common queries without fragile multi-hop joins. |
 | Service boundary | Covered. | Keep report SQL in `lib/queries/reports/*`; keep pure helpers side-effect free. |
@@ -424,27 +429,30 @@ Current contract files:
 
 ## Proposed Additive Schema Direction
 
-Do not replace the current ledger. Add tables/columns in phases.
+Do not replace the current ledger. This section records logical dependencies;
+the Financial Data Foundation plan now owns the actual migration ledger and all
+canonical entity/account/balance/reconciliation DDL. Report implementation must
+consume those owners rather than recreate the historical names below.
 
-Likely additions:
+Foundation-owned dependencies:
 
-- `schema_migrations` or a repo-approved migration ledger.
 - `reporting_entities`
-- additive columns on `accounts`: `entity_id`, `account_kind`,
-  `normal_balance`, `currency`, `active`, `report_role`
+- additive identity/scope columns on `accounts` plus account aliases
 - `account_balance_snapshots`
+- typed `transfer_matches`
+
+Report-owned additions or existing report projections:
+
 - `report_lines`
 - `transaction_report_mappings`
 - `report_mapping_rules`
-- `transfer_matches`
 - `manual_journal_entries`
 - `report_runs`
 
-Open implementation choice:
-
-- If extending `accounts` makes migration risk high, add a `financial_accounts`
-  sidecar table keyed to `accounts.id` instead. Default remains additive columns
-  on `accounts`.
+The account decision is no longer open here: the foundation plan defaults to
+additive `accounts` evolution plus aliases. If its migration spike proves that
+unsafe, the foundation ADR owns the replacement design. This report spec may
+not independently introduce a `financial_accounts` sidecar.
 
 ## External AI Contract Additions
 
@@ -480,7 +488,7 @@ current bookkeeping product and the future accounting-report extension.
 | Credit card statements | CSV, Excel export, PDF text, screenshots converted to text | Inspect statement format, identify current-period rows, classify merchant transactions, produce ledger CSV, propose merchant rules. | Current `transactions`, `sources`, `classification_rules`. |
 | Bank account statements | CSV, Excel export, current transaction list, monthly statement | Identify inflows/outflows, running balances, transfer rows, ending balance if present. | Current `transactions`; future `account_balance_snapshots`. |
 | Current transaction exports | "Current month unbilled" card transactions plus official statement | De-duplicate against imported statement rows, preserve source context, flag provisional rows when final statement is not available. | Current dedupe/import model; future source status. |
-| Account list | Bank, card, loan, brokerage, wallet, masked number | Normalize account identity, propose account kind, entity, currency, active status. | Future account metadata on `accounts` or sidecar. |
+| Account list | Bank, card, loan, brokerage, wallet, masked number | Normalize account identity, propose account kind, entity, currency, active status. | Foundation-owned additive `accounts` metadata plus aliases. |
 | Balance snapshots | Statement ending balance, loan balance, brokerage cash, wallet balance | Extract as-of date and source note; flag missing or stale balances. | Future `account_balance_snapshots`. |
 | Business/personal context | "This card is mostly business", "this account is household", project name | Assign entity and identify mixed-use accounts that need review. | Future `reporting_entities`; future transaction allocation if needed. |
 | Known transfers | "This bank row pays this card", "this is moving cash to savings" | Propose transfer candidate keys and confidence. | Future `transfer_matches`. |
@@ -754,7 +762,7 @@ Files likely touched:
 - `docs/contracts/*.md`
 - `test/fixtures/reporting/*.csv` or generated anonymized fixture builders
 - `scripts/seed-demo.js` only if demo data needs reporting examples
-- `lib/db.js` or a new migration helper if migration convention is introduced
+- upstream foundation contracts/fixtures only when report requirements expose a missing canonical fact
 
 Files not to touch:
 
@@ -766,9 +774,8 @@ Implementation constraints:
 
 - Use anonymized demo data only.
 - Define acceptance examples before adding report APIs.
-- If a migration ledger is added, it must coexist with existing
-  `migrateSchema(db)` (internal, triggered via `initializeDatabase`/`getDb`,
-  not exported) and existing DBs.
+- Do not add a report-specific migration ledger. Confirm the upstream foundation
+  migration runner and compatibility tests are accepted before report-owned DDL.
 
 Validation:
 
@@ -1170,37 +1177,40 @@ Test rules:
 - Blocks: public performance claims.
 - Fallback: add indexes and report-run cache table.
 
-## Open Decisions
+## Decisions And Inherited Decisions
 
-- D1: Extend existing `accounts` or add `financial_accounts`.
-  Default: extend `accounts` with additive columns unless migration risk grows.
-- D2: Personal-only first or entity-aware from day one.
-  Default: entity-aware from day one; default entity is `personal`.
+- D1: Account owner (inherited, resolved).
+  The foundation plan owns additive `accounts` evolution plus aliases. Reports
+  cannot introduce `financial_accounts`; any fallback requires the upstream ADR.
+- D2: Personal-only first or entity-aware from day one (inherited, resolved).
+  The foundation is entity-aware from day one with default entity `personal`.
 - D3: Rule-based report-line mapping.
   Default: yes, but use separate `report_mapping_rules`, not
   `classification_rules`.
 - D4: Multi-currency in first reporting release.
-  Default: store currency metadata now; convert/report multi-currency later.
+  Foundation stores source currency now; reports convert only with qualified FX
+  evidence and may defer consolidated multi-currency presentation.
 - D5: Allocate credit-card payments back to original purchase categories.
   Default: no in Phase 3. Show payment as cash-flow settlement and rely on P&L
   for expense category detail.
-- D6: Versioned migrations.
-  Default: introduce the smallest migration ledger before adding multiple report
-  tables, while preserving existing `migrateSchema(db)` compatibility. Note:
-  `migrateSchema` is internal (not in `module.exports`); it runs through
-  `initializeDatabase`/`getDb`. Any migration ledger must hook into that same
-  path rather than calling `migrateSchema` directly.
+- D6: Versioned migrations (inherited, resolved).
+  The Financial Data Foundation plan owns the migration runner and the exported
+  `migrateSchema` compatibility transition. Report work consumes that path and
+  may add only report-owned migrations after its entry gate passes.
 
 ## Execution Readiness Verdict
 
-Verdict: Ready for Phase 0. Phase 1-4 are conditionally executable only after
-their prerequisite contracts, fixtures, and spikes are completed.
+Verdict: Ready for Phase 0 contract alignment only. Runtime report expansion is
+blocked until the upstream Financial Data Foundation phases that own its account,
+balance, liability, investment, and reconciliation inputs are accepted. Phase
+1-4 then remain conditional on their report-specific contracts, fixtures, and
+spikes; this spec must not build substitute canonical tables to unblock itself.
 
 Blockers before Phase 1 implementation:
 
 - Create the Phase 1 behavior contract.
 - Add anonymized acceptance fixtures.
-- Decide the migration convention.
+- Confirm the upstream migration runner and required data-owner phases passed.
 - Define the initial report-line taxonomy and mapping API.
 
 Execution risks:

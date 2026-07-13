@@ -1,0 +1,39 @@
+{
+  "fixture_schema": "finance-source-map/v1",
+  "source": {
+    "source_key": "src_broker_2026_06",
+    "source_kind": "brokerage_statement",
+    "institution_alias": "Example Brokerage",
+    "period_end": "2026-06-30",
+    "authority": "official",
+    "content_sha256": "synthetic:broker-june-v1"
+  },
+  "input": {
+    "accounts": [
+      { "alias": "BROKER-TWD-01", "currency": "TWD" },
+      { "alias": "BROKER-USD-02", "currency": "USD" }
+    ],
+    "holdings": [
+      { "client_item_key": "holding-twd-stock", "account_alias": "BROKER-TWD-01", "instrument": { "name": "Example Taiwan Stock", "symbol": "EX01", "type": "stock", "quote_currency": "TWD" }, "quantity_decimal": "125.5" },
+      { "client_item_key": "holding-twd-etf", "account_alias": "BROKER-TWD-01", "instrument": { "name": "Example Taiwan ETF", "symbol": "EXETF", "type": "ETF", "quote_currency": "TWD" }, "quantity_decimal": "300" },
+      { "client_item_key": "holding-usd", "account_alias": "BROKER-USD-02", "instrument": { "name": "Example Global Fund", "symbol": "EXGF", "type": "ETF", "quote_currency": "USD" }, "quantity_decimal": "10.25" }
+    ],
+    "quotes": [
+      { "holding_ref": "holding-twd-stock", "price_decimal": "48.35", "currency": "TWD", "as_of": "2026-07-14", "quote_type": "close", "authority": "ai_researched", "source_url_note": "https://example.invalid/quotes/ex01" },
+      { "holding_ref": "holding-usd", "price_decimal": "101.23", "currency": "USD", "as_of": "2026-07-14", "quote_type": "close", "authority": "ai_researched", "source_url_note": "https://example.invalid/quotes/exgf" }
+    ],
+    "fx": { "base": "USD", "quote": "TWD", "rate_decimal": "32.5", "as_of": "2026-07-14", "authority": "ai_researched", "source_url_note": "https://example.invalid/fx/usd-twd" },
+    "cash_leg": { "bank_transaction_ref": "bank-investment-1", "brokerage_account_alias": "BROKER-TWD-01", "amount_minor": "2000000" }
+  },
+  "canonical_payload": {
+    "schemas": ["finance.investment-holding/v1", "finance.market-quote/v1", "finance.fx-quote/v1", "finance.investment-cash-match/v1"],
+    "expected_usd_value_minor": "103761",
+    "expected_usd_value_twd_minor": "3372232"
+  },
+  "expected": {
+    "commit": "atomic",
+    "investment_value": "partial_missing_quote_for_EXETF",
+    "stale_variant": "change_quote_as_of_to_2026-03-31_and_expect_stale",
+    "unsupported_variant": "canonical/additional-contexts.json#unsupported_derivative"
+  }
+}

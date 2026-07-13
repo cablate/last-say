@@ -1,0 +1,30 @@
+{
+  "fixture_schema": "last-say-financial-foundation-fixtures/v1",
+  "privacy": "synthetic-only",
+  "currency_base": "TWD",
+  "source_mappings": [
+    "source-mappings/bank-statement.json",
+    "source-mappings/card-statement.json",
+    "source-mappings/loan-statement.json",
+    "source-mappings/investment-statement.json"
+  ],
+  "canonical_scenarios": [
+    "canonical/additional-contexts.json"
+  ],
+  "readiness_scenarios": [
+    "readiness/scope-and-source-gaps.json"
+  ],
+  "legacy_builder": "scripts/fixtures/financial-data/build-legacy-v0.2.3.mjs",
+  "coverage": {
+    "bank": ["checking", "savings", "cash", "e_wallet", "official_balance", "conflicting_balance"],
+    "credit_card": ["two_cards", "official_statement", "unbilled", "payment", "official_installments", "mismatched_installments"],
+    "liability": ["loan_profile", "official_schedule", "principal_interest_fee_split"],
+    "investment": ["TWD_stock", "TWD_ETF", "USD_holding", "quote", "FX", "stale_quote", "missing_quote"],
+    "commitment": ["salary", "rent", "insurance"],
+    "valued_item": ["home", "private_receivable"],
+    "reconciliation": ["internal_transfer", "card_settlement", "loan_split", "investment_cash_leg"],
+    "boundary": ["unsupported_derivative"],
+    "scope": ["missing", "expired", "declared_partial", "new_resource_invalidation"],
+    "legacy": ["v0.2.3", "human_correction", "classification_rule", "append_only_logs"]
+  }
+}

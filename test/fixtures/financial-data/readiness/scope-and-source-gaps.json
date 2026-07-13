@@ -1,0 +1,39 @@
+{
+  "fixture_schema": "finance-readiness-scenarios/v1",
+  "scenarios": [
+    {
+      "id": "no-cash-attestation",
+      "facts": ["checking-current-balance"],
+      "attestation": null,
+      "goal": "cash_position",
+      "expected": { "status": "partial", "first_gap": "missing_scope_attestation" }
+    },
+    {
+      "id": "expired-investment-attestation",
+      "attestation": { "scope_kind": "investments", "coverage_state": "declared_complete", "valid_until": "2026-06-30", "authority": "user_confirmed" },
+      "as_of": "2026-07-14",
+      "goal": "investment_value",
+      "expected": { "status": "partial", "first_gap": "expired_scope_attestation" }
+    },
+    {
+      "id": "declared-partial-liabilities",
+      "attestation": { "scope_kind": "liabilities", "coverage_state": "declared_partial", "as_of_date": "2026-07-14", "authority": "user_confirmed" },
+      "goal": "debt_obligations",
+      "expected": { "status": "partial", "gap": "scope_declared_partial" }
+    },
+    {
+      "id": "new-account-invalidates-cash-scope",
+      "attestation": { "scope_kind": "cash_accounts", "coverage_state": "declared_complete", "version": 1, "authority": "user_confirmed" },
+      "event": { "type": "account_created", "resource_key": "acct_new_wallet" },
+      "goal": "cash_position",
+      "expected": { "cache_invalidated": true, "status": "partial" }
+    },
+    {
+      "id": "missing-expected-month",
+      "expectation": { "target_context": "cash_activity", "cadence": "monthly", "grace_days": 7, "authority": "user_confirmed", "goals": ["spending_history", "cash_flow_statement"] },
+      "latest_period": "2026-05",
+      "as_of": "2026-07-14",
+      "expected": { "hard_blocker": true, "missing_period": "2026-06" }
+    }
+  ]
+}

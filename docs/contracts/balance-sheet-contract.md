@@ -1,5 +1,11 @@
 # Balance Sheet Contract
 
+> Upstream data owner: `financial-data-core-contract.md`,
+> `account-balance-storage-contract.md`, and
+> `investment-valuation-storage-contract.md`. This contract owns only the
+> balance-sheet read model and must not recreate canonical account, balance,
+> liability, or valuation facts.
+
 > Status: planning contract.
 > Scope: management balance sheet / net worth statement.
 

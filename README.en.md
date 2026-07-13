@@ -132,6 +132,8 @@ The release verifier runs lint, dependency audit, tests, an isolated `.next-veri
 
 ## Roadmap
 
+The canonical product direction is defined in the [Last Say Long-Term Goal](./docs/long-term-goal.md). The near-term [Financial Data Foundation Master Plan](./docs/plans/financial-data-foundation-master-plan.md) establishes traceable data and gap detection before forecasting and proactive control. New capabilities must improve trustworthy financial understanding, earlier risk control, or the long-term cost of human-AI collaboration.
+
 - Account roles and balance snapshots for a reconcilable balance sheet.
 - Transfer matching and a direct-method cash flow statement.
 - Configurable objective dimensions such as personal versus business.

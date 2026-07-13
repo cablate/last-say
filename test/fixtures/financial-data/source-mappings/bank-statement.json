@@ -1,0 +1,39 @@
+{
+  "fixture_schema": "finance-source-map/v1",
+  "source": {
+    "source_key": "src_bank_2026_06",
+    "source_kind": "bank_statement_csv",
+    "institution_alias": "Example Community Bank",
+    "period_start": "2026-06-01",
+    "period_end": "2026-06-30",
+    "authority": "institution_export",
+    "content_sha256": "synthetic:bank-june-v1"
+  },
+  "input": {
+    "accounts": [
+      { "alias": "CHECKING-0011", "kind": "checking", "currency": "TWD" },
+      { "alias": "SAVINGS-0022", "kind": "savings", "currency": "TWD" }
+    ],
+    "rows": [
+      { "client_item_key": "bank-1", "date": "2026-06-05", "description": "Synthetic Employer Payroll", "amount_minor": "7200000" },
+      { "client_item_key": "bank-2", "date": "2026-06-08", "description": "Own Account Transfer", "amount_minor": "-500000" },
+      { "client_item_key": "bank-3", "date": "2026-06-08", "description": "Own Account Transfer", "amount_minor": "500000" },
+      { "client_item_key": "bank-4", "date": "2026-06-15", "description": "Card Settlement Example", "amount_minor": "-1200000" }
+    ],
+    "ending_balances": [
+      { "account_alias": "CHECKING-0011", "kind": "statement", "as_of": "2026-06-30", "amount_minor": "9350000", "currency": "TWD" },
+      { "account_alias": "SAVINGS-0022", "kind": "statement", "as_of": "2026-06-30", "amount_minor": "24500000", "currency": "TWD" }
+    ]
+  },
+  "canonical_payload": {
+    "schemas": ["finance.cash-activity/v1", "finance.account-balance/v1"],
+    "context_counts": { "cash_activity": 4, "account_balance": 2 },
+    "transfer_candidate": { "from": "bank-2", "to": "bank-3", "amount_minor": "500000" },
+    "card_settlement_candidate": { "cash_item": "bank-4", "card_account_alias": "CARD-1001" }
+  },
+  "expected": {
+    "commit": "atomic",
+    "cash_position": "partial_without_scope_attestation",
+    "source_period_covered": "2026-06"
+  }
+}

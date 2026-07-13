@@ -1,0 +1,50 @@
+{
+  "fixture_schema": "finance-source-map/v1",
+  "source": {
+    "source_key": "src_card_a_2026_06",
+    "source_kind": "credit_card_statement_csv",
+    "institution_alias": "Example Card Union",
+    "period_start": "2026-05-21",
+    "period_end": "2026-06-20",
+    "authority": "official",
+    "content_sha256": "synthetic:card-a-june-v1"
+  },
+  "input": {
+    "account_alias": "CARD-1001",
+    "statement": { "close_date": "2026-06-20", "due_date": "2026-07-08", "balance_minor": "1200000", "minimum_due_minor": "120000", "currency": "TWD" },
+    "transactions": [
+      { "client_item_key": "card-charge-1", "date": "2026-06-02", "merchant": "Example Market", "amount_minor": "-1200000", "role": "charge" },
+      { "client_item_key": "card-refund-1", "date": "2026-06-04", "merchant": "Example Market", "amount_minor": "20000", "role": "refund" }
+    ],
+    "installment_plan": {
+      "client_item_key": "plan-1",
+      "originating_transaction_ref": "card-charge-1",
+      "financed_principal_minor": "1200000",
+      "installment_count": 12,
+      "entries": [
+        { "sequence": 1, "due_date": "2026-07-08", "principal_minor": "100000", "interest_minor": "0", "fee_minor": "0", "total_minor": "100000" },
+        { "sequence": 2, "due_date": "2026-08-08", "principal_minor": "100000", "interest_minor": "0", "fee_minor": "0", "total_minor": "100000" }
+      ],
+      "remaining_entries_pattern": { "sequence": "3..12", "principal_minor_each": "100000", "total_schedule_minor": "1200000" },
+      "authority": "official"
+    },
+    "unbilled_second_card": {
+      "account_alias": "CARD-2002",
+      "as_of": "2026-07-14",
+      "amount_minor": "340000",
+      "currency": "TWD",
+      "authority": "institution_export"
+    }
+  },
+  "canonical_payload": {
+    "schemas": ["finance.cash-activity/v1", "finance.card-statement/v1", "finance.account-balance/v1", "finance.card-installment/v1"],
+    "expense_fact_count": 2,
+    "installment_obligation_count": 12,
+    "duplicate_expense_from_installments": 0
+  },
+  "expected": {
+    "commit": "atomic",
+    "debt_obligations": "partial_without_card_scope_attestation",
+    "mismatch_variant": "change_entry_12_principal_to_99000_and_expect_unreconciled"
+  }
+}

@@ -1,5 +1,11 @@
 # Cash Flow Contract
 
+> Upstream data owner: `financial-data-core-contract.md`,
+> `account-balance-storage-contract.md`,
+> `liability-and-commitment-storage-contract.md`, and
+> `transfer-matching-contract.md`. This contract owns only the cash-flow read
+> model and must not recreate canonical balances, obligations, or matches.
+
 > Status: planning contract.
 > Scope: direct-method management cash flow statement.
 

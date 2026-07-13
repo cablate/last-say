@@ -1,5 +1,11 @@
 # Transfer Matching Contract
 
+> Upstream data owner: `financial-data-core-contract.md`,
+> `account-balance-storage-contract.md`, and
+> `liability-and-commitment-storage-contract.md`. This contract owns typed
+> reconciliation proposals and decisions, not source transaction or balance
+> facts.
+
 > Status: planning contract.
 > Scope: candidate matching and human confirmation for internal transfers.
 

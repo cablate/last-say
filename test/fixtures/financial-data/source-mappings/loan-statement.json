@@ -1,0 +1,29 @@
+{
+  "fixture_schema": "finance-source-map/v1",
+  "source": {
+    "source_key": "src_loan_contract_v1",
+    "source_kind": "loan_contract",
+    "institution_alias": "Example Lending Cooperative",
+    "as_of_at": "2026-06-30",
+    "authority": "official",
+    "content_sha256": "synthetic:loan-contract-v1"
+  },
+  "input": {
+    "account_alias": "LOAN-3030",
+    "profile": { "original_principal_minor": "150000000", "currency": "TWD", "rate_type": "fixed", "apr_decimal": "0.021", "start_date": "2026-01-01", "maturity_date": "2032-12-31", "payment_frequency": "monthly" },
+    "principal_balance": { "as_of": "2026-06-30", "amount_minor": "141250000" },
+    "schedule": [
+      { "client_item_key": "loan-due-7", "due_date": "2026-07-05", "principal_minor": "1750000", "interest_minor": "247188", "fee_minor": "0", "total_minor": "1997188" }
+    ],
+    "cash_payment": { "client_item_key": "loan-cash-7", "date": "2026-07-05", "amount_minor": "-1997188" }
+  },
+  "canonical_payload": {
+    "schemas": ["finance.liability/v1", "finance.account-balance/v1", "finance.loan-schedule/v1", "finance.cash-activity/v1", "finance.loan-allocation/v1"],
+    "allocation": { "cash_ref": "loan-cash-7", "schedule_ref": "loan-due-7", "sum_minor": "1997188" }
+  },
+  "expected": {
+    "commit": "atomic",
+    "allocation_status": "reconciled",
+    "debt_obligations": "partial_without_liability_scope_attestation"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "fixture_schema": "finance-canonical-scenarios/v1",
+  "synthetic": true,
+  "cash_and_wallet": [
+    { "resource_key": "acct_cash_home", "kind": "cash", "currency": "TWD", "balance_minor": "150000" },
+    { "resource_key": "acct_wallet_demo", "kind": "e_wallet", "currency": "TWD", "balance_minor": "82000" }
+  ],
+  "commitments": [
+    { "resource_key": "commit_salary", "kind": "salary", "direction": "in", "amount_kind": "fixed", "amount_minor": "7200000", "currency": "TWD", "cadence": "monthly", "authority": "user_confirmed" },
+    { "resource_key": "commit_rent", "kind": "rent", "direction": "out", "amount_kind": "fixed", "amount_minor": "1800000", "currency": "TWD", "cadence": "monthly", "authority": "user_confirmed" },
+    { "resource_key": "commit_insurance", "kind": "insurance", "direction": "out", "amount_kind": "fixed", "amount_minor": "2400000", "currency": "TWD", "cadence": "yearly", "authority": "official" }
+  ],
+  "valued_items": [
+    { "resource_key": "item_home_demo", "item_type": "home", "direction": "asset", "value_minor": "1800000000", "currency": "TWD", "as_of": "2026-06-30", "method": "user_estimate", "authority": "user_confirmed" },
+    { "resource_key": "item_receivable_demo", "item_type": "private_receivable", "direction": "asset", "value_minor": "3500000", "currency": "TWD", "as_of": "2026-06-30", "method": "contract_balance", "authority": "official" }
+  ],
+  "conflicting_balance": {
+    "semantic_key": "acct_checking_demo:statement:2026-06-30",
+    "candidates": [
+      { "source_key": "src_bank_2026_06", "amount_minor": "9350000", "authority": "institution_export" },
+      { "source_key": "src_bank_corrected_2026_06", "amount_minor": "9360000", "authority": "official" }
+    ],
+    "expected_status": "conflicted"
+  },
+  "unsupported_derivative": {
+    "input": { "instrument_type": "option", "symbol": "EX01-CALL", "quantity_decimal": "1" },
+    "expected_error": "UNSUPPORTED_CONTEXT",
+    "must_not_store_as": "other"
+  }
+}
