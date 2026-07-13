@@ -27,6 +27,7 @@ import { useBreakdown } from "@/lib/hooks"
 import { formatTWD } from "@/lib/format"
 import {
   ChartNoAxesColumnIncreasing,
+  Database,
   History,
   LayoutDashboard,
   ListChecks,
@@ -40,6 +41,7 @@ const NAV = [
   { href: "/", label: "總覽", icon: LayoutDashboard },
   { href: "/transactions", label: "交易明細", icon: ReceiptText },
   { href: "/reports", label: "報表", icon: ChartNoAxesColumnIncreasing },
+  { href: "/data", label: "資料中心", icon: Database },
   { href: "/trend", label: "走勢", icon: TrendingUp },
   { href: "/corrections", label: "修正紀錄", icon: History },
   { href: "/rules", label: "分類規則", icon: ListChecks },

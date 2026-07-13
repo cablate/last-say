@@ -2437,6 +2437,57 @@ cleanup_exists=False
 Focused negative evidence 由 tests 覆蓋：migration checksum drift／newer schema／rollback、backup hash corruption／newer manifest／existing-target refusal、confirmation actor spoof／payload or version change／expiry／replay／concurrency 均 fail closed。Shared enums、JSON Schemas 與 runtime validators 同源；legacy transaction IDs、dedupe、human corrections、rules 與 append-only logs 在 migration characterization tests 中保持不變。
 
 Phase 1 狀態：acceptance passed。Shared kernel、typed finance API、human-confirmation boundary、backup／restore 與 Skill 同步均完成；Phase 2 只有在本 Phase commit 與 push 成功後解鎖。
+
+### 31.8 Phase 2 Validation Evidence
+
+2026-07-14 於 Windows x64、Node v22.19.0、SQLite 3.50.4，全程以 explicit temp `FINANCE_DB_PATH`、隔離 Next dist 與 synthetic data 驗收；未讀寫 `data/finance.sqlite`，runtime 使用 temp port 3138，未碰 3127。
+
+```text
+npm test
+tests 104, pass 104, fail 0, duration_ms 2088.5738
+
+npm run lint
+Exit code: 0 (eslint . --max-warnings=0)
+
+$env:NEXT_DIST_DIR = '.next-p2-final'; npm run build
+Compiled successfully; 43 pages/routes generated; /data and all P2 APIs present
+```
+
+Focused automated evidence：
+
+```text
+preview canonical writes: 0
+same idempotency key + same hash: original run returned
+same idempotency key + changed hash: conflict
+compound late-section validation failure: all canonical sections remain 0
+unresolved client reference: rejected before staging
+successful commit: account/source/balance/cash all committed atomically; staged_json purged
+uncommitted preview after 24h: run/items expired; staged_json purged
+official + inferred same-date balance: both retained; official selected; conflict visible
+AI expectation: candidate gap only; user-confirmed expectation: hard gap
+confirmed reversal: typed facts marked reversed; source/audit retained; summary/P&L exclude reversed row
+reversal with later out-of-run fact: reversible=false and fail closed
+legacy CSV import: repeated rows deduped; rules_applied and human classifications preserved
+```
+
+以 temp server `http://127.0.0.1:3138` 走實際 browser/API rehearsal：
+
+```text
+GET /api/health => ok true, schema_version 3
+GET /data => HTTP 200
+UI add account => account visible in inventory
+UI enter 4321.09 TWD => amount_minor 432109, balance status current
+UI rename account => updated display name and optimistic version
+GET /api/finance/inventory => as_of_date 2026-07-14; missing_scope_attestation remains visible
+desktop 1440x900 => account, balance, source date, readiness gap rendered
+mobile 390x844 => scrollWidth 390, clientWidth 390
+browser console errors => 0
+temp server/DB/dist/screenshots removed; port 3138 listener false
+```
+
+日期驗收曾發現以 UTC `toISOString()` 產生 business date，會讓 Asia/Taipei 凌晨顯示前一天並暫時隱藏當日 snapshot；已改用主機本地日期並以 UI/API 重驗。計畫 Phase 2 摘要只列 P2A-P2D，但 §27.2 package index 另列 P2E-P2G；本次以較完整的現實 package index 為準，Data Center、reversal 與 Skill sync 均納入同一 Phase commit。
+
+Phase 2 狀態：acceptance passed。Structured ingestion、balances、legacy adapter、inventory/readiness、Data Center、human-confirmed reversal 與 Skill workflow 已完成；Phase 3 只有在本 Phase commit 與 push 成功後解鎖。
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。

@@ -5,6 +5,7 @@ import { getDb } from '@/lib/db';
 import { withTransaction } from '@/lib/queries/finance/common';
 import { readFinanceJson, actorFromRequest, financeErrorResponse } from '@/lib/finance/http';
 import { FinanceError } from '@/lib/finance/contracts';
+import { reverseIngestion } from '@/lib/finance/ingestion/reversal';
 
 export async function POST(request, { params }) {
   try {
@@ -32,7 +33,9 @@ export async function POST(request, { params }) {
     const db = getDb()
     const result = withTransaction(db, () => {
       const proposal = getHumanConfirmation(key, db)
-      if (proposal.action_kind !== 'declare_scope_complete' || proposal.resource_type !== 'scope_attestation') {
+      const canDeclareScope = proposal.action_kind === 'declare_scope_complete' && proposal.resource_type === 'scope_attestation'
+      const canReverseRun = proposal.action_kind === 'reverse_ingestion_run' && proposal.resource_type === 'ingestion_run'
+      if (!canDeclareScope && !canReverseRun) {
         throw new FinanceError('REVIEW_REQUIRED', 'This action has no Phase 1 browser executor', { status: 409 })
       }
       const confirmed = confirmHumanConfirmation(key, { browserConfirmed: true }, db)
@@ -44,12 +47,9 @@ export async function POST(request, { params }) {
         expected_version: proposal.expected_version,
         proposal_key: key,
         confirmation_receipt: confirmed.confirmation_receipt,
-      }, (authorization) => createScopeAttestation(
-        proposal.payload,
-        actorFromRequest(request),
-        db,
-        authorization,
-      ), db)
+      }, (authorization) => canDeclareScope
+        ? createScopeAttestation(proposal.payload, actorFromRequest(request), db, authorization)
+        : reverseIngestion(proposal.resource_key, proposal.payload, actorFromRequest(request), db, authorization), db)
     })
     return NextResponse.json({ ok: true, result })
   } catch (error) {

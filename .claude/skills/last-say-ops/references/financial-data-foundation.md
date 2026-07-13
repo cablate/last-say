@@ -1,18 +1,20 @@
-# Financial Data Foundation: Phase 1 Operator Guide
+# Financial Data Foundation: Phase 1-2 Operator Guide
 
 Read this reference for account inventory, institution aliases, source evidence,
-scope attestations, and source expectations. Phase 1 establishes identity and
-evidence only. Structured statement ingestion, balances, credit-card schedules,
-loans, investments, readiness APIs, and analysis datasets are not available yet.
-Do not simulate them with generic JSON or direct DB writes.
+scope attestations, source expectations, balance snapshots, cash activity, and
+structured ingestion. Credit-card statements/schedules, loans, investments,
+valuations, and general analysis datasets are not available yet. Do not simulate
+them with generic JSON or direct DB writes.
 
 ## Bootstrap
 
 1. `GET /api/health`; stop on non-200 or `ok != true`.
 2. `GET /api/finance/capabilities`; use its enums/schema IDs as authority.
-3. Read `entities`, `institutions`, `accounts`, `sources`,
+3. `GET /api/finance/inventory`; then read the relevant readiness goal through
+   `GET /api/finance/readiness?goal=spending_history|cash_position`.
+4. Read `entities`, `institutions`, `accounts`, `sources`,
    `scope-attestations`, and `source-expectations` relevant to the task.
-4. Separate known facts, identity conflicts, missing scope, and unsupported
+5. Separate known facts, identity conflicts, missing scope, and unsupported
    contexts before proposing writes.
 
 Every API error is shaped as:
@@ -112,6 +114,43 @@ Source expectations describe what data should recur and which analysis goals
 it affects. AI-inferred expectations are hints. Only user-confirmed expectations
 may later make a missing period a hard blocker.
 
+## Structured Account, Balance, And Cash Ingestion
+
+Use `finance.ingestion-bundle/v1`; retrieve current enums from capabilities.
+Supported Phase 2 sections are `accounts`, `sources`, `balance_snapshots`, and
+`cash_transactions`. Each item has a unique `client_item_key`; later sections
+may use `account_client_ref` or `source_client_ref` to reference items in the
+same bundle. Money is an integer minor-unit JSON string plus currency.
+
+1. `POST /api/finance/imports/preview` with an idempotency key, evidence
+   authority, reason, optional calibrated AI confidence, and typed sections.
+2. Inspect the returned contexts/actions/warnings. Preview writes staging only;
+   it must not change accounts, balances, or transactions.
+3. Resolve all identity conflicts and review requirements. If the payload
+   changes, create a new preview and idempotency key.
+4. `POST /api/finance/imports/:runKey/commit`. Commit is all-or-nothing. A retry
+   of the same committed run returns its result; do not manufacture duplicates.
+5. Re-read inventory and readiness. Report created resources, duplicates,
+   conflicts, stale/missing evidence, and remaining scope gaps.
+
+Official, running, and manually entered balances can coexist. Never overwrite a
+source snapshot to make totals agree. Running balances must use
+`authority=ai_inferred`, remain `needs_review`, and cannot alone complete cash
+position. The UI is `/data`; it displays latest selection, actual date, source,
+stale/missing/conflict state, and scope gaps.
+
+For an incorrect committed run:
+
+1. `POST /api/finance/imports/:runKey/reverse-preview`.
+2. Stop if `reversible=false`; human evidence or facts outside the run require
+   manual resolution.
+3. Create a high-risk proposal with
+   `action_kind=reverse_ingestion_run`, `resource_type=ingestion_run`, the run
+   key, and exact `{reason,impact_hash}` payload.
+4. Tell the user to inspect `/confirmations`; do not confirm it yourself.
+5. After human execution, re-read the run, inventory, and readiness. Reversal
+   preserves source/audit rows and marks typed facts reversed; it is not delete.
+
 ## Backup Boundary
 
 Backup/restore has no HTTP or AI route. A human local operator can use explicit
@@ -125,12 +164,13 @@ node scripts/finance-restore.mjs --input <manifest> --target <new-db-path>
 Restore never overwrites an existing target. DB-only backup explicitly omits
 source artifacts. Bundles are sensitive and not encrypted by Last Say.
 
-## Phase 1 Stop Conditions
+## Current Stop Conditions
 
 - No account/source identity: create or resolve typed identity first.
 - Alias collision: stop at `IDENTITY_CONFLICT`.
 - Complete-scope proposal: hand off to `/confirmations`.
-- Need balances, structured statement import, loan/card/investment facts,
-  readiness, or analysis context: report that Phase 1 does not expose it yet.
+- Need card statements/installments, loan/commitment, investment/valuation,
+  reconciliation, or arbitrary analysis datasets: report that the current
+  capability does not expose it yet.
 - Options, futures, margin, DeFi, tax lots, or business consolidation: report
   `unsupported`; never store as `other` to claim complete support.

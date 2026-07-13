@@ -39,13 +39,14 @@ test('migration runner refuses ledger versions unknown to this application', () 
 
 test('frozen v0.2.3 fixture upgrades without changing legacy evidence', () => {
   const dir=tempDir();const legacyPath=path.join(dir,'legacy.sqlite');
+  let db;
   try {
     execFileSync(process.execPath,['scripts/fixtures/financial-data/build-legacy-v0.2.3.mjs','--output',legacyPath],{cwd:path.join(__dirname,'..')});
-    const db=new DatabaseSync(legacyPath);db.exec('PRAGMA foreign_keys=ON');
+    db=new DatabaseSync(legacyPath);db.exec('PRAGMA foreign_keys=ON');
     const before={transactions:db.prepare('SELECT id,dedupe_key,classification_source,reviewed FROM transactions ORDER BY id').all(),corrections:db.prepare('SELECT transaction_id,field_name,old_value,new_value FROM correction_log').all(),rules:db.prepare('SELECT id,match_key,category_value FROM classification_rules').all()};
     initializeDatabase(db);const after={transactions:db.prepare('SELECT id,dedupe_key,classification_source,reviewed FROM transactions ORDER BY id').all(),corrections:db.prepare('SELECT transaction_id,field_name,old_value,new_value FROM correction_log').all(),rules:db.prepare('SELECT id,match_key,category_value FROM classification_rules').all()};
     assert.deepEqual(after,before);assert.equal(db.prepare('PRAGMA user_version').get().user_version,SCHEMA_VERSION);
-    assert.equal(db.prepare('SELECT COUNT(*) count FROM schema_migrations').get().count,2);
-    initializeDatabase(db);assert.equal(db.prepare('SELECT COUNT(*) count FROM schema_migrations').get().count,2);db.close();
-  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+    assert.equal(db.prepare('SELECT COUNT(*) count FROM schema_migrations').get().count,SCHEMA_VERSION);
+    initializeDatabase(db);assert.equal(db.prepare('SELECT COUNT(*) count FROM schema_migrations').get().count,SCHEMA_VERSION);
+  } finally {if(db)db.close();fs.rmSync(dir,{recursive:true,force:true});}
 });

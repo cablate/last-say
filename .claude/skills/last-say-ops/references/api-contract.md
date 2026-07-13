@@ -16,7 +16,11 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `GET /api/rules/:id`: one rule plus `linked_rows`, `unreviewed_rows`, and `reviewed_rows`; required before a semantic rule mutation.
 - `GET /api/rules/normalize?text=`: canonical `match_key`; never normalize independently.
 - `GET /api/reports/income-statement?month=`: management P&L, coverage, blockers, and drilldown IDs.
-- `GET /api/finance/capabilities`: authoritative Phase 1 API/schema versions, enums, limits, readiness goals, and unsupported contexts.
+- `GET /api/finance/capabilities`: authoritative API/schema versions, enums, limits, readiness goals, and unsupported contexts.
+- `GET /api/finance/inventory?entity=&as_of=`: entities, accounts, selected/conflicting balances, sources, active transaction coverage, and spending/cash readiness.
+- `GET /api/finance/readiness?goal=spending_history|cash_position`: deterministic status, hard gaps, candidate gaps, evidence, and next missing facts.
+- `GET /api/finance/imports/:runKey`: preview/commit/reversal run evidence; staged sensitive payload is not returned.
+- `GET /api/finance/balance-snapshots?account=`: active typed balance facts; add `history=1` for reversed/superseded audit drilldown.
 - `GET /api/finance/entities`, `/institutions`, `/accounts`, `/sources`, `/scope-attestations`, `/source-expectations`: typed financial foundation inventory. Resource detail routes use the stable key.
 - `GET /api/finance/human-confirmations?status=pending`: high-risk proposals. AI may inspect status but may not call the browser confirmation route.
 
@@ -32,7 +36,10 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `POST /api/transactions/review` with `{ids:[...]}` to confirm classifications without changing facts.
 - `POST /api/reports/mappings`: explicit per-transaction report mapping.
 - `POST /api/reports/mapping-rules`: reusable accounting mapping rule; keep separate from merchant classification rules.
-- Typed Phase 1 CRUD: `POST /api/finance/entities|institutions|accounts|sources|scope-attestations|source-expectations`; `PATCH` resource detail routes with `expected_version`; add aliases through `/institutions/:key/aliases` or `/accounts/:key/aliases`.
+- Typed CRUD: `POST /api/finance/entities|institutions|accounts|sources|scope-attestations|source-expectations|balance-snapshots`; `PATCH` resource detail routes with `expected_version`; add aliases through `/institutions/:key/aliases` or `/accounts/:key/aliases`.
+- `POST /api/finance/imports/preview`: validate and stage an atomic `finance.ingestion-bundle/v1`; no canonical writes.
+- `POST /api/finance/imports/:runKey/commit`: atomically write all supported sections and purge staged payload.
+- `POST /api/finance/imports/:runKey/reverse-preview`: read-only impact and blocker check. A reversible result supplies the exact `impact_hash` for a human-confirmed reversal proposal.
 - `POST /api/finance/human-confirmations`: prepare a registry-approved high-risk proposal. For `declare_scope_complete`, submit `{action_kind:"declare_scope_complete",resource_type:"scope_attestation",payload:<exact scope payload>}` and tell the user to review `/confirmations`. Do not call `/browser-session` or `/:key/confirm` as AI.
 
 ## Invariants
@@ -49,3 +56,4 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - Learning context is evidence retrieval, not automatic classification. Never copy `similarity` into ledger confidence. `consensus.conflict=true` caps confidence below `0.6` and forbids rule creation until new evidence resolves it.
 - Finance API errors use `{error:{code,message,field?,allowed_values?,retryable}}`; handle `IDENTITY_CONFLICT`, `VERSION_CONFLICT`, `HUMAN_CONFIRMATION_REQUIRED`, and `UNSUPPORTED_CONTEXT` explicitly.
 - New financial money facts use integer minor units and currency; quantity/price/FX use canonical decimal strings. Legacy transaction endpoints retain their established compatibility representation.
+- Active summaries/P&L/readiness exclude `reversed`, `superseded`, and `archived`; history/review drilldown may still show them.

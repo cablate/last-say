@@ -203,17 +203,39 @@ function upsertAccount(db, sourceType, rawInfo) {
   const name = sourceType;
   const accountTypeValue = accountType(sourceType);
   const masked = maskedNumber(sourceType, rawInfo);
+  const entityId = db.prepare("SELECT id FROM reporting_entities WHERE entity_key='personal'").get().id;
+  const kind = accountTypeValue === 'card' ? 'credit_card' : (accountTypeValue === 'bank' ? 'bank' : 'other');
+  const normalBalance = kind === 'credit_card' ? 'credit' : 'debit';
+  const liquidity = kind === 'bank' ? 'liquid' : 'non_liquid';
+  const existed = db.prepare('SELECT id FROM accounts WHERE name=?').get(name);
   db.prepare(`
-    INSERT INTO accounts (name, institution, account_type, masked_number)
-    VALUES (?, 'Imported Source', ?, ?)
+    INSERT INTO accounts (name, institution, account_type, masked_number,account_key,display_name,entity_id,account_kind,currency,normal_balance,liquidity_class,authority,review_state,updated_at)
+    VALUES (?, 'Imported Source', ?, ?,?,?,?,?, 'TWD',?,?,'institution_export','needs_review',CURRENT_TIMESTAMP)
     ON CONFLICT(name) DO UPDATE SET
       account_type = excluded.account_type,
-      masked_number = COALESCE(excluded.masked_number, accounts.masked_number)
-  `).run(name, accountTypeValue, masked);
-  return db.prepare('SELECT id FROM accounts WHERE name = ?').get(name).id;
+      masked_number = COALESCE(excluded.masked_number, accounts.masked_number),
+      display_name = COALESCE(accounts.display_name,excluded.display_name),
+      entity_id = COALESCE(accounts.entity_id,excluded.entity_id),
+      account_kind = COALESCE(accounts.account_kind,excluded.account_kind),
+      currency = COALESCE(accounts.currency,excluded.currency),
+      normal_balance = COALESCE(accounts.normal_balance,excluded.normal_balance),
+      liquidity_class = COALESCE(accounts.liquidity_class,excluded.liquidity_class),
+      authority = COALESCE(accounts.authority,excluded.authority),
+      review_state = COALESCE(accounts.review_state,excluded.review_state),
+      updated_at = CURRENT_TIMESTAMP
+  `).run(name, accountTypeValue, masked, crypto.randomUUID(), name, entityId, kind, normalBalance, liquidity);
+  const account = db.prepare('SELECT id,account_key FROM accounts WHERE name = ?').get(name);
+  db.prepare(`INSERT OR IGNORE INTO account_aliases(account_id,source_system,alias_type,alias_value_normalized,masked_hint,confidence,authority,review_state)
+    VALUES(?,'legacy-ledger','legacy_name',?,?,1.0,'institution_export','reviewed')`).run(account.id, String(sourceType).normalize('NFKC').trim().toUpperCase(), masked);
+  if (!existed) {
+    const scopeKind = kind === 'credit_card' ? 'credit_cards' : (kind === 'bank' ? 'cash_accounts' : null);
+    if (scopeKind) db.prepare(`UPDATE scope_attestations SET invalidated_at=CURRENT_TIMESTAMP,invalidation_reason=?,version=version+1,updated_at=CURRENT_TIMESTAMP WHERE entity_id=? AND scope_kind=? AND invalidated_at IS NULL`).run(`Legacy import discovered ${kind} account ${account.account_key}`, entityId, scopeKind);
+    db.prepare(`INSERT INTO data_change_log(resource_type,resource_key,action,after_json,actor_type,actor_note) VALUES('account',?,'legacy_import',?,'legacy_import','CSV compatibility adapter')`).run(account.account_key, JSON.stringify({ display_name: name, account_kind: kind }));
+  }
+  return account.id;
 }
 
-function upsertSource(db, row, sourceMap) {
+function upsertSource(db, row, sourceMap, accountId) {
   const sourceType = row['來源類型'] || '';
   const description = row['來源說明'] || 'unknown source';
   const indexed = sourceMap.get(`${sourceType}|${description}`);
@@ -221,12 +243,20 @@ function upsertSource(db, row, sourceMap) {
   const rowCount = toNumber(indexed?.['筆數']);
   const statementMonth = parseStatementMonth(sourceType, description, row['月份']);
   db.prepare(`
-    INSERT INTO sources (source_type, source_file, description, statement_month, row_count)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO sources (source_type, source_file, description, statement_month, row_count,source_key,source_kind,authority,status,artifact_status,account_id,is_official,created_by,review_state,updated_at)
+    VALUES (?, ?, ?, ?, ?,?,?, 'institution_export','active',?,?,1,'legacy_import','reviewed',CURRENT_TIMESTAMP)
     ON CONFLICT(source_type, source_file, description) DO UPDATE SET
       statement_month = excluded.statement_month,
-      row_count = COALESCE(excluded.row_count, sources.row_count)
-  `).run(sourceType, sourceFile, description, statementMonth, rowCount);
+      row_count = COALESCE(excluded.row_count, sources.row_count),
+      source_key = COALESCE(sources.source_key,excluded.source_key),
+      source_kind = COALESCE(sources.source_kind,excluded.source_kind),
+      authority = COALESCE(sources.authority,excluded.authority),
+      status = COALESCE(sources.status,excluded.status),
+      artifact_status = COALESCE(sources.artifact_status,excluded.artifact_status),
+      account_id = COALESCE(sources.account_id,excluded.account_id),
+      review_state = COALESCE(sources.review_state,excluded.review_state),
+      updated_at = CURRENT_TIMESTAMP
+  `).run(sourceType, sourceFile, description, statementMonth, rowCount, crypto.randomUUID(), sourceFamily(sourceType) === 'card' ? 'credit_card_statement_csv' : 'bank_statement_csv', sourceFile ? 'available' : 'external-only', accountId);
   return db.prepare(`
     SELECT id, statement_month AS statementMonth
     FROM sources
@@ -286,9 +316,10 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
       dedupe_key, import_match_key, transaction_date, transaction_month, statement_month,
       source_type, flow_type, name, amount, inflow, outflow,
       category_primary, category_sub, judgment_reason, memo, raw_info, balance,
-      account_original_order, account_id, first_source_id, classification_source, rule_id, ai_confidence
+      account_original_order, account_id, first_source_id, classification_source, rule_id, ai_confidence,
+      transaction_key,currency,amount_minor,inflow_minor,outflow_minor,record_status,source_item_key
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,'TWD',?,?,?,'posted',?)
     ON CONFLICT(dedupe_key) DO UPDATE SET
       statement_month = COALESCE(transactions.statement_month, excluded.statement_month),
       judgment_reason = COALESCE(NULLIF(transactions.judgment_reason, ''), excluded.judgment_reason),
@@ -317,7 +348,12 @@ function insertOrUpdateTransaction(db, row, accountId, source, keys) {
     source.id,
     sourceKind,
     ruleId,
-    aiConfidence
+    aiConfidence,
+    crypto.randomUUID(),
+    amount,
+    inflow,
+    outflow,
+    row.id || row['id'] || keys.importMatchKey
   );
 
   const transaction = db.prepare('SELECT id FROM transactions WHERE dedupe_key = ?').get(keys.dedupeKey);
@@ -374,7 +410,7 @@ function main(opts = {}) {
   try {
     for (const row of ledger) {
       const accountId = upsertAccount(db, row['來源類型'], row['原始交易資訊']);
-      const source = upsertSource(db, row, sourcesByDescription);
+      const source = upsertSource(db, row, sourcesByDescription, accountId);
       const occurrenceKey = duplicateOccurrenceKey(row);
       const occurrence = occurrenceKey
         ? (duplicateOccurrenceCounts.get(occurrenceKey) || 0) + 1
