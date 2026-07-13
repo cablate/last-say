@@ -37,6 +37,9 @@ Before operating on statements or rules, read the required references below. `AG
 - For account, source, scope, or other financial-data work, start with `GET /api/finance/capabilities`; never guess an enum or field.
 - Before importing account, balance, or cash activity facts, read `GET /api/finance/inventory` and the relevant readiness goal. Report existing identity, coverage, conflicts, and gaps before proposing writes.
 - Structured financial writes must use preview then commit. Inspect normalized actions and warnings; never skip preview or treat staging rows as canonical facts.
+- Credit-card payments are settlement matches, not a second expense. Installment entries are future obligations, not repeated merchant purchases.
+- Never derive an official loan schedule, revolving-card interest, or future payment amount from APR, principal, or historical averages. Store only sourced facts; leave readiness partial when official evidence is missing.
+- Before changing a commitment template, inspect settled occurrences. Template edits must not rewrite settled history.
 - After commit, re-read inventory/readiness. For a wrong committed run, use reverse-preview and prepare a `reverse_ingestion_run` confirmation; never hard-delete or patch source facts into disappearance.
 - Never use arbitrary SQL, direct SQLite writes, generic field patches, server-side URL fetch, or hard deletion of source facts.
 - A database row count does not prove that all accounts, liabilities, or investments are known. Only report global completeness when the relevant scope attestation and runtime readiness permit it.

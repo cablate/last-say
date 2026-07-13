@@ -2488,6 +2488,58 @@ temp server/DB/dist/screenshots removed; port 3138 listener false
 日期驗收曾發現以 UTC `toISOString()` 產生 business date，會讓 Asia/Taipei 凌晨顯示前一天並暫時隱藏當日 snapshot；已改用主機本地日期並以 UI/API 重驗。計畫 Phase 2 摘要只列 P2A-P2D，但 §27.2 package index 另列 P2E-P2G；本次以較完整的現實 package index 為準，Data Center、reversal 與 Skill sync 均納入同一 Phase commit。
 
 Phase 2 狀態：acceptance passed。Structured ingestion、balances、legacy adapter、inventory/readiness、Data Center、human-confirmed reversal 與 Skill workflow 已完成；Phase 3 只有在本 Phase commit 與 push 成功後解鎖。
+
+### 31.9 Phase 3 Validation Evidence
+
+2026-07-14 於 Windows x64、Node v22.19.0、SQLite 3.50.4，全程以 explicit temp `FINANCE_DB_PATH`、隔離 Next dist 與 synthetic data 驗收；未讀寫 `data/finance.sqlite`，runtime 使用 temp port 3138，未碰 3127。
+
+```text
+npm test
+tests 112, pass 112, fail 0, duration_ms 2493.6003
+
+npm run lint
+Exit code: 0 (eslint . --max-warnings=0)
+
+$env:NEXT_DIST_DIR = '.next-p3-acceptance'; npm run build
+Compiled successfully; 50 static pages generated; /data and all Phase 3 APIs present
+```
+
+Focused automated evidence：
+
+```text
+statement ownership: closed charge/refund retained; unbilled remains card-owned
+partial card payment: match_status partial; no second expense created
+complete installment principal schedule: reconciliation_status reconciled
+partial installment schedule: reconciliation_status unreconciled
+installment obligations: transaction count remains 1; P&L expense recognized once
+AI-inferred loan schedule: REVIEW_REQUIRED before persistence
+official loan allocation: principal + interest + fee equals cash; reconciled
+missing card statement: readiness gap missing_credit_card_statement
+missing loan principal: readiness gap missing_loan_principal_balance
+settled commitment occurrence: unchanged after optimistic template update
+compound card late-section failure: account/transaction/statement canonical rows all 0
+legacy P&L, CSV import, learning, reversal, and append-only tests remain green
+```
+
+以 temp server `http://127.0.0.1:3138` 走實際 browser/API rehearsal：
+
+```text
+GET /api/health => ok true, schema_version 4
+GET /data => account and obligations tabs rendered
+UI add credit-card account => account visible
+UI add card profile => close day 20; due day 8; credit_limit_minor 12000000
+UI add fixed rent commitment => amount_minor 1800000; next due 2026-08-01
+GET /api/finance/inventory => accounts 1; cards 1; commitments 1; debt status partial
+desktop 1440x1000 => empty, ready, dialog, and saved states exercised
+mobile 390x844 => no horizontal overflow; card and commitment visible
+browser console errors => 0
+temp server/DB/dist/screenshots removed; port 3138 listener false
+```
+
+規格與現實偏差：Phase 3 validation 原列 `canonical/credit-cards.json`、`liabilities.json`、`commitments.json`，repository 實際 fixture 為 `source-mappings/card-statement.json`、`loan-statement.json` 與 `canonical/additional-contexts.json`；驗收沿用現存 synthetic fixture 語意並新增四個 focused test files。首次 compound fixture rehearsal 少了既有 balance schema 必填 `observed_at`，已補正 fixture 後重跑通過。`liquidity_forecast_90d` 僅回 prerequisites 與 `forecast_available=false`，沒有提前實作 Phase 6 forecast。
+
+Phase 3 狀態：acceptance passed。Credit cards、statements、payment matches、installments、liabilities、official schedules、payment allocations、commitments、typed routes、compound ingestion、debt readiness、Data Center UI 與 Skill workflow 均完成；Phase 4 只有在本 Phase commit 與 push 成功後解鎖。
+
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。

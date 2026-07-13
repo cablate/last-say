@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CircleDollarSign, Database, Pencil, Plus, RefreshCw, ShieldAlert, WalletCards } from 'lucide-react';
+import { AlertCircle, CircleDollarSign, CreditCard, Database, Pencil, Plus, RefreshCw, ShieldAlert, WalletCards } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ObligationRegister from './ObligationRegister';
 
 const STATUS = {
   current: { label: '最新', variant: 'default' }, missing: { label: '缺餘額', variant: 'secondary' },
@@ -103,7 +105,7 @@ export default function AccountRegister() {
       {state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>資料載入失敗</AlertTitle><AlertDescription>{state.error}</AlertDescription></Alert> : null}
       {state.loading && !inventory ? <LoadingState /> : null}
 
-      {inventory ? <>
+      {inventory ? <Tabs defaultValue="accounts" className="gap-6"><TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit"><TabsTrigger value="accounts"><Database aria-hidden="true" />帳戶與餘額</TabsTrigger><TabsTrigger value="obligations"><CreditCard aria-hidden="true" />卡片與負債</TabsTrigger></TabsList><TabsContent value="accounts" className="space-y-6">
         <section className="grid gap-4 border-b pb-6 md:grid-cols-[minmax(0,1.6fr)_minmax(15rem,0.8fr)]">
           <div className="space-y-2">
             <div className="flex items-center gap-2"><CircleDollarSign className="size-5 text-primary" aria-hidden="true" /><h2 className="font-semibold">現金部位準備度</h2><StatusBadge status={cash?.status} /></div>
@@ -129,7 +131,7 @@ export default function AccountRegister() {
               })}
             </div>}
         </section>
-      </> : null}
+      </TabsContent><TabsContent value="obligations"><ObligationRegister inventory={inventory} onSaved={load} /></TabsContent></Tabs> : null}
       <AccountDialog open={accountDialog.open} account={accountDialog.account} onOpenChange={(open) => setAccountDialog((current) => ({ ...current, open }))} onSaved={load} />
       <BalanceDialog open={Boolean(balanceAccount)} account={balanceAccount} onOpenChange={(open) => !open && setBalanceAccount(null)} onSaved={load} />
     </section>

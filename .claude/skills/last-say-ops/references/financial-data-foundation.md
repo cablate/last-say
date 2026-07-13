@@ -1,8 +1,8 @@
-# Financial Data Foundation: Phase 1-2 Operator Guide
+# Financial Data Foundation: Phase 1-3 Operator Guide
 
 Read this reference for account inventory, institution aliases, source evidence,
-scope attestations, source expectations, balance snapshots, cash activity, and
-structured ingestion. Credit-card statements/schedules, loans, investments,
+scope attestations, source expectations, balance snapshots, cash activity,
+credit cards, loans, commitments, and structured ingestion. Investments,
 valuations, and general analysis datasets are not available yet. Do not simulate
 them with generic JSON or direct DB writes.
 
@@ -11,7 +11,7 @@ them with generic JSON or direct DB writes.
 1. `GET /api/health`; stop on non-200 or `ok != true`.
 2. `GET /api/finance/capabilities`; use its enums/schema IDs as authority.
 3. `GET /api/finance/inventory`; then read the relevant readiness goal through
-   `GET /api/finance/readiness?goal=spending_history|cash_position`.
+   `GET /api/finance/readiness` for the task's supported goal.
 4. Read `entities`, `institutions`, `accounts`, `sources`,
    `scope-attestations`, and `source-expectations` relevant to the task.
 5. Separate known facts, identity conflicts, missing scope, and unsupported
@@ -117,8 +117,11 @@ may later make a missing period a hard blocker.
 ## Structured Account, Balance, And Cash Ingestion
 
 Use `finance.ingestion-bundle/v1`; retrieve current enums from capabilities.
-Supported Phase 2 sections are `accounts`, `sources`, `balance_snapshots`, and
-`cash_transactions`. Each item has a unique `client_item_key`; later sections
+Supported sections are `accounts`, `sources`, `balance_snapshots`,
+`cash_transactions`, `credit_card_profiles`, `credit_card_statements`,
+`credit_card_installments`, `credit_card_payment_matches`, `liabilities`,
+`loan_schedules`, `loan_allocations`, `commitments`, and
+`commitment_occurrences`. Each item has a unique `client_item_key`; later sections
 may use `account_client_ref` or `source_client_ref` to reference items in the
 same bundle. Money is an integer minor-unit JSON string plus currency.
 
@@ -138,6 +141,39 @@ source snapshot to make totals agree. Running balances must use
 `authority=ai_inferred`, remain `needs_review`, and cannot alone complete cash
 position. The UI is `/data`; it displays latest selection, actual date, source,
 stale/missing/conflict state, and scope gaps.
+
+## Credit Cards, Loans, And Commitments
+
+Start with inventory and `GET /api/finance/readiness?goal=debt_obligations`.
+Create account identity before its profile. Direct human-maintenance routes are:
+
+- `GET|POST /api/finance/credit-cards`, `GET|PATCH /api/finance/credit-cards/:key`;
+- `POST /api/finance/credit-cards/statements|installments|payment-matches`;
+- `GET|POST /api/finance/liabilities`, `GET /api/finance/liabilities/:key`;
+- `POST /api/finance/liabilities/:key/schedule`, `POST /api/finance/liabilities/allocations`;
+- `GET|POST /api/finance/commitments`, `GET|PATCH /api/finance/commitments/:key`;
+- `POST /api/finance/commitments/:key/occurrences`.
+
+For AI or compound source ingestion, use the shared preview/commit bundle. Use
+client refs to connect account, source, transaction, profile, statement,
+installment, liability, schedule, and occurrence sections. Commit is atomic.
+
+Card statement items own closed charge/refund/fee/interest facts. Unbilled
+transactions remain owned by the card account/profile and an unbilled balance
+snapshot; never attach them to a closed statement. A bank-side card
+payment is linked through `credit_card_payment_matches`; never classify it as a
+second expense. Installment plans point to the one originating purchase. Their
+entries are obligations and cannot create additional P&L expenses.
+
+Loan profile APR is only a reported fact. A schedule requires `official` or
+`user_confirmed` authority plus a source. Never calculate an authoritative
+schedule or revolving interest from principal and APR. Payment allocations must
+split principal, interest, and fee; a cash mismatch remains `unreconciled`.
+
+Commitments cover confirmed fixed or ranged recurring cash items. Historical
+patterns may only produce candidates. Editing a template never changes settled
+occurrences. `liquidity_forecast_90d` exposes prerequisites only in Phase 3; do
+not claim that a forecast exists.
 
 For an incorrect committed run:
 
@@ -169,8 +205,9 @@ source artifacts. Bundles are sensitive and not encrypted by Last Say.
 - No account/source identity: create or resolve typed identity first.
 - Alias collision: stop at `IDENTITY_CONFLICT`.
 - Complete-scope proposal: hand off to `/confirmations`.
-- Need card statements/installments, loan/commitment, investment/valuation,
-  reconciliation, or arbitrary analysis datasets: report that the current
-  capability does not expose it yet.
+- Need investment/valuation, cross-context reconciliation, or arbitrary analysis
+  datasets: report that the current capability does not expose it yet.
+- Missing official card statement, loan principal snapshot, or loan schedule:
+  report the exact readiness gap; never fill it with an AI estimate.
 - Options, futures, margin, DeFi, tax lots, or business consolidation: report
   `unsupported`; never store as `other` to claim complete support.
