@@ -2703,6 +2703,79 @@ Reality deviations discovered and resolved:
 
 Phase 6 acceptance passed: readiness requirement graph, inventory v2, governed analysis datasets, privacy/size/error limits, deterministic provenance, Skill preflight/reporting contract, production DB compatibility, and legacy spending coverage are complete. Phase 7 may begin only after this Phase commit is pushed.
 
+### 31.13 Phase 7 Validation Evidence
+
+2026-07-14，Windows x64、Node v22.19.0、SQLite 3.50.4。所有自動化、demo、build、backup rehearsal 與 browser runtime 均使用明確隔離 DB；production browser runtime 僅使用 3138，未讀寫 `data/finance.sqlite`，未碰 3127。證據檔位於 ignored `outputs/foundation-phase7-evidence/`，不進 git。
+
+```text
+npm run lint
+> eslint . --max-warnings=0
+Exit code: 0
+
+node --test test/foundation-demo-and-skill-eval.test.js test/runtime-smoke-safety.test.js test/backup-restore.test.js
+# tests 6
+# pass 6
+# fail 0
+
+npm run eval:skill
+PASS inventory-preflight
+PASS bank-import
+PASS loan-gap
+PASS investment-quote
+PASS gap-analysis
+PASS version-conflict
+PASS high-risk-confirmation
+PASS unsupported-derivative
+Skill eval: 8/8 passed
+
+npm run verify:release
+PASS eslint - 0 warnings
+PASS production-audit - 0 vulnerabilities at moderate or above
+PASS node-test - 134/134 passed
+PASS skill-eval - 8/8 fixed cases passed
+PASS next-build - 64 pages/routes generated
+PASS runtime-smoke - health + transactions page + production CSP passed
+PASS personalized-residue
+PASS demo-db-seeded
+PASS demo-metrics - 6 months; automation 30% -> 40% -> 53.3% -> 63.3% -> 73.3% -> 80%; lowConfidence=30; humanCorrectionRules=2
+PASS demo-foundation-contexts - accounts=4; balances=3; cards=1; liabilities=1; commitments=1; holdings=1; valuedItems=1; openTasks=1
+PASS backup-restore-rehearsal - integrity=ok; transactions=180; changeEvidence=34
+PASS screenshots - all existing release screenshots present and non-empty
+Exit code: 0
+```
+
+以匿名 demo DB 與 production server `http://127.0.0.1:3138` 執行 browser/API closure：
+
+```text
+desktop 1440x1000 => all 8 readiness goals rendered; policy finance-readiness/1; prioritized gap and source aggregation visible
+source drilldown => kind, authority, review state, description, period, artifact status and source key rendered
+review tab => one source_conflict task visible and actionable
+mobile 390x844 => scrollWidth 390, clientWidth 390; all 8 goals and review task reachable
+desktop browser errors => 0 before intentional conflict request
+mobile browser errors => 0
+optimistic conflict => external PATCH 200/version 2; stale UI PATCH 409; dialog rendered "Expected version 1, current version is 2"
+the single console network error is the expected HTTP 409 resource response; no unhandled page error occurred
+
+GET /api/health => ok true; transactions 180; corrections 4; schema_version 6
+GET /api/finance/capabilities => preview_commit_available true; arbitrary_sql false
+scoped readiness before => stale; gaps balance_stale + expected_source_overdue
+POST /api/finance/imports/preview => HTTP 201; preview_ready
+POST /api/finance/imports/<run>/commit => HTTP 200; committed
+scoped readiness after => partial; balance_stale removed; expected_source_overdue retained
+```
+
+Backup/restore 操作文件已落於 `docs/operations/backup-restore.md`。Demo seed 現在同時覆蓋 legacy 六個月分類學習與 account/card/loan/commitment/investment/Tier 2/source conflict typed contexts。Last Say Skill 加入 preflight、fact/derived/interpretation 分層、最高優先缺口、四種 error recovery、高風險 browser confirmation handoff 與六項 A6 自查。
+
+Reality deviations discovered and resolved：
+
+1. 首次 `verify:release` 因前一個被 caller timeout 的 verifier 子行程仍在清理同一 `.next-verify`，造成 `pages-manifest.json` race；確認無殘留行程後單獨 build 通過，後續完整 verifier 穩定通過。這是驗收啟動競態，不是產品 build failure。
+2. `scripts/smoke-runtime.mjs` 仍硬編碼 schema version 1，健康端點正確回 6 卻被誤判；已改為引用 `lib/db.js` 的 `SCHEMA_VERSION` 並保留精確相等的 fail-closed 驗證。
+3. Privacy scan 將 ADR 的公開 BigInt 邊界 fixture `9007199254740993` 誤判為卡號；只精確 allowlist 該一個 `Number.MAX_SAFE_INTEGER + 2` fixture，其他 13-16 位與 4-4-4-4 模式仍全數掃描。
+
+Deferred Verification Ledger closure：DVL-01 由 134/134 全套 regression 與 release verifier 關閉；DVL-02 由 desktop/mobile inventory -> gap -> source/review 與 conflict evidence 關閉；DVL-03 由固定 8-case Skill eval 關閉；DVL-04～06 已由 Phase 6 benchmark、cross-context invariant 與 frozen freshness/policy tests 關閉並在 31.12 記錄；DVL-07 由 audit、privacy scan、匿名 demo、backup restore 與證據圖人工檢查關閉。Release-blocking ledger 為空。
+
+Phase 7 acceptance passed: Human Data Center navigation/states、source drilldown、version conflict、anonymous full-context demo、operator Skill closure/eval、backup/restore docs and rehearsal、README capability/unsupported boundary、privacy scan 與 integrated release gate 均完成。Financial Data Foundation Phase 0-7 完成；正式 balance sheet/cash-flow statement presentation、forecast/safe-to-spend、tax 與 complex derivatives 仍依下游計畫或 separate typed context 處理，不在本階段宣稱完成。
+
 - [Node.js SQLite API](https://nodejs.org/api/sqlite.html)：`node:sqlite` 的 BigInt、backup 與版本行為入口；不得只依模型記憶假設 API signature。
 - [JSON Schema 2020-12](https://json-schema.org/draft/2020-12)：machine-readable AI payload／capability contract。
 - [SIX Financial Data Standards](https://www.six-group.com/en/products-services/financial-information/market-reference-data/data-standards.html)：currency／instrument identifier 標準入口；instrument identity 仍需 source 與 review。

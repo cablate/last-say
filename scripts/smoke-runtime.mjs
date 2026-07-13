@@ -1,9 +1,12 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { createServer } from 'node:net';
 import { resolve } from 'node:path';
 
+const require = createRequire(import.meta.url);
+const { SCHEMA_VERSION } = require('../lib/db');
 const ROOT = resolve(import.meta.dirname, '..');
 const RUNTIME_DB = 'data/dev-verify-runtime.sqlite';
 const REAL_DB = resolve(ROOT, 'data/finance.sqlite');
@@ -89,7 +92,7 @@ child.stderr.on('data', (chunk) => output.push(chunk.toString()));
 try {
   const healthResponse = await waitForHealth(baseUrl, child, output);
   const health = await healthResponse.json();
-  if (!health.ok || health.schema_version !== 1) {
+  if (!health.ok || health.schema_version !== SCHEMA_VERSION) {
     throw new Error(`Unexpected health payload: ${JSON.stringify(health)}`);
   }
 

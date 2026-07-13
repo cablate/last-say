@@ -1,11 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync } from 'node:fs';
-import { extname, relative, resolve, sep } from 'node:path';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { extname, join, relative, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const DEMO_DB = 'data/dev-demo.sqlite';
+const DEMO_DB = 'data/dev-verify-demo.sqlite';
+const TEST_DB = 'data/dev-test.sqlite';
 const BUILD_DB = 'data/dev-verify-build.sqlite';
 const RUNTIME_DB = 'data/dev-verify-runtime.sqlite';
 const VERIFY_DIST_DIR = '.next-verify';
@@ -55,15 +57,16 @@ function fail(name, detail) {
 }
 
 function ensureDemoDb() {
-  if (existsSync(resolve(ROOT, DEMO_DB))) {
-    pass('demo-db-present', DEMO_DB);
-    return;
-  }
-  run(process.execPath, ['scripts/seed-demo.js'], {
-    label: `FINANCE_DB_PATH=${DEMO_DB} node scripts/seed-demo.js`,
+  removeDb(resolve(ROOT, DEMO_DB));
+  run(process.execPath, ['scripts/seed-demo.js', '--reset'], {
+    label: `FINANCE_DB_PATH=${DEMO_DB} node scripts/seed-demo.js --reset`,
     env: { FINANCE_DB_PATH: DEMO_DB },
   });
   pass('demo-db-seeded', DEMO_DB);
+}
+
+function removeDb(path) {
+  for (const suffix of ['', '-shm', '-wal']) rmSync(`${path}${suffix}`, { force: true });
 }
 
 function getRows(db, sql) {
@@ -112,19 +115,58 @@ function checkDemoMetrics() {
     }
     if (!(lowConfidence > 0)) fail('demo-low-confidence', `expected >0, got ${lowConfidence}`);
     if (!(humanRules > 0)) fail('demo-human-correction-rules', `expected >0, got ${humanRules}`);
+    const foundation = {
+      accounts: getRow(db, 'SELECT COUNT(*) count FROM accounts WHERE account_key IS NOT NULL').count,
+      balances: getRow(db, 'SELECT COUNT(*) count FROM account_balance_snapshots').count,
+      cards: getRow(db, 'SELECT COUNT(*) count FROM credit_card_profiles').count,
+      liabilities: getRow(db, 'SELECT COUNT(*) count FROM liability_profiles').count,
+      commitments: getRow(db, 'SELECT COUNT(*) count FROM commitment_templates').count,
+      holdings: getRow(db, 'SELECT COUNT(*) count FROM holding_snapshots').count,
+      valuedItems: getRow(db, 'SELECT COUNT(*) count FROM valued_items').count,
+      openTasks: getRow(db, "SELECT COUNT(*) count FROM review_tasks WHERE status='open'").count,
+    };
+    if (Object.values(foundation).some((count) => count < 1)) fail('demo-foundation-contexts', JSON.stringify(foundation));
 
     pass(
       'demo-metrics',
       `months=${monthRows.length}; automation=${monthRows.map((r) => `${r.month}:${r.automation_rate}%`).join(' -> ')}; lowConfidence=${lowConfidence}; humanCorrectionRules=${humanRules}`,
     );
+    pass('demo-foundation-contexts', JSON.stringify(foundation));
   } finally {
     db.close();
   }
 }
 
+function rehearseBackupRestore() {
+  const dir = mkdtempSync(join(tmpdir(), 'last-say-release-backup-'));
+  const restored = join(dir, 'restored.sqlite');
+  try {
+    const output = run(process.execPath, ['scripts/finance-backup.mjs', '--db', resolve(ROOT, DEMO_DB), '--output', dir], { label: 'finance-backup anonymized demo DB' });
+    const manifest = JSON.parse(output).manifest_path;
+    run(process.execPath, ['scripts/finance-restore.mjs', '--input', manifest, '--target', restored], { label: 'finance-restore anonymized demo DB to new path' });
+    const db = new DatabaseSync(restored, { readOnly: true });
+    try {
+      const integrity = db.prepare('PRAGMA integrity_check').get().integrity_check;
+      const transactions = db.prepare('SELECT COUNT(*) count FROM transactions').get().count;
+      const changes = db.prepare('SELECT COUNT(*) count FROM data_change_log').get().count;
+      if (integrity !== 'ok' || transactions !== 180 || changes < 1) fail('backup-restore-rehearsal', `integrity=${integrity}; transactions=${transactions}; changes=${changes}`);
+      pass('backup-restore-rehearsal', `integrity=ok; transactions=${transactions}; changeEvidence=${changes}`);
+    } finally { db.close(); }
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
+function cleanupVerificationArtifacts() {
+  for (const file of [DEMO_DB, TEST_DB, BUILD_DB, RUNTIME_DB]) removeDb(resolve(ROOT, file));
+  rmSync(resolve(ROOT, VERIFY_DIST_DIR), { recursive: true, force: true });
+}
+
 // Demo seed 遮罩號（****1234 / ****5678 / ****2468 / ****3579 / ****8080）。
 // 這些是 `*` 前綴 + 4 碼尾號，不是真實卡號，掃描時必須排除以免誤判 demo 資料。
 const DEMO_MASKED_TAILS = new Set(['1234', '5678', '2468', '3579', '8080']);
+const PUBLIC_NUMERIC_FIXTURES = new Set([
+  // Number.MAX_SAFE_INTEGER + 2, used by the money precision ADR/spike.
+  '9007199254740993',
+]);
 
 // 偵測疑似真實卡號。回傳匹配說明或 null。
 // 規則：
@@ -141,6 +183,7 @@ function detectCardNumber(line) {
   // 以及被 `*` 直接前綴的遮罩號。
   for (const match of line.matchAll(/\d{13,16}/g)) {
     const digits = match[0];
+    if (PUBLIC_NUMERIC_FIXTURES.has(digits)) continue;
     const start = match.index;
     // 排除：前面緊鄰 `*`（demo 遮罩 ****1234）— 但 ****1234 只有 4 碼不會匹配 13+，
     // 這裡主要防禦 `****1234****5678` 之類拼接地。只要前一字元是 `*` 就視為遮罩片段。
@@ -199,6 +242,7 @@ function checkScreenshots() {
 }
 
 function main() {
+  cleanupVerificationArtifacts();
   console.log('Last Say release verification');
   console.log(`cwd=${ROOT}`);
   console.log(`demoDb=${DEMO_DB}`);
@@ -221,9 +265,12 @@ function main() {
 
   run(process.execPath, ['--test'], {
     label: 'node --test',
-    env: { FINANCE_DB_PATH: 'data/dev-test.sqlite' },
+    env: { FINANCE_DB_PATH: TEST_DB },
   });
   pass('node-test', 'passed');
+
+  run(process.execPath, ['scripts/eval-last-say-skill.mjs'], { label: 'node scripts/eval-last-say-skill.mjs' });
+  pass('skill-eval', '8/8 fixed cases passed');
 
   run(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
     label: `FINANCE_DB_PATH=${BUILD_DB} NEXT_DIST_DIR=${VERIFY_DIST_DIR} next build`,
@@ -242,17 +289,20 @@ function main() {
 
   checkPersonalizedResidue();
   checkDemoMetrics();
+  rehearseBackupRestore();
   checkScreenshots();
 
   console.log('\nRelease verification summary');
   for (const check of checks) {
     console.log(`${check.status} ${check.name}${check.detail ? ` - ${check.detail}` : ''}`);
   }
+  cleanupVerificationArtifacts();
 }
 
 try {
   main();
 } catch (error) {
+  cleanupVerificationArtifacts();
   console.error(`\nFAIL ${error?.message ?? error}`);
   if (checks.length > 0) {
     console.error('\nPartial verification summary');

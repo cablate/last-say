@@ -68,6 +68,28 @@ Read only the files needed for the current task:
 - `references/operator-contract.md`: role, privacy, source handling, and completion contract.
 - `references/financial-data-foundation.md`: financial inventory/readiness, governed analysis context, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
 
+## Error Recovery
+
+- `VERSION_CONFLICT`: re-read the current resource, preserve the human's newer values, and rebuild the proposal with its new `expected_version`. Never use last-write-wins.
+- `IDENTITY_CONFLICT`: stop and report both typed identities and aliases. Do not merge by display name.
+- `HUMAN_CONFIRMATION_REQUIRED`: prepare the exact proposal, tell the user to inspect `/confirmations`, and stop. Never confirm as AI or forge a receipt.
+- `UNSUPPORTED_CONTEXT`: name the unsupported boundary and the separate typed context required. Do not coerce it into an available schema.
+- Failed preview or commit: report the run key, item/section error, and canonical write count. Change the payload only through a new preview.
+- A complete result only means the requested goal, scope, and as-of date satisfy the current readiness policy. It never proves the user's whole financial picture is complete.
+
+## A6 Completion Self-Check
+
+Before declaring any financial-data or analysis task complete, answer all six:
+
+1. **Preflight:** Did I run health, capabilities, inventory, and goal/scope/as-of readiness before analysis or writes?
+2. **Evidence:** Did I separate source-backed facts, deterministic derived values, and interpretation, with source/resource watermarks?
+3. **Write safety:** For a bank import or compound update, did I use preview then commit and re-read readiness afterward?
+4. **Gap honesty:** Did I report the highest-priority gap and request typed evidence instead of inventing missing facts? For `cash_flow_statement`, did I verify cash boundaries and reconciliation?
+5. **Domain limits:** Did I avoid deriving a loan schedule from APR, timeless investment quotes, invented FX, generic records, and arbitrary SQL?
+6. **Human authority:** Did I preserve human decisions, surface review/version conflicts, and stop at browser confirmation for high-risk actions?
+
+The final report must state scope, as-of date, readiness, datasets/actions used, watermarks, remaining gaps, exclusions, and the exact human next step.
+
 ## Self-Update Protocol
 
 Update only workflow-level experience in this skill:

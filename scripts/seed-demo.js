@@ -4,6 +4,7 @@
 const crypto = require('node:crypto');
 const { openDatabase, initializeDatabase, DEFAULT_DB_PATH } = require('../lib/db');
 const { normalizeForRule } = require('../lib/normalize');
+const { seedFoundationDemo } = require('./fixtures/financial-data/seed-foundation-demo');
 
 const RESET = process.argv.includes('--reset');
 
@@ -405,6 +406,8 @@ for (const target of correctionTargets) {
   );
 }
 
+const foundation = seedFoundationDemo(db);
+
 const summary = db.prepare(`
   SELECT statement_month AS month,
          COUNT(*) AS total,
@@ -426,6 +429,7 @@ console.log(`  月份：${MONTHS[0]} ~ ${MONTHS[MONTHS.length - 1]}`);
 console.log(`  規則自動化率：${summary.map((row) => `${row.month} ${Math.round((row.rule_count / row.total) * 100)}%`).join(' → ')}`);
 console.log(`  待審提示：${summary.map((row) => `${row.month} ${row.needs_review}`).join(' / ')}`);
 console.log(`  人工修正：${corrections} 筆；human_correction 規則：${humanRules} 條。`);
+console.log(`  財務資料中心：${foundation.accounts} 個 typed 帳戶、${foundation.sources} 份來源、${foundation.open_review_tasks} 項待處理。`);
 const devHint = process.platform === 'win32'
   ? process.env.PSModulePath
     ? '  下一步（PowerShell）：$env:FINANCE_DB_PATH="data/dev-demo.sqlite"; npm run dev\n  或 cmd：set FINANCE_DB_PATH=data/dev-demo.sqlite && npm run dev'

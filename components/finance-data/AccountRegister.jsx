@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, CircleDollarSign, CreditCard, Database, LineChart, ListChecks, Pencil, Plus, RefreshCw, ShieldAlert, WalletCards } from 'lucide-react';
+import { AlertCircle, CircleDollarSign, CreditCard, Database, FileCheck2, FileSearch, LineChart, ListChecks, Pencil, Plus, RefreshCw, ShieldAlert, WalletCards } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ObligationRegister from './ObligationRegister';
 import InvestmentRegister from './InvestmentRegister';
 import ReconciliationRegister from './ReconciliationRegister';
+import ReadinessPanel from './ReadinessPanel';
 
 const STATUS = {
   current: { label: '最新', variant: 'default' }, missing: { label: '缺餘額', variant: 'secondary' },
@@ -47,6 +48,23 @@ function majorToMinor(value) {
 }
 
 function localDate() { return new Date().toLocaleDateString('en-CA'); }
+
+function SourceEvidenceDialog({ sourceKey, onOpenChange }) {
+  const [state, setState] = useState({ loading: false, error: null, source: null });
+  useEffect(() => {
+    if (!sourceKey) return;
+    let active = true;
+    setState({ loading: true, error: null, source: null });
+    fetch(`/api/finance/sources/${sourceKey}`, { cache: 'no-store' }).then(async (response) => {
+      const body = await response.json();
+      if (!response.ok) throw new Error(body?.error?.message || '來源證據讀取失敗');
+      if (active) setState({ loading: false, error: null, source: body.source });
+    }).catch((error) => { if (active) setState({ loading: false, error: error.message, source: null }); });
+    return () => { active = false; };
+  }, [sourceKey]);
+  const source = state.source;
+  return <Dialog open={Boolean(sourceKey)} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>來源證據</DialogTitle><DialogDescription>確認這筆數值的來源類型、權威性、涵蓋期間與審查狀態。</DialogDescription></DialogHeader>{state.loading ? <LoadingState /> : null}{state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertDescription>{state.error}</AlertDescription></Alert> : null}{source ? <dl className="grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-muted-foreground">來源類型</dt><dd className="mt-1 font-medium">{source.source_kind}</dd></div><div><dt className="text-muted-foreground">權威與審查</dt><dd className="mt-1 flex gap-2"><Badge variant="outline">{source.authority}</Badge><Badge variant="outline">{source.review_state}</Badge></dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">說明</dt><dd className="mt-1">{source.description || '未提供說明'}</dd></div><div><dt className="text-muted-foreground">涵蓋期間</dt><dd className="mt-1 tabular-nums">{source.period_start || '未提供'} 至 {source.period_end || source.as_of_at?.slice(0, 10) || '未提供'}</dd></div><div><dt className="text-muted-foreground">狀態</dt><dd className="mt-1">{source.status} · {source.artifact_status}</dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">證據 key</dt><dd className="mt-1 break-all font-mono text-xs">{source.source_key}</dd></div></dl> : null}</DialogContent></Dialog>;
+}
 
 function AccountDialog({ open, account, onOpenChange, onSaved }) {
   const [name, setName] = useState(''); const [kind, setKind] = useState('bank'); const [saving, setSaving] = useState(false); const [error, setError] = useState(null);
@@ -82,6 +100,7 @@ export default function AccountRegister() {
   const [state, setState] = useState({ loading: true, error: null, inventory: null });
   const [accountDialog, setAccountDialog] = useState({ open: false, account: null });
   const [balanceAccount, setBalanceAccount] = useState(null);
+  const [sourceKey, setSourceKey] = useState(null);
   const load = useCallback(async () => {
     setState((current) => ({ ...current, loading: true, error: null }));
     try {
@@ -107,7 +126,7 @@ export default function AccountRegister() {
       {state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>資料載入失敗</AlertTitle><AlertDescription>{state.error}</AlertDescription></Alert> : null}
       {state.loading && !inventory ? <LoadingState /> : null}
 
-      {inventory ? <Tabs defaultValue="accounts" className="gap-6"><TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit sm:grid-cols-4"><TabsTrigger value="accounts"><Database aria-hidden="true" />帳戶與餘額</TabsTrigger><TabsTrigger value="obligations"><CreditCard aria-hidden="true" />卡片與負債</TabsTrigger><TabsTrigger value="investments"><LineChart aria-hidden="true" />投資估值</TabsTrigger><TabsTrigger value="review"><ListChecks aria-hidden="true" />估值與待辦</TabsTrigger></TabsList><TabsContent value="accounts" className="space-y-6">
+      {inventory ? <Tabs defaultValue="readiness" className="gap-6"><TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit sm:grid-cols-5"><TabsTrigger value="readiness"><FileCheck2 aria-hidden="true" />分析就緒度</TabsTrigger><TabsTrigger value="accounts"><Database aria-hidden="true" />帳戶與餘額</TabsTrigger><TabsTrigger value="obligations"><CreditCard aria-hidden="true" />卡片與負債</TabsTrigger><TabsTrigger value="investments"><LineChart aria-hidden="true" />投資估值</TabsTrigger><TabsTrigger value="review"><ListChecks aria-hidden="true" />估值與待辦</TabsTrigger></TabsList><TabsContent value="readiness"><ReadinessPanel inventory={inventory} /></TabsContent><TabsContent value="accounts" className="space-y-6">
         <section className="grid gap-4 border-b pb-6 md:grid-cols-[minmax(0,1.6fr)_minmax(15rem,0.8fr)]">
           <div className="space-y-2">
             <div className="flex items-center gap-2"><CircleDollarSign className="size-5 text-primary" aria-hidden="true" /><h2 className="font-semibold">現金部位準備度</h2><StatusBadge status={cash?.status} /></div>
@@ -127,7 +146,7 @@ export default function AccountRegister() {
                 const balance = account.balance; const selected = balance?.selected;
                 return <article key={account.account_key} className="@container grid gap-4 px-4 py-4 sm:px-5 @md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.7fr)_auto] @md:items-center">
                   <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-medium">{account.display_name}</h3><Badge variant="outline">{account.account_kind}</Badge>{!account.active ? <Badge variant="secondary">已停用</Badge> : null}</div><p className="mt-1 truncate text-xs text-muted-foreground">{account.institution_name || '未指定機構'} · {account.currency} · {account.masked_number || '無遮罩識別'}</p></div>
-                  <div><p className="font-mono text-lg font-semibold tabular-nums">{formatMinor(selected?.amount_minor, selected?.currency || account.currency)}</p><p className="text-xs text-muted-foreground">{selected ? `${selected.as_of_date} · ${selected.balance_kind} · ${selected.source_key ? '有來源' : '無來源'}` : '尚無可用餘額 snapshot'}</p></div>
+                  <div><p className="font-mono text-lg font-semibold tabular-nums">{formatMinor(selected?.amount_minor, selected?.currency || account.currency)}</p>{selected ? <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{selected.as_of_date} · {selected.balance_kind}</span>{selected.source_key ? <Button type="button" variant="link" size="sm" className="h-auto px-0 text-xs" onClick={() => setSourceKey(selected.source_key)}><FileSearch aria-hidden="true" />查看來源</Button> : <span>無來源</span>}</div> : <p className="text-xs text-muted-foreground">尚無可用餘額 snapshot</p>}</div>
                   <div className="flex flex-wrap items-center gap-2 justify-self-start @md:justify-self-end"><StatusBadge status={balance?.status || 'missing'} /><Button variant="ghost" size="icon-sm" title="編輯帳戶" aria-label={`編輯 ${account.display_name}`} onClick={() => setAccountDialog({ open: true, account })}><Pencil aria-hidden="true" /></Button><Button variant="outline" size="sm" onClick={() => setBalanceAccount(account)}><WalletCards aria-hidden="true" />更新餘額</Button></div>
                 </article>;
               })}
@@ -136,6 +155,7 @@ export default function AccountRegister() {
       </TabsContent><TabsContent value="obligations"><ObligationRegister inventory={inventory} onSaved={load} /></TabsContent><TabsContent value="investments"><InvestmentRegister inventory={inventory} /></TabsContent><TabsContent value="review"><ReconciliationRegister inventory={inventory} onSaved={load} /></TabsContent></Tabs> : null}
       <AccountDialog open={accountDialog.open} account={accountDialog.account} onOpenChange={(open) => setAccountDialog((current) => ({ ...current, open }))} onSaved={load} />
       <BalanceDialog open={Boolean(balanceAccount)} account={balanceAccount} onOpenChange={(open) => !open && setBalanceAccount(null)} onSaved={load} />
+      <SourceEvidenceDialog sourceKey={sourceKey} onOpenChange={(open) => !open && setSourceKey(null)} />
     </section>
   );
 }

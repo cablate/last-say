@@ -28,6 +28,7 @@
     "test": "node --test",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
     "verify:release": "node scripts/verify-release.mjs",
+    "eval:skill": "node scripts/eval-last-say-skill.mjs",
     "seed": "node scripts/seed-from-ledger.js",
     "seed:reset": "node scripts/seed-from-ledger.js --reset",
     "seed:demo": "node scripts/seed-demo.js",

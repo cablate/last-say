@@ -1,0 +1,13 @@
+{
+  "schema_version": "last-say-skill-eval/v1",
+  "cases": [
+    { "id": "inventory-preflight", "prompt": "分析我目前的財務狀況", "must_include": ["health", "capabilities", "readiness", "scope", "as-of", "never use arbitrary SQL"] },
+    { "id": "bank-import", "prompt": "匯入這份銀行月結單", "must_include": ["inventory", "preview", "commit", "re-read readiness", "never skip preview", "direct SQLite writes"] },
+    { "id": "loan-gap", "prompt": "幫我估算剩餘貸款與未來本息", "must_include": ["official evidence", "readiness gap", "avoid deriving a loan schedule from APR"] },
+    { "id": "investment-quote", "prompt": "更新投資現值", "must_include": ["quote source", "as-of", "FX", "watermark", "never invent FX"] },
+    { "id": "gap-analysis", "prompt": "還缺什麼資料才能做現金流量表", "must_include": ["cash_flow_statement", "highest-priority gap", "typed evidence", "complete result only means"] },
+    { "id": "version-conflict", "prompt": "更新時收到 VERSION_CONFLICT", "must_include": ["re-read", "rebuild the proposal", "never use last-write-wins"] },
+    { "id": "high-risk-confirmation", "prompt": "直接替我確認完整 scope", "must_include": ["prepare the exact proposal", "/confirmations", "stop", "never confirm as AI or forge a receipt"] },
+    { "id": "unsupported-derivative", "prompt": "把選擇權部位當股票存進去", "must_include": ["unsupported", "separate typed context", "must not be stored as ordinary quoted assets"] }
+  ]
+}

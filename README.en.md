@@ -72,7 +72,7 @@ npm run seed:demo
 npm run dev
 ```
 
-Open [http://127.0.0.1:3127](http://127.0.0.1:3127). The demo contains fictional transactions and exercises the overview, review queue, rules, trends, and management P&L.
+Open [http://127.0.0.1:3127](http://127.0.0.1:3127). The demo contains fictional data and exercises transactions, review, rules, trends, management P&L, typed accounts, obligations, investments, valuations, and readiness gaps.
 
 If `3127` is already in use:
 
@@ -105,8 +105,11 @@ The Skill contains bank quirks, category boundaries, web research guidance, conf
 | Correction evidence, rule quality, historical reclassification | Ready |
 | Monthly overview, movers, recurring baseline, trends | Ready |
 | Management P&L with explicit coverage | Ready, coverage-dependent |
-| Balance sheet | Not complete; requires account roles and balance snapshots |
-| Cash flow statement | Not complete; requires cash snapshots and transfer matching |
+| Financial Data Center | Ready: typed accounts, sources, balances, cards, loans, commitments, investments, FX, Tier 2 values, and review tasks |
+| AI analysis preflight | Ready: 8 readiness goals, prioritized gaps, scoped/as-of checks, 7 named datasets, and provenance watermarks |
+| Balance sheet | Data foundation ready; final statement UI still incomplete and scope-dependent |
+| Cash flow statement | Readiness checks ready; final statement UI still incomplete and requires cash boundaries plus reconciliation |
+| Tax, options, and complex derivatives | Unsupported; requires a separate typed context |
 
 Last Say is currently a single-user localhost application with no authentication or tenant isolation. Do not expose port `3127` to a network or reverse proxy. See [SECURITY.md](./SECURITY.md).
 

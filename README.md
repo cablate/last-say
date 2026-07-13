@@ -89,7 +89,7 @@ npm run seed:demo
 npm run dev
 ```
 
-開啟 [http://127.0.0.1:3127](http://127.0.0.1:3127)。Demo seed 只包含虛構交易，可直接體驗總覽、待審、規則、走勢與管理用損益表。
+開啟 [http://127.0.0.1:3127](http://127.0.0.1:3127)。Demo seed 只包含虛構資料，可直接體驗總覽、待審、規則、走勢、管理用損益表，以及帳戶、債務、投資、估值與資料缺口中心。
 
 > 已經有正式資料時，不要執行 reset seed。請用 `FINANCE_DB_PATH` 指向隔離資料庫；開發與測試也不得使用 `data/finance.sqlite`。
 
@@ -121,8 +121,11 @@ npx next dev -H 127.0.0.1 -p 3128
 | 規則學習與歷史回溯 | 可用 | correction evidence、弱規則、覆寫率、歷史重新校正 |
 | 月結總覽與趨勢 | 可用 | 本月 vs 常態、Top movers、固定支出底盤、自動化率 |
 | 管理用損益表 | 可用但依覆蓋率 | 清楚標示 mapped、unmapped、needs review 與排除項目 |
-| 資產負債表 | 尚未完整 | 需要帳戶角色與期末餘額快照，系統不會用流水硬猜 |
-| 現金流量表 | 尚未完整 | 需要期初期末現金、轉帳配對與現金流分類 |
+| 財務資料中心 | 可用 | typed 帳戶、來源、餘額、卡片、貸款、承諾、投資、FX、Tier 2 估值與 review queue |
+| AI 分析 preflight | 可用 | 8 個 readiness goals、優先缺口、scope/as-of、7 個白名單 datasets 與 provenance watermarks |
+| 資產負債表 | 資料基礎可用，正式報表未完成 | Tier 1/Tier 2 inventory 已可分析；完整性仍取決於 scope attestation、餘額與估值來源 |
+| 現金流量表 | readiness 可用，正式報表未完成 | 會檢查期初期末現金與 reconciliation，不會用不完整流水硬猜 |
+| 稅務、選擇權與複雜衍生品 | 不支援 | 明確回傳 unsupported，必須另建 typed context，不能偽裝成一般股票 |
 
 這是單人本機工具，API 只應綁定 localhost，目前沒有登入與多租戶隔離。不要直接公開部署到網路；詳見 [SECURITY.md](./SECURITY.md)。
 
@@ -148,12 +151,14 @@ npm run verify:release
 
 `verify:release` 會在隔離 DB 與 `.next-verify` 中執行 lint、依賴稽核、測試、build、實際 runtime smoke test，並檢查公開檔案是否殘留銀行名稱、卡號或個人資料；不會改寫正式服務的 `.next`。核心技術為 Next.js 15、React 19、Tailwind CSS 4、shadcn/ui 與 Node 內建 SQLite。
 
+它也會重建匿名 foundation demo、執行固定的 8-case Skill eval，並做一次 DB-only backup→new-path restore rehearsal。個人正式備份仍應依 [Backup And Restore](./docs/operations/backup-restore.md) 定期演練。
+
 ## Roadmap
 
 長期產品方向以 [Last Say Long-Term Goal](./docs/long-term-goal.md) 為準；近期先依 [財務資料基礎建設 Master Plan](./docs/plans/financial-data-foundation-master-plan.md) 完成可追溯資料與缺口判斷，再推進預測與主動財務控制。功能必須能改善可信財務全貌、提早風險控制或人類與 AI 的長期協作成本。
 
-- 帳戶角色與餘額快照，完成可對帳的資產負債表。
-- 轉帳配對與 direct-method 現金流量表。
+- 將現有 typed inventory 組成可 drilldown、可對帳的正式資產負債表。
+- 將現有 cash boundaries 與 reconciliation 組成 direct-method 現金流量表。
 - 個人／事業等客觀維度與可配置分類。
 - 更多可分享、去識別化的銀行格式 adapters。
 - AI 月度洞察：只讀分析，不擅自修改財務資料。
