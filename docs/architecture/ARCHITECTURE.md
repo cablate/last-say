@@ -2,7 +2,7 @@
 
 用途：描述 Last Say 實際部署形態、模組依賴、信任邊界與目前架構原則的落差；不是理想化分層圖。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 實際系統形態
 
@@ -20,7 +20,7 @@ flowchart TB
             Queries["lib/queries"]
             DBFacade["lib/db.js\nlazy DatabaseSync singleton"]
         end
-        SQLite[("data/finance.sqlite\nWAL + schema v6")]
+        SQLite[("data/finance.sqlite\nWAL + code schema v9")]
         PrivateFiles["uploads / outputs / source files"]
     end
 
@@ -42,9 +42,9 @@ flowchart TB
 
 | 層 | 位置 | 實際責任 | 邊界問題 |
 |---|---|---|---|
-| Presentation | `app/**/page.js`、`components/**` | 頁面、client state、fetch、表格與視覺化 | 多個大型 component 同時負責取數、轉換與互動；Data Center money 已共用 canonical helper，legacy UI仍有自己的表示邏輯 |
+| Presentation | `app/**/page.js`、`components/**` | 頁面、client state、fetch、表格與視覺化 | 多個大型 component仍同時負責取數與互動；report UI只呈現server read model，不在client重算財務語意 |
 | HTTP／control | `app/api/**/route.js` | 解析 request、呼叫 validation／query、回傳 JSON | route 數量多；legacy 與 typed APIs 並存；一般 write route 無 auth |
-| Domain／contract | `lib/finance/**`、`lib/reporting/**` | typed schema、money、readiness、analysis registry、ingestion／reversal、Control Phase 0 reference projector、報表語意 | 核心語意已有邊界，但並非所有 legacy query 都經過 domain layer；control projector尚未接 runtime DB／UI |
+| Domain／contract | `lib/finance/**`、`lib/reporting/**` | typed schema、money、三時間線語意、readiness、analysis／proposal registry、ingestion／reversal、report coverage、Control Phase 0 reference projector | 核心語意已有邊界，但並非所有 legacy query 都經過 domain layer；control projector尚未接 runtime DB／UI |
 | Application／query | `lib/queries/**` | SQL、transaction orchestration、read model、learning／reclassification | SQL 與業務規則集中；部分檔案變大，變更半徑高 |
 | Persistence | `lib/db.js`、`lib/db/**` | connection、PRAGMA、compatibility schema、migration ledger、transaction | `lib/db.js` 同時保留 legacy schema bootstrap 與新 migration façade，責任較重 |
 | Operator | `.claude/skills/last-say-ops/**`、`scripts/**` | 外部 AI SOP、seed、backup／restore／health check、local launcher、browser E2E、release verification | 核心 onboarding 仍依賴 agent／CLI；不是一般 GUI 使用流程 |
@@ -69,7 +69,7 @@ CodeGraph 在專案根目錄重新索引後顯示：
 - **Server state：** SQLite 是持久 source of truth；UI 每次 fetch API，沒有 Redux／全域 client store。
 - **Connection state：** `globalThis` singleton 避免 dev hot reload 建立多連線；CLI 可直接 `openDatabase`。
 - **UI state：** 各 client component 以 React local state 管理 dialog、filters、loading、selection。
-- **Derived state：** P&L、overview、readiness、inventory、valuation與 reconciliation 由 query/read model 計算，不另設 cache。
+- **Derived state：** P&L、balance sheet、cash flow、overview、readiness、inventory、valuation與reconciliation由query/read model計算，不另設cache。
 - **AI state：** 不存模型 session；只保存來源、規則、人工裁決、review／confirmation 與 audit evidence。
 
 ## 安全與信任邊界
@@ -108,6 +108,8 @@ flowchart LR
 | `lib/finance/ingestion/**` | 多 context 原子性、identity、reversal | compound ingestion、reversal、contracts、conflict tests |
 | `lib/queries/finance/obligations.js` | cards、loans、commitments 共用且檔案大 | obligations 全測試與 cross-context invariant |
 | `lib/queries/finance/investments.js`／money helpers | manual source+fact atomicity、quote／FX／minor-unit correctness | JPY／TWD／USD fixtures、rollback與valuation tests |
+| `lib/queries/reports/**`／`lib/reporting/**` | 三張表共享typed owners、coverage與cross-view invariants | reporting fixtures、currency scope、partial／unreconciled與browser report flow |
+| `lib/queries/finance/review-workbench.js`／`ConfirmationQueue.jsx` | material human authority與多typed owner交會 | typed-owner orphan guard、stale recovery、ARIA與browser decisions |
 | `components/TransactionTable.jsx`／`Overview.jsx` | UI 責任集中、行為與展示耦合 | browser flow、API contract、responsive state |
 
 ## 長期原則與目前差距
@@ -115,8 +117,8 @@ flowchart LR
 | 原則 | 現況 | 差距 |
 |---|---|---|
 | 核心語意不依賴 UI | typed contracts／queries 大致符合 | legacy UI仍重複 money／filter logic |
-| 外部 AI 可替換 | skill 是 HTTP operator contract，server 無模型 SDK | 尚無 vendor-neutral operator conformance suite，只測現行 skill |
-| 關鍵流程可驗證 | 47 Node test files、1條隔離 Chromium E2E + release verifier | browser coverage仍窄；缺效能與長時間運行基線 |
+| 外部 AI 可替換 | skill 是 HTTP operator contract，server 無模型 SDK；12個named datasets與proposal envelope公開owner/evidence hints | 尚無 vendor-neutral operator conformance suite，只測現行 skill |
+| 關鍵流程可驗證 | Node suite、5條隔離Chromium流程、Skill eval與release verifier | browser coverage仍屬bounded；缺效能與長時間運行基線 |
 | 失敗可恢復 | atomic commit/reversal、backup/restore | 無 service-level rollback／operational drill automation |
 | 重要操作可稽核 | 多個 append-only logs + confirmation | 一般 CRUD audit coverage 不完全一致 |
 | 文件與程式碼同步 | contracts／plans／audit入口齊備，本次已同步主要repo reality | owner政策與未來實作完成後仍須持續回寫，避免Phase 0 reference被誤寫成runtime能力 |

@@ -34,7 +34,16 @@ function completionMessage(report) {
   const coverage = report?.coverage
   const unreviewed = Number(coverage?.unreviewed_transaction_count) || 0
   const unmapped = Number(coverage?.unmapped_transaction_count) || 0
+  const unresolved = Number(coverage?.owner_unresolved_transaction_count) || 0
+  const unresolvedInflow = Number(coverage?.owner_unresolved_inflow_cents) || 0
+  const unresolvedOutflow = Number(coverage?.owner_unresolved_outflow_cents) || 0
 
+  if (unresolved > 0) {
+    return {
+      tone: "warning",
+      text: `有 ${unresolved} 筆用途無法確認（流入 ${formatTWD(unresolvedInflow)}、流出 ${formatTWD(unresolvedOutflow)}）；現金已保留，但未算入收入或支出。${unreviewed > 0 ? ` 另有 ${unreviewed} 筆待審。` : ""}${unmapped > 0 ? ` 另有 ${unmapped} 筆未對應。` : ""}`,
+    }
+  }
   if (unreviewed > 0 && unmapped > 0) {
     return {
       tone: "warning",
@@ -78,6 +87,10 @@ export default function ReportSummary({ report }) {
   const netIncome = Number(report.net_income_cents) || 0
   const totalRevenue = Number(report.total_revenue_cents) || 0
   const totalExpense = Number(report.total_expense_cents) || 0
+  const unresolvedCount = Number(report.owner_unresolved_transaction_count) || 0
+  const unresolvedInflow = Number(report.owner_unresolved_inflow_cents) || 0
+  const unresolvedOutflow = Number(report.owner_unresolved_outflow_cents) || 0
+  const unresolvedNet = Number(report.owner_unresolved_net_cents) || 0
 
   const top = topExpense(report.expenses, report.total_expense_cents)
   const completion = completionMessage(report)
@@ -126,6 +139,14 @@ export default function ReportSummary({ report }) {
             <span className="font-medium text-foreground"> {top.percent}%</span>
             。
           </p>
+        ) : null}
+
+        {unresolvedCount > 0 ? (
+          <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/20 p-3 sm:grid-cols-3">
+            <MetricCard label="無法確認流入" value={formatTWD(unresolvedInflow)} tone="success" />
+            <MetricCard label="無法確認流出" value={formatTWD(unresolvedOutflow)} tone="destructive" />
+            <MetricCard label="暫記淨現金" value={signedTWD(unresolvedNet)} />
+          </div>
         ) : null}
 
         {/* 完成度提示（含過渡標示，精簡整合） */}

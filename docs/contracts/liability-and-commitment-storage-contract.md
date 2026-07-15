@@ -36,6 +36,11 @@ Credit Card context 擁有 statements/payment matches/installment plans；Liabil
 - Merchant expense 僅在原交易認列一次；installment entries 表示未來清償結構。
 - Card payment是 liability settlement/cash movement，不是第二筆 P&L expense。
 - Loan allocation principal+interest+fee 必須等於 matched cash amount，否則 unreconciled。
+- Card payment match只能連到active cash outflow，且與statement同entity／currency；同一付款與同一statement的累計allocation不得超過來源現金或應付額。
+- Loan allocation components不得為負；payment必須是active outflow且與liability同entity／currency。累計allocation不得超過來源現金或schedule各component；少配可保存為unreconciled，多配fail closed。
+- AI／estimated recurring pattern只能建立`provisional`＋`needs_review` commitment；未升格為official／user-confirmed前，occurrence也只能是provisional candidate。
+- Compound ingestion建立的card／loan／commitment canonical rows必須保存`ingestion_run_id`與active/reversed lifecycle。Confirmed reversal只改 lifecycle與audit，不刪除header、items、entries、source或交易。
+- 若回復後以新run重匯會撞到既有不可重用的identity（例如existing liability上的相同schedule sequence、existing commitment上的相同occurrence date），reverse preview必須明示blocker；不得先標reversed再讓修正資料無法落地。
 - Official schedule 可 supersede provisional future entries，但 settled history 不被 template/schedule edit 改寫。
 
 ## UI States
@@ -48,12 +53,17 @@ Credit Card context 擁有 statements/payment matches/installment plans；Liabil
 - Current loan principal 由 principal balance snapshot或 reconciled schedule read model 擁有，不放第二份 current balance 在 profile。
 - Variable-rate 未提供官方 schedule/repricing rule 時只保存已報告事實，future readiness partial。
 - Revolving、balloon、interest-only 等未具 typed contract 的生命週期 fail closed/另立 context。
+- Installment origin必須是同卡active outflow且幣別一致；financed principal不得超過原始charge絕對值。
 
 ## Acceptance Examples
 
 1. Given NT$12,000 merchant charge 分 12 期，then P&L 只有一筆 NT$12,000 expense，另有 12 筆 obligation entries，不產生 12 筆 merchant expense。
 2. Given loan cash payment NT$20,000 但 allocation sum NT$19,500，then status `unreconciled`。
 3. Given variable loan 只有目前 APR，when 要求未來 schedule，then 回 partial gap，不由 AI 猜 authoritative payment。
+4. Given AI從歷史交易推測每月支出，when proposal尚未經owner確認，then只能保存provisional candidate，不得建立scheduled／settled obligation。
+5. Given card／loan allocation超過cash leg或typed due component，then preview／commit fail closed且compound run canonical writes為零。
+6. Given一批新account＋card profile＋statement資料皆由同一run建立，when human-confirmed reversal執行，thenactive reads不再回傳該批資料、source/audit/child rows仍保留，且新run可重新建立正確資料。
+7. Given existing liability上新增schedule sequence 1，when reversal後新run仍會撞到同一unique identity，then reverse preview回不可回復blocker，原run保持committed。
 
 ## Test Mapping
 
@@ -64,11 +74,13 @@ test_mapping:
     - test/credit-card-installments.test.js
     - test/liability-storage.test.js
     - test/commitments.test.js
+    - test/obligation-closure.test.js
 ```
 
 ## Evidence
 
-- `test/credit-card-storage.test.js`、`test/credit-card-installments.test.js`、`test/liability-storage.test.js`、`test/commitments.test.js`。
+- `lib/db/migrations/0008-obligation-ingestion-lifecycle.js`、`lib/finance/ingestion/reversal.js`與`lib/queries/finance/obligations.js`。
+- `test/credit-card-storage.test.js`、`test/credit-card-installments.test.js`、`test/liability-storage.test.js`、`test/commitments.test.js`、`test/obligation-closure.test.js`。
 - Compound rehearsal使用`test/fixtures/financial-data/source-mappings/card-statement.json`、`loan-statement.json`與`canonical/additional-contexts.json`；repository沒有三份按domain拆開的canonical fixture。
 
 ## Intentional Changes

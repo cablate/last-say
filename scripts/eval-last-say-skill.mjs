@@ -7,7 +7,9 @@ const documents = [
   '.claude/skills/last-say-ops/SKILL.md',
   '.claude/skills/last-say-ops/references/api-contract.md',
   '.claude/skills/last-say-ops/references/financial-data-foundation.md',
+  '.claude/skills/last-say-ops/references/fx-and-market-valuation-refresh.md',
   '.claude/skills/last-say-ops/references/monthly-workflow.md',
+  '.claude/skills/last-say-ops/references/analysis-recipes.md',
 ].map((file) => readFileSync(resolve(root, file), 'utf8').toLowerCase()).join('\n');
 
 if (corpus.schema_version !== 'last-say-skill-eval/v1' || !Array.isArray(corpus.cases) || corpus.cases.length === 0) {

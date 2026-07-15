@@ -126,8 +126,8 @@ PowerShell請使用`$env:PORT='3128'; npm run dev`。host固定為`127.0.0.1`；
 | 財務資料中心 | 可用 | 全類型typed帳戶、來源、餘額、卡片、貸款、承諾、manual投資／quote／FX、Tier 2估值與review queue |
 | AI 分析 preflight | 可用 | 8 個 readiness goals、優先缺口、scope/as-of、7 個白名單 datasets 與 provenance watermarks |
 | Control Phase 0 reference | 已完成但非runtime能力 | contracts、metric dictionary、synthetic fixture與pure 90日timeline projector；尚未接真實DB／API／UI |
-| 資產負債表 | 資料基礎可用，正式報表未完成 | UI明確顯示不可用；完整性仍取決於scope、餘額、估值、FX與reconciliation |
-| 現金流量表 | readiness 可用，正式報表未完成 | UI明確顯示不可用；正式表仍需cash boundary、mapping與begin/end reconciliation |
+| 資產負債表 | 正式server-backed報表已實作 | 顯示資產、負債、淨值、scope、watermarks與coverage；缺快照、估值或FX時降級，不把未知當0 |
+| 現金流量表 | 正式direct-method報表已實作 | 依幣別與期間顯示營運／投資／融資流量、boundary reconciliation與blockers；缺matching或boundary時降級 |
 | 稅務、選擇權與複雜衍生品 | 不支援 | 明確回傳 unsupported，必須另建 typed context，不能偽裝成一般股票 |
 
 這是單人本機工具，API 只綁定 localhost，目前沒有登入與多租戶隔離。不要把任何設定port直接公開到網路；詳見 [SECURITY.md](./SECURITY.md)。

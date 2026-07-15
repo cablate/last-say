@@ -193,6 +193,42 @@ test('unmapped or unreviewed rows make the P&L partial without hiding computed t
   assert.equal(report.coverage.blockers.length, 2);
 });
 
+test('owner-unresolved cash is disclosed separately and never invented as P&L', () => {
+  const report = runFixture([
+    {
+      name: 'Owner unresolved inflow',
+      amount: 40000,
+      inflow: 40000,
+      category_primary: '無法確認',
+      classification_source: 'human',
+      reviewed: 1,
+    },
+    {
+      name: 'Owner unresolved outflow',
+      amount: -150000,
+      outflow: 150000,
+      category_primary: '無法確認',
+      classification_source: 'human',
+      reviewed: 1,
+    },
+  ]);
+
+  assert.equal(report.total_revenue_cents, 0);
+  assert.equal(report.total_expense_cents, 0);
+  assert.equal(report.net_income_cents, 0);
+  assert.equal(report.unmapped_transaction_count, 0);
+  assert.equal(report.unreviewed_transaction_count, 0);
+  assert.equal(report.owner_unresolved_transaction_count, 2);
+  assert.equal(report.owner_unresolved_inflow_cents, 40000);
+  assert.equal(report.owner_unresolved_outflow_cents, 150000);
+  assert.equal(report.owner_unresolved_net_cents, -110000);
+  assert.equal(findLine(report.excluded, 'excluded:unresolved_inflow').amount_cents, 40000);
+  assert.equal(findLine(report.excluded, 'excluded:unresolved_outflow').amount_cents, 150000);
+  assert.equal(report.coverage.status, 'partial');
+  assert.equal(report.coverage.blockers.length, 1);
+  assert.equal(report.coverage.blockers[0].kind, 'owner_unresolved_transaction');
+});
+
 test('ordinary report rules cannot turn deterministic card-payment exclusions into expenses', () => {
   const report = runFixture([
     {

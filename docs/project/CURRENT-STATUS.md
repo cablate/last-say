@@ -1,122 +1,101 @@
 # Current Status
 
-用途：提供截至 2026-07-15 的專案快照，區分「完成的財務資料基礎」、「剛完成的穩定化／Control Phase 0 reference slice」與「仍待正式 runtime 實作的財務控制能力」。
+用途：讓下一位人類或 AI 先知道目前真正完成到哪裡、哪些數字可用、哪些動作仍需要專案擁有者。本文描述 repository 現況，不取代功能契約或長期目標。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
-## 結論
+## 一句話結論
 
-**Confirmed：財務資料基礎Phase 0–7 release line已完成，並在2026-07-14通過release acceptance。** 證據是`e28f8af`至`4a4ac68`的能力提交、schema v6 migrations、active storage／operator contracts與release verification。這包含typed schema、migration、ingestion、cards／liabilities／commitments、investment valuation、reconciliation／review、analysis contexts、operator skill與backup／restore。
+Last Say 已從「有 typed 資料表的財務資料基礎」推進為「可由 AI 讀取受治理資料、由人類在統一工作台裁決、並產生管理損益表／資產負債表／現金流量表的 local-first 系統」。目前剩下的 foundation 關卡不是再建第二套資料模型，而是正式 DB 的受保護升級、真實待釐清項目處理，以及擁有者完成代表性操作驗收。
 
-**Confirmed：2026-07-15 完成一輪 correctness／operability stabilization 與 Financial Control Phase 0 reference slice。** JPY money bug、account/investment UI gap、static report preview、PORT漂移、browser E2E與backup health check已處理；四份Control contracts、metric dictionary、synthetic pressure fixture與pure 90-day cash-timeline projector已存在。
+## 已確認完成
 
-**Confirmed：整體產品仍未完成。** 正式 trusted financial position、Balance Sheet／Cash Flow、foundation-to-forecast adapter/API/UI、safe-to-spend與alerts仍是主要缺口。Pure synthetic projector不是使用者財務結論。
+- Repository code schema 已到 v9，migrations `0001`–`0009`涵蓋 shared kernel、ingestion、balances、obligations、investments、reconciliation、reimbursement matching、obligation reversal lifecycle 與 transfer optimistic versioning。
+- AI 分析面提供 12 個 allowlisted datasets 與 `finance.proposal-envelope/v1`；proposal 只描述 evidence、impact、missing data、typed owner 與 recovery，不直接取得 human authority。
+- 統一待審工作台 `finance.review-workbench/v1` 已接上 scope confirmations、transfer、reimbursement、recurring commitment、source conflict 與 owner-unresolved transaction。Typed owner 狀態不能再被 generic review task 單獨關閉。
+- 交易單筆修正與批次 review 已加入 `updated_at` stale guard；嚴格批次遇到任一版本衝突會整批拒絕。
+- 三張管理報表均為 server-side read model：
+  - management P&L：economic recognition，唯一已支援 basis 為 `card_accrual_management`；
+  - balance sheet：account／holding／valuation snapshots、FX watermarks、net worth 與 coverage；
+  - direct-method cash flow：cash settlement、typed transfer／card／loan／investment／reimbursement owner、begin/end reconciliation 與 coverage。
+- 報表 UI 只呈現 server 結果；partial、empty、unmapped、unreconciled 與 complete 都有明確狀態，不在 React 端重算財務語意。
+- Operator Skill 已加入固定／變動支出、工作／個人／報銷、descriptive income floor、分期 audit、未決轉帳、三視角 bridge 與 typed review recipes；adversarial eval 目前 17/17。
+- 最新整合驗證：`npm run verify:release`完整通過（86.3秒），其中Node tests 195/195、Skill eval 17/17、Chromium 5/5、production build、runtime smoke、privacy scan與匿名backup restore皆通過；Markdown links／fences與`git diff --check`也通過。
 
-## Owner-confirmed execution direction（2026-07-15）
+## 正式資料安全狀態
 
-- **Current stage：** 繼續收斂資料基礎建設的實際業務流程。Foundation Phase 0–7完成代表技術基線存在，不代表AI輸入→typed commit→UI確認／少量修正已在真實使用中永久封版。
-- **Operating model：** AI是主要輸入方式；UI只負責確認、歧義、高風險授權與少量修正，不追求full CRUD admin。
-- **Next stage：** Financial Control Center，且必須圍繞／消費既有foundation展開，不得重建canonical facts。
-- **Deferred：** reserve、reliable income與其他進階財務policy到實際control／forecast phase再決定；目前不以它們阻擋foundation工作。
-- **Simplicity rule：** 核心業務邏輯尚未跑順並獲owner滿意前，沿用簡單local-first defaults，只處理真實流程阻礙與correctness，不提前平台化或大規模優化。
+- 正式 `data/finance.sqlite` 仍是 schema v6；本輪沒有在正式 DB 執行 migration 或 canonical mutation。
+- 2026-07-16 唯讀盤點：1,078 transactions、13 accounts、19 sources、10 balance snapshots，交易日期涵蓋 2025-04-05 至 2026-07-15。
+- 已建立新的 ignored DB-only backup bundle；`backup:check` 驗證 hash、`integrity_check=ok`、0 foreign-key violations、schema v6，且在 24 小時 freshness gate 內。
+- 已把該 backup 還原到 OS temporary path，僅在暫存副本演練 v6→v9。結果為 schema v9、`integrity_check=ok`、0 FK violations，migrations 0007–0009 欄位／tables 存在；演練後暫存目錄已安全移除。
+- 隔離真實資料副本能產生三張表，但都誠實維持 `partial`：P&L 仍有 unmatched transfer；balance sheet 有 missing／stale snapshots與missing valuation；cash flow有missing boundaries、card／loan／transfer typed matching缺口。工作台另辨識20筆owner-unresolved transactions。
 
-## 目前版本與基線
+這些 aggregate evidence 不代表擁有者已接受每一筆分類，也不代表正式 DB 已可直接啟動新版本。
 
-| 項目 | 狀態 |
+## Owner-confirmed operating direction
+
+- AI 是主要輸入方式；UI 負責確認、歧義、高風險授權與少量修正，不追求每個 context 都有 full CRUD admin。
+- 目前先把資料基礎與真實操作流程跑順；Financial Control Center 是下一階段，必須消費現有 canonical facts，不建立第二套帳戶、資產、負債或投資 truth。
+- Reserve、dependable income、safe-to-spend policy 等到 control／forecast consumer 真正需要時再由 owner 決定。
+- 業務邏輯未獲 owner 滿意前，以簡單 local-first defaults 為主，不提前做 remote platform、multi-tenant、複雜 observability 或大規模重構。
+
+## 目前版本與入口
+
+| 項目 | 現況 |
 |---|---|
-| Audit baseline | 本輪開始時`main`／`origin/main`為`4a4ac68`（`feat: complete financial data foundation release`）；本文件描述該baseline之後的盤點與stabilization delivery，實際branch／commit以Git為準 |
-| package version | `0.2.3` |
-| schema | version 6，checksummed migrations `0001`–`0006`；本輪未改schema/migration |
+| Git delivery | branch `codex/repository-audit-and-stabilization`；精確commit以`git log -1`為準 |
+| package | `0.2.3` |
+| code schema | v9 |
+| formal DB schema | v6；只完成 backup + isolated rehearsal |
 | runtime | Node >=22.5、Next.js 15、React 19、SQLite |
-| app/API | 8 app pages；78 route files，其中57個`/api/finance` route files |
-| automated tests | 47個`.test.js`檔 + 1個Chromium E2E spec；最終結果見audit report |
-| CodeGraph | 本輪定稿時在專案根目錄重跑；最終數量見audit validation record |
-| documentation | `Final-Long-Term-Goal.md`與`docs/README.md`為唯一正式冷啟動入口；active ADR／contract／runbook留在工作樹，被取代的舊文件已在有效內容吸收後移除，歷史追溯使用Git |
+| pages | Overview、Transactions、Reports、Data Center、Trend、Corrections、Rules、Confirmations |
+| AI contract | `.claude/skills/last-say-ops/` |
+| active foundation plan | `docs/plans/ai-assisted-financial-semantics-plan.md` |
+| next-stage plan | `docs/plans/master-financial-control-plan.md` |
 
-數量是盤點快照，不是產品 KPI；新增檔案後會自然改變。
+## 能力狀態
 
-## 最近已完成的主線
+### Implemented and verified
 
-Financial Data Foundation Git歷史依能力相依順序落地：
+- Legacy transaction import、dedupe、review、correction、classification learning與human-evidence preservation。
+- Typed identity／source／scope、preview／staging／atomic commit、idempotency、confirmed reversal與append-only evidence。
+- Balances、cards、liabilities、loan schedules／allocations、commitments、investments、quotes／FX、valued items。
+- Transfer／reimbursement matching、source conflicts、identity merge／redirect、human confirmation與review workbench。
+- Inventory、8 readiness goals、12 governed analysis datasets與proposal envelope。
+- Management P&L、balance sheet、cash flow、shared coverage、drillback與browser-backed report UI。
+- Backup／restore／health check、isolated runtime smoke、Chromium E2E與release verifier。
+- Control Phase 0 pure synthetic projector與contracts；仍不是runtime forecast。
 
-1. `e28f8af` — shared kernel。
-2. `d078db8` — atomic ingestion／balances。
-3. `bf79442` — typed debt／commitments。
-4. `20d75cb` — deterministic investment valuation。
-5. `f692956` — cross-context reconciliation。
-6. `31a926b` — governed analysis contexts。
-7. `4a4ac68` — complete financial data foundation release。
+### Partial by real-data evidence
 
-本輪實作範圍與驗證ledger見[`../plans/active-stabilization-and-control-phase0-plan.md`](../plans/active-stabilization-and-control-phase0-plan.md)。
+- Formal DB 尚未升到 v9，因此新 reimbursement lifecycle、review workbench與三張表不能在 active DB 上宣稱已發布。
+- 真實 transfer、card settlement、loan allocation、reimbursement與commitment evidence仍不完整；部分報表合理維持 partial。
+- 部分 cash accounts 缺期初／期末 boundary，部分 position snapshots stale／missing；不能用零補齊。
+- 20筆交易的現金方向已知但用途仍需owner；這是刻意保留的未知，不是AI失敗後可以硬猜的分類。
+- Browser suite涵蓋核心報表與typed review決策，但不是完整mobile、multi-browser或長時間併發證據。
 
-## 能力完成度
+### Planned after foundation acceptance
 
-### 已完成且可由測試支持
+- Foundation facts → deterministic runtime 90-day forecast adapter／API／UI。
+- Owner-approved reserve、dependable-income、freshness與uncertainty policies。
+- Safe-to-spend、alert lifecycle、scenario comparison與Financial Control Center。
+- Centralized observability、service packaging與更完整的operational automation；只在實際需求出現後投入。
 
-- legacy transaction import／review／correction／classification learning。
-- management P&L、report mappings、coverage。
-- shared kernel與account／source／scope identity。
-- typed preview、staging、atomic commit、idempotency與confirmed reversal。
-- balance snapshots、cards、liabilities、loan schedules、commitments。
-- investments、market／FX quotes、valuation、valued items。
-- transfers、source conflicts、review tasks、identity redirects／merge。
-- 8 readiness goals、7 governed analysis datasets。
-- 完整canonical account-kind/currency create UI，以及bounded manual instrument／holding／quote／FX UI。
-- currency-aware UI money presentation；JPY 0位與兩位小數幣別共用canonical exponent。
-- Balance Sheet／Cash Flow的honest unavailable state；不再顯示static readiness claims。
-- high-risk browser confirmation、backup／restore、唯讀backup health/freshness check。
-- isolated Chromium critical E2E，納入local／CI／release gate。
-- Financial Control Phase 0 contracts、metric dictionary、synthetic fixture與pure reference projector。
+## Master plan progress
 
-### 部分完成
+- `MP-00`～`MP-03`：semantic kernel、typed owners、reconciliation、AI context／proposal complete。
+- `MP-04`：unified impact review workbench complete；server counts與typed actions有Node＋browser evidence。
+- `MP-05`：three-view reporting complete at code／synthetic／UI level；真實資料結果仍按coverage降級。
+- `MP-06`：operator Skill與17-case adversarial eval complete。
+- `MP-07`：backup、唯讀inventory、restore→migration rehearsal與real-copy report preflight complete；正式migration、owner逐項決策、browser acceptance與GATE-F6仍待owner醒來後執行。
 
-- Data Center已能建立所有canonical account kinds與人工投資估值資料；正式statement／schedule／trade／source lifecycle仍以external AI/API為主。
-- runtime smoke與critical Chromium E2E都存在；尚未涵蓋所有高風險流程、mobile journey與長時間併發。
-- management reporting有P&L；Balance Sheet／Cash Flow正式query仍未實作。
-- security對localhost使用情境有安全標頭與高風險確認；一般API沒有auth，不能安全假設可對外網路暴露。
+因此，不能把 master plan 標為 Complete，也不能把 Financial Control `FC-1` entry gate 標成 passed。
 
-### 尚未開始或只有plan／draft contract
+## 下一個合理動作
 
-- trusted financial-position read model／API與formal Balance Sheet presentation。
-- foundation facts → deterministic 90-day forecast的正式adapter／API／UI。
-- owner-approved reserve、dependable-income、freshness與uncertainty policies；已明確延後到相關control phase，不是目前foundation blocker。
-- safe-to-spend、alert lifecycle與scenario comparison。
-- formal Cash Flow與accounting closure。
-- centralized logging、monitoring、alerting、deployment／rollback automation。
+1. 由owner確認是否現在執行正式DB v6→v9；若同意，使用已驗證backup，升級後立即做PRAGMA、aggregate、inventory／readiness／report postflight。
+2. 由owner在統一工作台處理material items，特別是20筆owner-unresolved與transfer／card／loan／reimbursement evidence。
+3. Owner用常見問題驗收AI回答與三張表差異；接受remaining gaps後才關閉GATE-F6。
+4. Gate F通過後，才由`master-financial-control-plan.md`接手Financial Control runtime。
 
-## 最近plan的正確讀法
-
-### Foundation Phase 0–7 release line
-
-- **Current truth：Completed and validated。** `e28f8af`至`4a4ac68`、schema v6、active foundation contracts及release verifier共同支持此結論。
-- **仍延後：** formal Balance Sheet／Cash Flow、forecast／safe-to-spend等downstream能力。
-- 舊規劃內容已自working tree移除；需要重建phase決策脈絡時才查Git history，不把歷史baseline當成目前現況。
-
-### Master Financial Control Plan
-
-- **Current truth：Phase 0 reference artifacts implemented and verified；Control Center已被owner確認為下一階段，但排在foundation業務流程收斂之後；Phase 1–6 runtime implementation尚未開始。**
-- Phase 0已建立contracts、metric dictionary、synthetic fixture與pure timeline；reserve、dependable-income、freshness與alert policy保留為後續phase decisions，不要求現在回答。
-- Phase 1–6依序涵蓋trusted position／formal BS、commitment calendar、forecast、control center、Cash Flow、learning／scenarios。
-
-### Reporting implementation reality
-
-- **Current truth：** Management P&L、mapping與coverage已完成，typed foundation與versioned migrations已存在；現行語意由active reporting contracts、code與tests擁有。
-- Formal Balance Sheet／Cash Flow仍未完成；report tabs現在誠實標示unavailable，不代表statement已實作。
-
-## 目前最重要的風險
-
-1. **P1 product gap：** 使用者已有多資產／負債事實與reference projection semantics，但缺乏正式trusted position、forecast與風險控制輸出。
-2. **P1 scope／security：** 一般API依賴localhost trust，若改成LAN／remote exposure會立即需要auth、CSRF與threat model。
-3. **Current acceptance gap：** AI主輸入／UI確認是刻意產品模式；尚缺的是完整來源在實際使用中的流程順暢度與owner acceptance evidence，不是所有resource的CRUD UI。
-4. **P2 maintainability：** `TransactionTable.jsx`、`Overview.jsx`、`lib/queries/transactions.js`、`lib/queries/finance/obligations.js`等責任集中且變更半徑大。
-5. **P2 operations：** backup可檢查freshness，但owner尚未核准RPO／RTO／retention，也沒有production service definition、graceful shutdown或central observability。
-
-完整分級與證據見[`../planning/GAPS-RISKS-AND-DEBT.md`](../planning/GAPS-RISKS-AND-DEBT.md)。
-
-## 下一個合理關卡
-
-**Current gate：** 以AI operator為主要入口，逐步確認各類來源能完成capabilities／inventory／readiness → typed preview／commit → UI確認／少量修正 → reconciliation／analysis的完整閉環；發現真實阻礙就修正，直到owner對foundation業務邏輯滿意。
-
-**After that：** 才進入Financial Control Center，先用既有foundation建立trusted position與obligation timeline。Reserve／reliable income等policy到forecast或safe-to-spend真正需要時再決定；不要現在為它們擴充架構，也不要把Phase 0 synthetic projector直接接成使用者財務結論。
-
-更新觸發：release、schema、主要plan phase、驗證基線、重大風險或產品能力狀態改變時更新。
+更新觸發：schema／正式DB版本、master plan package、報表契約、驗證基線、真實coverage或owner acceptance改變時更新。

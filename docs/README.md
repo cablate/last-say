@@ -2,12 +2,12 @@
 
 用途：這是人類與 AI 重新進入 Last Say 時的第一個文件索引。它說明各文件的責任、閱讀順序、證據標籤與更新規則；產品入口仍是根目錄 `README.md`。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 先理解目前結論
 
 - **Confirmed：** Last Say 已有可運作的本機交易審查、規則學習、管理損益表，以及 Phase 0–7 財務資料基礎；這不等於完整的財務控制產品。
-- **Confirmed：** Control Phase 0 的contracts、metric dictionary、synthetic fixture與pure 90日timeline reference已完成，但尚未連接真實DB／API／UI；正式資產負債表、現金流量表、runtime forecast、safe-to-spend與主動警示仍未實作。
+- **Confirmed：** 管理損益表、資產負債表與直接法現金流量表都已有server-backed read model、coverage／blockers與UI；真實資料仍會因缺少boundary、matching或新鮮快照而誠實降級。Control Phase 0的pure 90日timeline尚未接成runtime forecast，safe-to-spend與主動警示也尚未實作。
 - **Confirmed：** 伺服器不內建 LLM；外部 AI 透過 `.claude/skills/last-say-ops/` 與受約束 API 操作。
 - **Owner-confirmed（2026-07-15）：** AI是主要輸入方式，UI負責確認與少量修正；目前先收斂foundation業務流程，Financial Control Center是下一階段。Reserve／reliable income與其他優化延後處理。
 - **Recommended：** 開始任何新功能前，先讀根目錄 [`Final-Long-Term-Goal.md`](../Final-Long-Term-Goal.md)、[目前狀態](project/CURRENT-STATUS.md) 與[風險／技術債](planning/GAPS-RISKS-AND-DEBT.md)。
@@ -43,6 +43,9 @@ Last validated against repository: 2026-07-15
 - [`architecture/EXTERNAL-INTEGRATIONS.md`](architecture/EXTERNAL-INTEGRATIONS.md)：外部 AI、本機檔案、第三方依賴與失效行為。
 - [`adr/`](adr/)：已接受的跨階段架構決策。
 - [`contracts/`](contracts/)：行為契約；必須同時查看其 `status` 與實作證據。
+- [`contracts/financial-event-semantics-contract.md`](contracts/financial-event-semantics-contract.md)：Foundation 共用的 economic recognition／cash settlement／obligation 三時間線、唯一認列、AI proposal與review邊界；MP-01之後的語意實作依此驗收。
+- [`contracts/transfer-and-recurring-reconciliation-contract.md`](contracts/transfer-and-recurring-reconciliation-contract.md)：Transfer match驗證／裁決、未配對候選、reconciliation completeness與AI recurring candidate review邊界。
+- [`contracts/ai-analysis-context-and-proposal-contract.md`](contracts/ai-analysis-context-and-proposal-contract.md)：AI named candidate datasets、proposal envelope、typed owner提示與隱私／權限邊界。
 - [`planning/FINANCIAL-CONTROL-METRIC-DICTIONARY.md`](planning/FINANCIAL-CONTROL-METRIC-DICTIONARY.md)：Control Phase 0 metrics、availability與去重語意；目前是proposed reference，非owner核准政策。
 
 ### 開發與維運
@@ -62,8 +65,9 @@ Last validated against repository: 2026-07-15
 - [`planning/ROADMAP.md`](planning/ROADMAP.md)：由現況與長期目標推導的能力階段。
 - [`planning/OPEN-QUESTIONS.md`](planning/OPEN-QUESTIONS.md)：需要 owner 決策或 Repository 無法回答的問題。
 - [`audit/PROJECT-AUDIT-REPORT.md`](audit/PROJECT-AUDIT-REPORT.md)：2026-07-15 全專案盤點、證據、驗證與覆蓋限制。
-- [`plans/master-financial-control-plan.md`](plans/master-financial-control-plan.md)：foundation完成後的下一階段規格；目前仍排在Foundation Business-Flow Closure之後。
-- [`plans/active-stabilization-and-control-phase0-plan.md`](plans/active-stabilization-and-control-phase0-plan.md)：最新一輪stabilization／Control Phase 0 reference的execution ledger與驗證結果。
+- [`plans/master-financial-control-plan.md`](plans/master-financial-control-plan.md)：foundation完成後唯一canonical Financial Control spec-plan；包含real-data entry gate、`FC-*`執行包、Data Source Map、AI權限矩陣、平行邊界與驗證階梯。目前planning ready，runtime仍排在Foundation Business-Flow Closure之後。
+- [`plans/ai-assisted-financial-semantics-plan.md`](plans/ai-assisted-financial-semantics-plan.md)：目前 Gate F 唯一 canonical Foundation AI master plan；包含 GORE goals、ownership、三時間線語意、typed closure、AI context／review、三視角報表、Skill、真實資料驗收與交棒條件。
+- [`plans/active-stabilization-and-control-phase0-plan.md`](plans/active-stabilization-and-control-phase0-plan.md)：2026-07-15 stabilization／Control Phase 0 reference的歷史execution ledger；報表能力現況以`CURRENT-STATUS`與active contracts為準。
 
 ## 建議閱讀順序
 
@@ -89,6 +93,7 @@ Last validated against repository: 2026-07-15
 |---|---|
 | 處理 Bug | `CURRENT-STATUS` → `MODULE-MAP` → 相關 contract／test → `TROUBLESHOOTING` |
 | 開發新功能 | `Final-Long-Term-Goal` → `FEATURE-INVENTORY` → `ARCHITECTURE`／`DATA-AND-FLOWS` → `GAPS`／`ROADMAP` → 新行為契約 |
+| 開發Financial Control第二階段 | `Final-Long-Term-Goal` → `CURRENT-STATUS` → `master-financial-control-plan`第17節 → 對應Control contract → 實際code／tests |
 | 重構 | `ARCHITECTURE` → `MODULE-MAP` → 受影響 contract／test → CodeGraph impact → `GAPS` |
 | 產品規劃 | `Final-Long-Term-Goal` → `PRODUCT-AND-USERS` → `CURRENT-STATUS` → `IMPROVEMENT-OPPORTUNITIES` → `ROADMAP`／`OPEN-QUESTIONS` |
 | 部署／故障 | `CONFIGURATION` → `DEPLOYMENT-AND-OPERATIONS` → `backup-restore` → `TROUBLESHOOTING` |

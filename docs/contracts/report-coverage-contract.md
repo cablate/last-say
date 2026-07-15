@@ -1,6 +1,6 @@
 # Report Coverage Contract
 
-> Status: planning contract.
+> Status: frozen implementation contract (`finance.report-coverage/v1`).
 > Scope: shared coverage semantics for management reports.
 
 ## Purpose
@@ -38,6 +38,12 @@ Examples:
 - no balance snapshots for the selected as-of date;
 - no accounts included in the report scope.
 
+### `unmapped`
+
+The report has usable rows and no broader reconciliation failure, but one or
+more rows have no accounting report-line mapping. This existing public P&L state
+is retained for compatibility and is still a blocking, incomplete state.
+
 ### `partial`
 
 Enough data exists to compute a scoped report, but missing or stale data prevents
@@ -70,7 +76,7 @@ and report-specific reconciliation checks pass.
 
 ```json
 {
-  "status": "empty | partial | unreconciled | complete",
+  "status": "empty | unmapped | partial | unreconciled | complete",
   "entity_id": "personal",
   "period_start": "2026-06-01",
   "period_end": "2026-06-30",
@@ -151,3 +157,9 @@ and report-specific reconciliation checks pass.
 - Query/API tests for coverage object shape.
 - Fixtures for `empty`, `partial`, `unreconciled`, and `complete`.
 - No test may point at `data/finance.sqlite`.
+
+## Update Rule
+
+Update this contract whenever scope defaults, coverage statuses, blockers,
+reconciliation rules, or public drillback behavior changes. Last validated
+against repository: 2026-07-16.

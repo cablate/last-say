@@ -2,7 +2,7 @@
 
 用途：用可驗證的 Repository 證據回答 Last Say 是什麼、由哪些執行單元組成，以及使用者資料如何在系統內流動。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 一句話
 
@@ -28,9 +28,9 @@ Last validated against repository: 2026-07-15
 | Web | Next.js 15 App Router、React 19 | `package.json`、`app/**` |
 | UI | Tailwind CSS 4、Radix、Recharts、lucide-react | `package.json`、`components/**` |
 | API | Next route handlers；主要為 JSON REST 風格 | `app/api/**/route.js` |
-| Persistence | 單一 SQLite DB，schema version 6，WAL | `lib/db.js`、`lib/db/migration-runner.js`、`lib/db/migrations/**` |
+| Persistence | 單一 SQLite DB，code schema version 9，WAL；正式DB升級受backup gate約束 | `lib/db.js`、`lib/db/migration-runner.js`、`lib/db/migrations/**` |
 | Language | JavaScript／JSX；沒有 TypeScript typecheck | `rg --files`、`package.json#scripts` |
-| Tests | Node test runner（47 個 `.test.js` 檔）＋Playwright（1 個browser spec） | `test/**`、`e2e/**`、`npm test`、`npm run test:e2e` |
+| Tests | Node test runner＋Playwright browser suite | `test/**`、`e2e/**`、`npm test`、`npm run test:e2e`；精確通過數見`CURRENT-STATUS.md` |
 | CI | GitHub Actions 執行 release verifier；另有 CodeQL | `.github/workflows/ci.yml`、`.github/workflows/codeql.yml` |
 | AI | 外部 agent skill；server 不呼叫 LLM | `.claude/skills/last-say-ops/**`、Repository 搜尋 |
 
@@ -67,10 +67,10 @@ legacy CSV／ledger 流程仍存在：外部 AI 產生 ledger → `/api/import-l
 
 ## 目前成熟階段
 
-**Confirmed：** 資料基礎已完成並有廣泛測試；交易審查與管理 P&L 可用。產品仍處於「可信事實與人工審查平台」到「主動財務控制工具」之間。
+**Confirmed：** 資料基礎、AI proposal contract、統一待審工作台與三張管理報表已在code／synthetic／browser層完成。正式DB仍待受保護v6→v9升級與owner acceptance；產品仍處於「可信事實、人工裁決與管理報表平台」到「主動財務控制工具」之間。
 
-- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、review queue、readiness、analysis contexts、currency-aware Data Center、critical browser E2E、backup／restore／health，以及Control Phase 0 reference semantics。
-- 尚未具備：正式balance sheet／cash flow、foundation-backed forecast API/UI、safe-to-spend、alerts、scenario policy、正式deployment／monitoring。
+- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、unified review workbench、readiness、analysis contexts、management P&L／Balance Sheet／Cash Flow、currency-aware Data Center、browser E2E、backup／restore／health，以及Control Phase 0 reference semantics。
+- 尚未具備：formal DB v9 publication與owner acceptance、foundation-backed forecast API/UI、safe-to-spend、alerts、scenario policy、正式deployment／monitoring。
 
 詳細狀態見 [`CURRENT-STATUS.md`](CURRENT-STATUS.md) 與 [`FEATURE-INVENTORY.md`](FEATURE-INVENTORY.md)。
 

@@ -25,6 +25,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBreakdown } from "@/lib/hooks"
 import { formatTWD } from "@/lib/format"
+import { OWNER_UNRESOLVED_CATEGORY } from "@/lib/constants"
 import {
   ChartNoAxesColumnIncreasing,
   Database,
@@ -117,8 +118,11 @@ export default function AppSidebar({ children }) {
                   </SidebarMenuItem>
                 ))
               ) : Array.isArray(categories) && categories.length > 0 ? (
-                categories.map((c) => (
-                  <SidebarMenuItem key={c.label}>
+                categories.map((c) => {
+                  const displayedAmount = c.label === OWNER_UNRESOLVED_CATEGORY
+                    ? Number(c.inflow || 0) + Number(c.outflow || 0)
+                    : c.spend
+                  return <SidebarMenuItem key={c.label}>
                     <SidebarMenuButton
                       asChild
                       isActive={activeCategory === c.label}
@@ -128,12 +132,12 @@ export default function AppSidebar({ children }) {
                       <Link href={withScope("/transactions", { category: c.label })}>
                         <span className="truncate">{c.label}</span>
                         <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                          {formatTWD(c.spend)}
+                          {formatTWD(displayedAmount)}
                         </span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))
+                })
               ) : (
                 <li className="px-2 py-1.5 text-xs text-muted-foreground">
                   無分類資料

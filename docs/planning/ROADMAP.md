@@ -2,22 +2,22 @@
 
 用途：從目前完成的資料基礎與 [`../../Final-Long-Term-Goal.md`](../../Final-Long-Term-Goal.md) 反推能力順序。這不是日期承諾，也不代表未經owner核准的phase已排入backlog。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
-Status: Foundation business-flow closure is current; Stage 0 complete; Stage 1 reference complete; Control Center confirmed as the next stage
+Status: Foundation Gate F is in guarded real-data acceptance; review workbench and three management statements are implemented; Control runtime remains behind owner acceptance
 
 ## 推導原則
 
 ```mermaid
 flowchart LR
-    C["Implemented foundation + review + P&L"] --> S["Completed: trust stabilization"]
-    S --> W["Current: foundation workflow closure\nAI input + UI confirmation"]
+    C["Implemented foundation + unified review + three statements"] --> S["Completed: synthetic and browser stabilization"]
+    S --> W["Current: guarded real-data closure\nformal DB upgrade + owner acceptance"]
     S -.-> M
     M["Completed planning reference:\ncontrol semantics + fixtures"] -.-> P
-    W --> P["Next stage: Control Center\nTrusted position + obligations timeline"]
+    W --> P["Next stage: Control Center\nposition adapter + obligations timeline"]
     P --> F["90-day forecast"]
     F --> G["Safe-to-spend + alerts"]
-    P --> A["Formal statements"]
+    P --> A["Cross-view control integration"]
     G --> L["Learning + scenarios"]
     A --> O["Operational maturity"]
     L --> O
@@ -28,9 +28,11 @@ flowchart LR
 
 **Current gate：** 先讓資料基礎的真實業務流程跑順：AI作為主要輸入，經typed preview／commit保存canonical facts，UI負責確認、歧義與少量修正。Reserve與reliable income不是目前要解的問題，不阻擋foundation工作。
 
-**Next stage：** Owner已確認Financial Control Center接在foundation之後。屆時由Stage 2 trusted position與Stage 3 obligation timeline開始；只有走到forecast／safe-to-spend真正需要時，才決定相應policy。Phase 0 pure projector不得直接接UI冒充可用forecast。
+**Next stage：** Owner已確認Financial Control Center接在foundation之後。Stage 2的management Balance Sheet與Stage 6的direct-method Cash Flow read model已由Gate F MP-05提前完成，下一階段不重做報表；它建立foundation→Control position／obligation adapter，只有走到forecast／safe-to-spend真正需要時才決定policy。Phase 0 pure projector不得直接接UI冒充可用forecast。
 
 ## Current Gate F — Foundation Business-Flow Closure
+
+**Active canonical master plan：** [`../plans/ai-assisted-financial-semantics-plan.md`](../plans/ai-assisted-financial-semantics-plan.md)。順序是先鎖定 economic event／cash settlement／obligation 語意與回歸樣本，再完成真實 typed obligations／reconciliation、AI context／review、三視角報表、operator Skill與owner acceptance；這些是進入 Financial Control Center 前的 foundation closure，不是另一套產品或資料真相。
 
 ### 階段目標
 
@@ -138,9 +140,11 @@ Reference artifacts只需Stage 0 safety net，已完成。Runtime consumer仍須
 
 ### 解鎖
 
-Trusted position、obligation timeline與forecast可平行做有限切片。
+Trusted position先落地，obligation timeline接續；public response contract凍結後，對應UI與operator Skill可做bounded parallel。Forecast不得早於前兩者。
 
 ## Stage 2 — Trusted position 與 formal Balance Sheet foundation
+
+**Implementation status（2026-07-16）：** Formal management Balance Sheet query／API／coverage／UI已由Gate F MP-05完成。此stage剩餘的是把該position contract作為Control runtime opening position，並以正式DB／owner acceptance驗證；不得另建第二套position truth。
 
 ### 階段目標
 
@@ -155,7 +159,7 @@ Trusted position、obligation timeline與forecast可平行做有限切片。
 - position read model／API，區分liquid、restricted、liability、valued item與unknown。
 - FX／quote freshness與base-currency presentation policy。
 - source／scope／reconciliation blockers。
-- formal Balance Sheet mapping與data-backed UI；替換目前的unavailable state。
+- formal Balance Sheet mapping與data-backed UI（已由MP-05完成）；Control adapter必須直接消費同一read model／facts。
 
 ### 前置條件
 
@@ -211,7 +215,7 @@ Deterministic forecast events與near-term risk explanation。
 
 ### 階段目標
 
-以可信starting cash、future obligations與reliable income產生可重現日曲線。
+以可信starting cash、future obligations與可選的confirmed inflows產生可重現日曲線；未定義reliable income時仍可顯示「已知承諾下的raw projection」，但不可顯示safe-to-spend或安全結論。
 
 ### 為什麼現在做
 
@@ -220,17 +224,17 @@ Stage 2與3已提供位置與時間；這時才有資格回答「何時不足」
 ### 必要工作
 
 - forecast run／input snapshot／event projection責任與必要persistence。
-- base case daily curve、minimum cash、first breach、gap amount、driver events。
+- raw／base daily curve、minimum cash、driver events；reserve breach與gap只在對應policy存在時啟用。
 - source freshness、confidence與blocked/degraded semantics。
 - actual vs forecast variance基礎。
 
 ### 前置條件
 
-Stage 1–3；owner定義reliable income與forecast horizon／as-of policy。
+Stage 1–3；owner只需確認forecast horizon／as-of的簡單default。Reliable income可保持未設定，未確認inflow必須排除。
 
 ### 驗收標準
 
-固定fixture每次產生相同曲線；收入下降、漏source、過期balance、未對帳transfer可預期降級；同日事件排序與rounding有contract；AI不參與canonical計算。
+固定fixture每次產生相同曲線；漏source、過期balance、未對帳transfer可預期降級；同日事件排序與rounding有contract；AI不參與canonical計算；未設定reserve／reliable income時safe-to-spend明確unavailable。
 
 ### 此階段不應做
 
@@ -276,13 +280,15 @@ Control Plan A8／A9可重現；每個signal能回溯forecast run、policy與fac
 
 ## Stage 6 — Formal Cash Flow 與 accounting closure
 
+**Implementation status（2026-07-16）：** Direct-method management Cash Flow query／API／coverage／UI、typed transfer／card／loan／investment／reimbursement handling與cross-view fixtures已由Gate F MP-05完成。此stage未來只處理真實reconciliation closure、Control variance consumer與必要的accounting成熟度，不重寫statement owner。
+
 ### 階段目標
 
 以cash boundary、transaction mapping、transfer reconciliation與begin/end cash建立可信cash-flow statement。
 
-### 為什麼在Control後
+### 為什麼剩餘closure在Control後
 
-cash event與reconciliation語意在Stage 1–4已成熟；可避免先做一張無法對回期初／期末現金的表。
+核心statement已先落地並會在資料不足時降級；更完整的month-end closure與variance learning仍需Control使用脈絡與owner真實資料驗收。
 
 ### 必要工作
 

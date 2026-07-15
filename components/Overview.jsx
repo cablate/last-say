@@ -150,6 +150,9 @@ export default function Overview() {
   const aiCount = Number(classification.ai ?? 0) || 0
   const humanCount = Number(classification.human ?? 0) || 0
   const needsReviewCount = Number(classification.needsReview ?? 0) || 0
+  const ownerUnresolvedCount = Number(classification.ownerUnresolved ?? 0) || 0
+  const ownerUnresolvedInflow = Number(classification.ownerUnresolvedInflow ?? 0) || 0
+  const ownerUnresolvedOutflow = Number(classification.ownerUnresolvedOutflow ?? 0) || 0
   const automationPercent = Math.round(
     (Number(classification.automationRate ?? 0) || 0) * 100,
   )
@@ -162,7 +165,8 @@ export default function Overview() {
   const lowConfidencePercent = Math.round(
     (Number(classification.lowConfidenceRate ?? 0) || 0) * 100,
   )
-  const closingComplete = processedCount > 0 && needsReviewCount === 0
+  const reportBlockingCount = needsReviewCount + ownerUnresolvedCount
+  const closingComplete = processedCount > 0 && reportBlockingCount === 0
 
   // balanceHistory 取最新兩筆做月變動 Badge，讓 useBalanceHistory 有實際用途。
   const latestBalanceEntry =
@@ -208,7 +212,7 @@ export default function Overview() {
   return (
     <div className="flex flex-col gap-6">
       {/* 首屏關鍵指標列：淨現金流 / 待審數 / 自動化率。一進來就能掌握狀態，不必下滑。 */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KeyMetric
           label={`${monthLabel} 淨現金流`}
           value={formatTWD(netCash)}
@@ -247,6 +251,19 @@ export default function Overview() {
           loading={summaryLoading}
         />
         <KeyMetric
+          label="無法確認"
+          value={String(ownerUnresolvedCount)}
+          tone={ownerUnresolvedCount > 0 ? "warning" : "neutral"}
+          badge={
+            ownerUnresolvedCount > 0 ? (
+              <Badge variant="outline">暫記款</Badge>
+            ) : (
+              <Badge variant="secondary">無暫記</Badge>
+            )
+          }
+          loading={summaryLoading}
+        />
+        <KeyMetric
           label="自動化率"
           value={`${automationPercent}%`}
           tone="neutral"
@@ -264,23 +281,35 @@ export default function Overview() {
         <CardHeader>
           <CardDescription>{monthLabel} {statusLabel} · AI 已完成初步分類</CardDescription>
           <CardAction>
-            <Button
-              type="button"
-              size="sm"
-              variant={needsReviewCount > 0 ? "default" : "outline"}
-              onClick={() =>
-                drill({
-                  view: "needs-review",
-                  sort: "confidence",
-                  direction: "asc",
-                  page: null,
-                })
-              }
-            >
-              <ListChecks data-icon="inline-start" />
-              前往審查
-              <ArrowRight data-icon="inline-end" />
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              {ownerUnresolvedCount > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => drill({ view: "unresolved", sort: "date", direction: "asc", page: null })}
+                >
+                  查看無法確認 {ownerUnresolvedCount}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant={needsReviewCount > 0 ? "default" : "outline"}
+                onClick={() =>
+                  drill({
+                    view: "needs-review",
+                    sort: "confidence",
+                    direction: "asc",
+                    page: null,
+                  })
+                }
+              >
+                <ListChecks data-icon="inline-start" />
+                前往審查
+                <ArrowRight data-icon="inline-end" />
+              </Button>
+            </div>
           </CardAction>
         </CardHeader>
         <CardContent>
@@ -291,6 +320,15 @@ export default function Overview() {
             <span aria-hidden>·</span>
             <span>
               待你審 <span className="font-medium text-foreground">{needsReviewCount}</span>
+            </span>
+            <span aria-hidden>·</span>
+            <span>
+              無法確認 <span className="font-medium text-foreground">{ownerUnresolvedCount}</span>
+              {ownerUnresolvedCount > 0 ? (
+                <span className="ml-1 font-mono tabular-nums">
+                  （流入 {formatTWD(ownerUnresolvedInflow)}／流出 {formatTWD(ownerUnresolvedOutflow)}）
+                </span>
+              ) : null}
             </span>
             <span aria-hidden>·</span>
             <span>
@@ -316,7 +354,7 @@ export default function Overview() {
       <MonthlyReportSection
         report={monthlyReport}
         monthLabel={monthLabel}
-        needsReviewCount={needsReviewCount}
+        blockingCount={reportBlockingCount}
         onCategoryClick={drillCategory}
         onFixedItemClick={(item) =>
           drill({
@@ -678,12 +716,12 @@ function SpendingDeltaBadge({ delta }) {
 function MonthlyReportSection({
   report,
   monthLabel,
-  needsReviewCount,
+  blockingCount,
   onCategoryClick,
   onFixedItemClick,
 }) {
   if (!report) return null
-  const isSoftLocked = Number(needsReviewCount) > 0
+  const isSoftLocked = Number(blockingCount) > 0
 
   const comparison = report.comparison ?? {}
   const previousMonths = comparison.previousMonths ?? []
@@ -711,7 +749,7 @@ function MonthlyReportSection({
 
       {isSoftLocked ? (
         <div className="rounded-lg border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-          審完 {needsReviewCount} 筆解鎖完整月報
+          仍有 {blockingCount} 筆待審或無法確認，月報目前只供參考
         </div>
       ) : null}
 

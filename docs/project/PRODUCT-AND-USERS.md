@@ -68,7 +68,7 @@ flowchart TD
 - 多數typed resources主要透過外部AI／API建立是已確認的產品模式；真正的摩擦是Skill、typed preview／commit、錯誤恢復與UI確認能否在實際來源中順暢閉環，而不是CRUD數量。
 - Data Center已支援全部account kinds，以及manual instrument／holding／quote／FX；statement、trade history與schedule仍由AI／typed API主導。
 - 沒有 forecast／alert，使用者仍需自行把事實轉成未來風險判斷。
-- 已有一條空白隔離DB的critical Chromium E2E，覆蓋帳戶、JPY餘額、人工投資估值與報表unavailable states；完整新手onboarding、AI ingestion、review與mobile journey仍缺usability／E2E證據。
+- Chromium E2E目前覆蓋Data Center、三張server-backed報表與unified review workbench的主要empty／partial／typed-owner流程；完整新手onboarding、真實AI ingestion、mobile與多瀏覽器journey仍缺usability／acceptance證據。
 
 ## 人類、AI 與系統責任
 

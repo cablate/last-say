@@ -2,7 +2,7 @@
 
 用途：把目前到長期目標之間仍存在的缺口轉成有證據、影響、前置條件與驗證方式的優先級，並保留已完成修正的證據。本文件不是一般 TODO 清單。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 評分方式
 
@@ -14,15 +14,14 @@ Last validated against repository: 2026-07-15
 
 **Confirmed：** 目前 localhost＋既有 verifier 下沒有已證實的 P0。若 server 對外暴露，無 auth 會立刻成為 P0；目前 loopback 是禁止任意改變的 trust boundary。
 
-**Owner sequencing decision（2026-07-15）：** R4／R6仍是最高價值的下一階段產品缺口，但不是目前execution。Current gate是讓foundation的AI主輸入→typed commit→UI確認／少量修正流程在實際業務中跑順。Reserve／reliable income等policy延後，不得把control規劃擠到foundation closure之前。
+**Owner sequencing decision（2026-07-15）：** Current gate仍是讓foundation的AI主輸入→typed commit→UI確認／少量修正流程在實際業務中跑順。R4的formal Balance Sheet已於2026-07-16完成code／synthetic／browser切片；R6 runtime forecast／safe-to-spend才是Gate F後的主要產品缺口。Reserve／reliable income等policy延後。
 
 ## 仍開放的優先級
 
 | ID | Priority | 缺口 | Impact | Urgency | Confidence | Effort | Risk | Dependency | Reversibility | Alignment |
 |---|---|---|---|---|---|---|---|---|---|---|
-| R4 | P1 — next stage | 缺可信 financial position／formal BS | High | Medium | High | L | High semantic | Foundation Closure、Phase 0 contracts | Medium | G1, G2, G4 |
 | R6 | P1 — next stage | Phase 0只有純reference；缺runtime 90日forecast／safe-to-spend／alerts | High | Medium | High | L | High financial interpretation | R4、obligation timeline、later owner policies | Medium | G4, G5 |
-| R7 | P1 — current gate | AI-primary輸入邊界已確認；完整operator→typed commit→UI review流程仍需實際使用驗收 | Medium | High | High | M | Medium workflow | Foundation Closure Gate | High | G3, G8 |
+| R7 | P1 — current gate | AI-primary、unified review與三張表已實作；正式DB升級與owner真實流程驗收仍未完成 | High | High | High | M | High data release | verified backup＋MP-07 owner authority | Medium | G3, G8 |
 | R8 | Later | legacy／typed schema與money語意雙軌 | Medium | Low | High | L | High migration | stable business flow＋compatibility evidence | Low | G1, G8 |
 | R9 | Later | 大型UI／query模組責任集中 | Medium | Low | High | L | Medium regression | actual flow pain＋characterization | High | G8 |
 | R10 | Later / Needs owner decision | 已有backup health與policy worksheet；缺實際排程、retention、RPO／RTO、restore drill與graceful shutdown | High | Low | High | M | High recovery | actual operations need＋owner policy | Medium | G6, G8 |
@@ -32,16 +31,11 @@ Last validated against repository: 2026-07-15
 
 ## Next-stage P1詳細項目
 
-### R4 — 缺可信 financial position／formal Balance Sheet
+### R4 — Trusted position／formal Balance Sheet（Resolved in code；real-data acceptance pending under R7）
 
-- **問題／證據：** accounts、balances、liabilities、holdings、valued items、FX與reconciliation已存在，但沒有formal position read model／API；`components/reports/ReportsView.jsx`只顯示誠實不可用狀態。
-- **影響：** 使用者無法從已完成foundation取得明示scope、as-of、currency、coverage與reconciliation的可信總覽；forecast也缺正式starting position。
-- **與長期目標：** 解鎖G1資料可信度、G2解釋與G4 deterministic control。
-- **不處理後果：** 大量資料能力停留在inventory，Control Phase 0只能是synthetic reference。
-- **前置條件：** owner決定base currency、FX／quote freshness、statement scope；net-worth readiness；沿用`docs/contracts/financial-position-contract.md`。
-- **Recommended：** 先做position read model與coverage，再做formal BS presentation；不可先畫dashboard或用balancing plug補Unknown。
-- **規模／可逆性：** L／Medium；read model可分片，但任何新persistence或migration需另立contract。
-- **驗證：** synthetic fixture對assets、liabilities、net position、missing／stale／unreconciled狀態做exact assertions；缺scope／balance／quote時不得顯示complete；每一line可追到facts。
+- **完成證據：** `lib/queries/reports/balance-sheet.js`、API route、`BalanceSheet.jsx`、`balance-sheet-contract.md`與`test/reporting-three-view.test.js`。
+- **已關閉風險：** Account snapshot優先、完整holding fallback、tier-2 valuation、FX／source／snapshot watermarks、missing／stale blockers與derived net worth均由server read model提供；current debt不由original principal或schedule猜測。
+- **仍不宣稱：** 正式DB尚未v9 publication且真實position coverage是partial，因此R4實作完成不等於owner已取得complete balance sheet。
 
 ### R6 — 缺runtime forecast／safe-to-spend／alerts
 
@@ -59,8 +53,8 @@ Last validated against repository: 2026-07-15
 ### R7 — AI-primary foundation workflow仍需實際收斂
 
 - **Owner decision：** AI是主要輸入方式；UI只負責確認、歧義、高風險授權與少量修正，不追求純GUI full onboarding。
-- **現況證據：** `AccountRegister.jsx`支援全部account kinds；`InvestmentRegister.jsx`可建立manual valuation facts；operator Skill與typed APIs涵蓋其他resources。
-- **剩餘缺口：** 完整statement／trade／schedule來源能否在實際AI流程中順利preflight、preview、commit、recover與UI review，尚缺owner acceptance evidence。
+- **現況證據：** Account／investment UI、12 analysis datasets、proposal envelope、unified review workbench與三張server reports均已存在；Node／browser／Skill tests通過。Verified backup可還原並在temporary copy升到v9。
+- **剩餘缺口：** 正式DB仍是v6；20筆owner-unresolved與transfer／card／loan／reimbursement evidence待owner；GATE-F6沒有人工acceptance evidence。
 - **不處理後果：** 技術table雖齊全，實際使用仍可能卡在Skill指引、錯誤訊息、identity／source缺口或confirmation，而被誤判為foundation完成。
 - **Recommended：** 以真實workflow發現的摩擦做最小修正；優先Skill、contract、error recovery與bounded confirmation UI，不以CRUD數量衡量進度。
 - **驗證：** Owner常用來源不需直接改SQLite即可完成canonical commit與必要UI確認，並由owner明確接受流程。
@@ -109,9 +103,9 @@ Last validated against repository: 2026-07-15
 | ID | 原缺口 | 完成證據 | 驗收狀態 |
 |---|---|---|---|
 | R1 | JPY UI money exponent錯誤 | `lib/finance/money/presentation.js`；account／obligation UI；`test/money-presentation.test.js`；browser E2E | JPY 0位、TWD／USD 2位、超額精度拒絕；focused tests與E2E通過 |
-| R2 | BS／CF readiness preview可能被誤認為正式能力 | `components/reports/ReportsView.jsx`；`test/data-center-ui-contract.test.js`；browser E2E | 兩tab只顯示明確不可用狀態；沒有靜態財務數字或過期readiness宣稱 |
+| R2 | BS／CF readiness preview可能被誤認為正式能力 | `ReportsView.jsx`、三張server query／API、reporting tests、browser E2E | 靜態preview先被移除；2026-07-16由具coverage與drillback的正式management read models取代 |
 | R3 | Control Phase 0 contract／metric／fixture缺口 | 四份behavior contracts、metric dictionary、synthetic fixture、`project-cash-timeline.js`、`test/control-cash-timeline.test.js` | reference語意與acceptance通過；owner policy與runtime adapter仍屬R4／R6 |
-| R5 | 缺browser E2E | `playwright.config.mjs`、`scripts/run-browser-e2e.mjs`、`e2e/data-center-and-reports.spec.js`、CI／release gate | 隔離empty DB走完JPY account、manual investment valuation與report unavailable；Chromium通過 |
+| R5 | 缺browser E2E | Playwright config／runner、Data Center／reports spec、review workbench spec、CI／release gate | 隔離DB驗證JPY account、manual valuation、server-backed reports、typed decisions、stale／partial／retry；Chromium 5/5 |
 | R12 | port設定漂移 | `scripts/run-next-local.mjs`、package scripts、`.env.example`、`test/local-next-launcher.test.js` | PORT precedence／range與loopback binding已測試 |
 
 本次另補上manual investment source＋fact atomicity、backup health check／policy worksheet，以及privacy scan對untracked working files的coverage。這些不代表formal statements、runtime forecast或實際backup schedule已完成。

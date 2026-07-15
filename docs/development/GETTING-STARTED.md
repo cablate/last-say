@@ -2,7 +2,7 @@
 
 用途：提供可重現且不碰真實資料的本機啟動流程，再說明如何安全切換到自己的 private database。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 環境需求
 
@@ -54,7 +54,7 @@ npm run dev
 Invoke-RestMethod http://127.0.0.1:<PORT>/api/health
 ```
 
-預期 `ok=true` 且 `schema_version=6`。demo DB 在 `data/`，已被 Git 忽略。
+預期 `ok=true` 且 `schema_version=9`。demo DB 在 `data/`，已被 Git 忽略。若既有DB仍為v6，啟動前應先依operations文件建立可驗證backup，再由正常初始化流程升級。
 
 停止 server 後，PowerShell session 內仍保留 `FINANCE_DB_PATH`；切換專案或 DB 前先確認：
 

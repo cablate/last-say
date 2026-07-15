@@ -38,7 +38,7 @@ change_context:
 ## Outputs And Side Effects
 
 - Launcher 以 resolved port 啟動 Next，轉送 exit code 與 signals。
-- Browser E2E 建立／清除匿名 temp DB，驗證 JPY balance、account kinds、manual investment entry 與 unavailable statement states。
+- Browser E2E 建立／清除匿名 temp DB，驗證Data Center、三張server-backed statements與unified review workbench的complete／partial／empty／typed-owner狀態。
 - Backup check 驗證 manifest format、hash、SQLite integrity、foreign keys、schema compatibility、source artifact hashes與 age；不建立 restore target、不修改 bundle。
 - Directory mode 選擇 manifest `created_at` 最新且格式可解析者；找不到時 non-zero exit。
 

@@ -72,9 +72,10 @@ test('critical Data Center inputs and report availability are browser-verifiable
   await expect(position).toContainText('440.00');
 
   await page.goto('/reports?statement=balance');
-  await expect(page.getByText('資產負債表正式報表尚未實作')).toBeVisible();
-  await expect(page.getByRole('link', { name: /前往財務資料中心/ })).toHaveAttribute('href', '/data');
+  await expect(page.getByText('資產合計', { exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'E2E JPY Cash' })).toBeVisible();
+  await expect(page.getByText('這張報表可預覽，但仍不完整')).toBeVisible();
   await page.getByRole('tab', { name: '現金流量表' }).click();
-  await expect(page.getByText('現金流量表正式報表尚未實作')).toBeVisible();
+  await expect(page.getByText('這個期間沒有可列入現金流量表的活動')).toBeVisible();
   expect(pageErrors).toEqual([]);
 });

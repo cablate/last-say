@@ -1,5 +1,7 @@
 # Active Stabilization And Financial Control Phase 0
 
+> Historical execution ledger completed on 2026-07-15. Its “unavailable statement” assertions describe that release baseline only. Balance Sheet／Cash Flow were subsequently implemented by Gate F MP-05; use `docs/project/CURRENT-STATUS.md` and the active report contracts for current capability.
+
 Status: Completed
 Started: 2026-07-15
 Delivery baseline: `main` at `4a4ac68`; this ledger covers the subsequent documentation audit and stabilization delivery

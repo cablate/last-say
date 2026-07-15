@@ -149,7 +149,7 @@ may later make a missing period a hard blocker.
 
 Use `finance.ingestion-bundle/v1`; retrieve current enums from capabilities.
 Supported sections are `accounts`, `sources`, `balance_snapshots`,
-`cash_transactions`, `credit_card_profiles`, `credit_card_statements`,
+`cash_transactions`, `transaction_classifications`, `credit_card_profiles`, `credit_card_statements`,
 `credit_card_installments`, `credit_card_payment_matches`, `liabilities`,
 `loan_schedules`, `loan_allocations`, `commitments`, `commitment_occurrences`,
 `instruments`, `investment_trades`, `holding_snapshots`, `market_quotes`,
@@ -168,6 +168,18 @@ same bundle. Money is an integer minor-unit JSON string plus currency.
    of the same committed run returns its result; do not manufacture duplicates.
 5. Re-read inventory and readiness. Report created resources, duplicates,
    conflicts, stale/missing evidence, and remaining scope gaps.
+
+`transaction_classifications` is the only governed write path for AI judgment
+on an existing transaction. Each item supplies `transaction_key`, a standard
+`category_primary`, optional `category_sub`, optional canonical `flow_type`, calibrated `ai_confidence`, a
+specific non-empty `judgment_reason`, and the exact `expected_updated_at` read
+before preview. The bundle authority must be `ai_researched` or `ai_inferred`.
+Commit changes interpretation fields only, keeps `reviewed=0`, records
+`classification_source=ai`, and appends audit evidence without creating a
+`correction_log` row. It fails closed on stale versions and must never replace
+a human-owned or reviewed classification. Amount, date, name, currency,
+account, source, and record status remain immutable. Do not use the legacy transaction
+PATCH or batch correction routes for AI classifications.
 
 Official, running, and manually entered balances can coexist. Never overwrite a
 source snapshot to make totals agree. Running balances must use

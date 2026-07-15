@@ -277,10 +277,10 @@ function main() {
   run(process.execPath, ['scripts/run-browser-e2e.mjs'], {
     label: 'node scripts/run-browser-e2e.mjs',
   });
-  pass('browser-e2e', 'critical Data Center + report availability flow passed in isolated Chromium');
+  pass('browser-e2e', 'Data Center + three reports + unified review workbench passed in isolated Chromium');
 
   run(process.execPath, ['scripts/eval-last-say-skill.mjs'], { label: 'node scripts/eval-last-say-skill.mjs' });
-  pass('skill-eval', '8/8 fixed cases passed');
+  pass('skill-eval', 'all versioned fixed cases passed');
 
   run(process.execPath, ['node_modules/next/dist/bin/next', 'build'], {
     label: `FINANCE_DB_PATH=${BUILD_DB} NEXT_DIST_DIR=${VERIFY_DIST_DIR} next build`,

@@ -16,7 +16,7 @@ change_context:
 
 # Reports Phase 1 Management P&L Contract
 
-Implementation status note (validated 2026-07-15): the management P&L route, query, mappings, coverage UI, tests, and `/reports` surface are implemented. Balance Sheet and Cash Flow remain explicitly out of scope and are not implemented by this contract.
+Implementation status note (validated 2026-07-16): this contract remains deliberately scoped to management P&L. The repository now also implements Balance Sheet and Cash Flow under their own contracts and server read models; those statements are not governed by this Phase 1 P&L contract.
 
 ## Behavior Boundary
 

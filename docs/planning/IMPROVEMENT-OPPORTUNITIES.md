@@ -2,7 +2,7 @@
 
 用途：把改善機會依成熟度與價值分類，避免將所有可做事項誤排成近期工作。優先級的最終依據仍是 [`GAPS-RISKS-AND-DEBT.md`](GAPS-RISKS-AND-DEBT.md) 與 owner決策。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## Current execution rule（owner-confirmed 2026-07-15）
 
@@ -11,21 +11,21 @@ Last validated against repository: 2026-07-15
 ## 本輪已完成
 
 - **Canonical UI money boundary：** `lib/finance/money/presentation.js`已成為Data Center輸入／顯示共用層，JPY／TWD／USD round-trip與invalid precision有測試。
-- **誠實reports狀態：** Balance Sheet／Cash Flow不再顯示容易被當成正式能力的static readiness內容；只保留明確不可用與Data Center入口。
+- **三張可信管理報表：** Balance Sheet／Cash Flow已從static readiness演進成server-backed read model，與P&L共同輸出scope、watermarks、coverage、blockers與drillback；不完整資料不會被補成0。
 - **可設定但維持loopback的PORT：** launcher統一process env／`.env` precedence、range validation與`127.0.0.1` binding。
-- **Critical browser E2E：** empty isolated DB可建立JPY account、manual investment facts／valuation，並確認BS／CF unavailable；已納入CI與release gate。
+- **Critical browser E2E：** isolated DB已覆蓋Data Center、管理損益表、資產負債表、現金流量表與unified review workbench的主要狀態；已納入release驗證。
 - **Control Phase 0 semantic package：** 四份contracts、metric dictionary、synthetic pressure fixture與pure 90-day timeline projector已建立；它是reference，不是runtime forecast。
 - **Manual Data Center核心建檔：** 全account kinds、instrument、holding、quote與FX可由UI建立；manual source＋fact在同一transaction內寫入。
 - **Recovery groundwork：** backup health CLI與policy worksheet已建立；實際RPO／RTO／schedule仍待owner。
 
 ## Control Center下一階段最值得投入（目前排隊，不立即執行）
 
-### Trusted financial position read model
+### Foundation-to-Control position adapter
 
-- **Why：** accounts、balances、liabilities、holdings、valued items與FX都已存在，但使用者仍沒有可信starting position。
-- **Scope：** 以`docs/contracts/financial-position-contract.md`建立scope／as-of／currency／coverage明確的read model與API，之後才接formal BS UI。
-- **Prerequisites：** owner決定base currency、FX／quote freshness與statement scope。
-- **Expected：** exact totals、missing/stale降級、line-to-fact traceability；解鎖forecast starting cash與net position。
+- **Why：** 管理資產負債表已能提供可信as-of position，但Control runtime尚未消費同一份facts與coverage。
+- **Scope：** 以`docs/contracts/financial-position-contract.md`建立薄adapter，重用既有Balance Sheet owners，不建立第二套position truth。
+- **Prerequisites：** MP-07 owner acceptance；真正進入forecast時才決定更完整的base-currency／freshness policy。
+- **Expected：** Control starting position可追溯到同一report facts，missing／stale維持降級；解鎖forecast starting cash與net position。
 - **Do not expand into：** GAAP／IFRS、tax、cloud quote provider或漂亮但無coverage的dashboard。
 
 ### Commitment／liability timeline

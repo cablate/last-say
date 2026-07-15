@@ -34,7 +34,8 @@ test('demo seed covers every foundation context with anonymized review work', ()
 });
 
 test('fixed operator Skill eval corpus passes all safety scenarios', () => {
+  const corpus = JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/skills/last-say-ops/evals/cases.json'), 'utf8'));
   const result = spawnSync(process.execPath, ['scripts/eval-last-say-skill.mjs'], { cwd: ROOT, encoding: 'utf8' });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Skill eval: 8\/8 passed/);
+  assert.match(result.stdout, new RegExp(`Skill eval: ${corpus.cases.length}/${corpus.cases.length} passed`));
 });

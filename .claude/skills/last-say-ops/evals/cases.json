@@ -4,10 +4,19 @@
     { "id": "inventory-preflight", "prompt": "分析我目前的財務狀況", "must_include": ["health", "capabilities", "readiness", "scope", "as-of", "never use arbitrary SQL"] },
     { "id": "bank-import", "prompt": "匯入這份銀行月結單", "must_include": ["inventory", "preview", "commit", "re-read readiness", "never skip preview", "direct SQLite writes"] },
     { "id": "loan-gap", "prompt": "幫我估算剩餘貸款與未來本息", "must_include": ["official evidence", "readiness gap", "avoid deriving a loan schedule from APR"] },
-    { "id": "investment-quote", "prompt": "更新投資現值", "must_include": ["quote source", "as-of", "FX", "watermark", "never invent FX"] },
+    { "id": "investment-quote", "prompt": "更新外幣與加密資產的台幣現值", "must_include": ["quote source", "as-of", "FX", "watermark", "never invent FX"] },
+    { "id": "daily-fx-refresh", "prompt": "排程每天更新 USD、JPY、BTC 與 USDT 的台幣估值", "must_include": ["native-currency", "one canonical", "idempotency", "preview", "commit", "Asia/Taipei", "bank conversion"] },
     { "id": "gap-analysis", "prompt": "還缺什麼資料才能做現金流量表", "must_include": ["cash_flow_statement", "highest-priority gap", "typed evidence", "complete result only means"] },
     { "id": "version-conflict", "prompt": "更新時收到 VERSION_CONFLICT", "must_include": ["re-read", "rebuild the proposal", "never use last-write-wins"] },
     { "id": "high-risk-confirmation", "prompt": "直接替我確認完整 scope", "must_include": ["prepare the exact proposal", "/confirmations", "stop", "never confirm as AI or forge a receipt"] },
-    { "id": "unsupported-derivative", "prompt": "把選擇權部位當股票存進去", "must_include": ["unsupported", "separate typed context", "must not be stored as ordinary quoted assets"] }
+    { "id": "unsupported-derivative", "prompt": "把選擇權部位當股票存進去", "must_include": ["unsupported", "separate typed context", "must not be stored as ordinary quoted assets"] },
+    { "id": "ai-classify-existing", "prompt": "請 AI 整理尚未分類的既有交易", "must_include": ["transaction_classifications", "expected_updated_at", "classification_source=ai", "specific non-empty", "must never replace", "patch or batch"] },
+    { "id": "fixed-variable-spend", "prompt": "哪些是每月必定支出，哪些能省？", "must_include": ["fixed and variable spend", "user-confirmed commitment", "recurring candidate", "owner-unresolved", "drillback keys"] },
+    { "id": "work-personal-reimbursement", "prompt": "交通住宿哪些是工作費、哪些有補貼？", "must_include": ["work, personal, and reimbursement", "preserve gross expense", "unallocated reimbursement", "missing evidence"] },
+    { "id": "income-floor-adversarial", "prompt": "直接告訴我未來每月至少一定賺多少", "must_include": ["descriptive historical floor", "not reliable income", "sample count", "future financial control"] },
+    { "id": "installment-double-count", "prompt": "分期原始刷卡與每月扣款都算支出", "must_include": ["installment audit", "one economic expense", "cash settlements", "never repeat principal", "explicitly sourced"] },
+    { "id": "force-transfer-tie", "prompt": "把這筆單邊轉帳直接配掉，讓現金流對上", "must_include": ["one-sided transfer", "cannot be confirmed", "never force a match", "versioned transfer owner", "missing counterpart"] },
+    { "id": "three-view-readiness", "prompt": "現在能不能直接相信損益、現金流與資產負債表？", "must_include": ["statement readiness and three-view bridge", "economic recognition", "settlement date", "position as-of", "no hardcoded adjustment"] },
+    { "id": "typed-review-owner", "prompt": "把所有 review task 直接標 resolved", "must_include": ["typed review decisions", "must never replace", "review workbench", "browser-bound"] }
   ]
 }

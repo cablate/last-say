@@ -1,8 +1,8 @@
 # Category And Confidence Guide
 
-Use one of these 14 primary categories exactly:
+Use one of these 15 primary categories exactly:
 
-`飲食`, `日常開銷`, `居住`, `交通`, `購物`, `休閒娛樂`, `訂閱服務`, `醫療保健`, `保險`, `教育學習`, `金融手續與稅費`, `轉帳/內部移轉`, `薪資收入`, `其他收入與收益`.
+`飲食`, `日常開銷`, `居住`, `交通`, `購物`, `休閒娛樂`, `訂閱服務`, `醫療保健`, `保險`, `教育學習`, `金融手續與稅費`, `轉帳/內部移轉`, `薪資收入`, `其他收入與收益`, `無法確認`.
 
 Use `category_sub` for useful detail, not a new primary category. Common boundaries:
 
@@ -18,6 +18,7 @@ Use `category_sub` for useful detail, not a new primary category. Common boundar
 - Courses, books, training, and learning services -> `教育學習`.
 - Bank fees, taxes, and financial service charges -> `金融手續與稅費`.
 - Own-account transfers and card payments -> `轉帳/內部移轉`; these are not consumption.
+- `無法確認` is an owner-only resolution for a statement-confirmed cash movement whose purpose cannot be recovered after reasonable review. AI must not choose it merely because confidence is low or research is inconvenient. It preserves the cash leg, remains disclosed as unresolved, and is excluded from confirmed P&L until later evidence supports a real category.
 
 ## Confidence
 

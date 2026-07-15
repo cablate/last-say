@@ -14,7 +14,7 @@ const {
   getCreditCard,
 } = require('../lib/queries/finance/obligations');
 const { readinessForGoal } = require('../lib/queries/finance/inventory');
-const { previewIngestion, commitIngestion } = require('../lib/finance/ingestion');
+const { previewIngestion } = require('../lib/finance/ingestion');
 
 function fixture(run) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'last-say-card-'));
@@ -62,7 +62,7 @@ test('debt readiness names a missing statement instead of claiming completeness'
   assert.ok(readiness.gaps.some((gap) => gap.gap === 'missing_credit_card_statement'));
 }));
 
-test('compound card ingestion rolls back every canonical context when installments are invalid', () => fixture((db) => {
+test('compound card ingestion rejects invalid installments before staging canonical context', () => fixture((db) => {
   const bundle = {
     schema_id: 'finance.ingestion-bundle/v1', idempotency_key: 'card-atomic-invalid', bundle_kind: 'card_statement',
     authority: 'official', reason: 'Synthetic compound card fixture.', sections: {
@@ -75,8 +75,8 @@ test('compound card ingestion rolls back every canonical context when installmen
       credit_card_installments: [{ client_item_key: 'plan', profile_client_ref: 'profile', originating_transaction_client_ref: 'charge', financed_principal_minor: '1200000', installment_count: 1, start_date: '2026-07-08', currency: 'TWD', authority: 'official', entries: [{ sequence: 1, due_date: '2026-07-08', principal_minor: '1200000', interest_minor: '0', total_minor: '1199999' }] }],
     },
   };
-  const preview = previewIngestion(bundle, {}, db);
-  assert.throws(() => commitIngestion(preview.run_key, {}, db), (error) => error.code === 'VALIDATION_ERROR');
+  assert.throws(() => previewIngestion(bundle, {}, db), (error) => error.code === 'VALIDATION_ERROR');
+  assert.equal(db.prepare('SELECT COUNT(*) count FROM ingestion_runs').get().count, 0);
   assert.equal(db.prepare('SELECT COUNT(*) count FROM accounts').get().count, 0);
   assert.equal(db.prepare('SELECT COUNT(*) count FROM transactions').get().count, 0);
   assert.equal(db.prepare('SELECT COUNT(*) count FROM credit_card_statements').get().count, 0);

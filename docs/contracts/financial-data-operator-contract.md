@@ -33,6 +33,7 @@ change_context:
 ## Outputs And Side Effects
 
 - AI 先列已知、缺口、unsupported、預計 actions；提交 preview 後先處理 errors/warnings，再 commit。
+- Candidate analysis datasets以`finance.proposal-envelope/v1`提供typed owner、evidence、impact與missing evidence；AI必須重讀current resource/version並轉成對應typed request，不可把hint本身當authority或mutation payload。
 - Commit 後重查 inventory/readiness，回報 create/update/duplicate/conflict/review/gaps。
 - High-risk action 只能準備 proposal；人類需在 UI 產生綁 payload/version 的一次性 receipt。
 - AI 遇 unknown schema、identity conflict、unsupported context、human-confirmed conflict 或缺 source 時 fail closed並向人類說明下一步。
@@ -70,7 +71,7 @@ test_mapping:
 
 ## Evidence
 
-- Phase 7 固定 Skill eval corpus與 operator rehearsal；Phase 0 fixture manifest提供案例。
+- Phase 7 固定 Skill eval corpus與 operator rehearsal；Phase 0 fixture manifest提供案例。MP-03新增5個candidate datasets與proposal envelope，證據見`test/analysis-proposal-context.test.js`。
 
 ## Intentional Changes
 

@@ -3,10 +3,10 @@
 > Upstream data owner: `financial-data-core-contract.md`,
 > `account-balance-storage-contract.md`,
 > `liability-and-commitment-storage-contract.md`, and
-> `transfer-matching-contract.md`. This contract owns only the cash-flow read
+> `transfer-and-recurring-reconciliation-contract.md`. This contract owns only the cash-flow read
 > model and must not recreate canonical balances, obligations, or matches.
 
-> Status: planning contract.
+> Status: frozen implementation contract (`finance.cash-flow/v1`).
 > Scope: direct-method management cash flow statement.
 
 ## Purpose
@@ -16,6 +16,12 @@ not the same as P&L, category spend, or balance history.
 
 Cash flow completeness depends on beginning and ending cash snapshots plus
 reviewed cash movements and transfer handling.
+
+The first release includes active `cash`, `bank`, and `e_wallet` accounts marked
+`included_in_analysis` whose account currency equals the requested report
+currency. Transactions and accounts in another currency are outside that report
+scope and must be requested separately; the query must not guess a rate or build
+a consolidated FX cash-flow view.
 
 ## Required Inputs
 
@@ -55,6 +61,15 @@ Minimum sections:
 | Own-account transfer, both sides in scope | Eliminated |
 | Own-account transfer, one side missing | Partial or unreconciled |
 
+Typed owners take precedence over text classification. Confirmed transfer pairs
+are eliminated; typed card-payment matches are operating settlements; loan
+allocations split principal to financing and interest/fee to operating;
+investment cash matches are investing; confirmed reimbursement links preserve
+gross source cash while explaining the cross-view difference. A reimbursement
+receipt is typed-owned only when its confirmed allocations exactly explain the
+receipt amount; partial allocation remains unresolved. Unmatched or
+conflicting typed candidates remain visible as blockers.
+
 The card-payment section intentionally does not allocate card payments back to
 merchant categories. P&L remains the category-detail view.
 
@@ -89,6 +104,11 @@ For single-currency TWD cents, required delta for `complete` is exactly zero.
 Non-zero delta returns `unreconciled`.
 
 For future multi-currency reports, reconcile by currency unless FX rules exist.
+
+Beginning and ending values use the latest active account snapshots on or before
+the requested boundary. The response exposes each actual snapshot date. Missing
+or older-period snapshots keep computed movements visible but prevent complete
+coverage; reconciliation runs only when both boundary totals are available.
 
 ## Output Shape
 
@@ -158,3 +178,9 @@ Review queue must expose:
 - Query fixture for one-sided transfer blocker.
 - Query fixture for card payment treatment.
 - API response shape test with reconciliation delta.
+
+## Update Rule
+
+Update this contract when cash-equivalent scope, typed settlement precedence,
+snapshot boundaries, currency policy, or the public response changes. Last
+validated against repository: 2026-07-16.

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { needsReviewRow } = require('../lib/review-policy');
+const { isOwnerUnresolvedRow, needsReviewRow } = require('../lib/review-policy');
 
 test('review policy separates AI uncertainty from rule performance', () => {
   assert.equal(needsReviewRow({ reviewed: 0, classification_source: 'ai', ai_confidence: null }), true);
@@ -13,6 +13,8 @@ test('review policy separates AI uncertainty from rule performance', () => {
   assert.equal(needsReviewRow({ reviewed: 0, classification_source: 'pending', ai_confidence: 0.9 }), true);
   assert.equal(needsReviewRow({ reviewed: 0, classification_source: 'rule', ai_confidence: null }), false);
   assert.equal(needsReviewRow({ reviewed: 1, classification_source: 'ai', ai_confidence: 0.2 }), false);
+  assert.equal(isOwnerUnresolvedRow({ category_primary: '無法確認' }), true);
+  assert.equal(isOwnerUnresolvedRow({ category_primary: '待確認' }), false);
 });
 
 test('meta, summary, and needs-review list use the same review policy', () => {

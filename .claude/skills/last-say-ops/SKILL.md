@@ -1,6 +1,6 @@
 ---
 name: last-say-ops
-description: "Operate Last Say as the external AI: process bank statements, classify and import monthly ledgers, create or repair classification rules, use web search for ambiguous merchants, learn from correction_log, and report aggregate QA. Use for monthly statement imports, rule evolution, low-confidence review support, Phase 3-style validation, and Last Say operations."
+description: "Operate Last Say as the external AI: process bank statements, classify and import monthly ledgers, create or repair classification rules, refresh dated FX and market quotes for TWD valuation, use web search for ambiguous merchants, learn from correction_log, and report aggregate QA. Use for monthly statement imports, exchange-rate or crypto-price refreshes, TWD net-worth valuation, rule evolution, low-confidence review support, Phase 3-style validation, and Last Say operations."
 ---
 
 # Last Say Ops
@@ -28,6 +28,7 @@ Before operating on statements or rules, read the required references below. `AG
 - Do not create rules with `confidence < 0.6`.
 - Before web search or classifying an uncovered merchant, retrieve learning context from the API.
 - Never use unreviewed AI classifications as learning evidence.
+- Classify existing transactions through the ingestion bundle's `transaction_classifications` section. Never use the human PATCH/batch routes for AI judgment, because those routes create human-owned evidence.
 - Similarity is retrieval relevance, not classification confidence.
 - Do not edit `correction_log`; treat it as append-only evidence.
 - Before changing classification semantics, disabling, or deleting a rule, read that rule's `linked_rows`, `unreviewed_rows`, and `reviewed_rows`; never bypass reclassification with direct DB edits.
@@ -37,6 +38,7 @@ Before operating on statements or rules, read the required references below. `AG
 - For account, source, scope, or other financial-data work, start with `GET /api/finance/capabilities`; never guess an enum or field.
 - Before answering any financial-analysis question, run `health -> capabilities -> readiness` for the requested goal and scope. Do not fetch datasets or interpret values until readiness status, blockers, as-of date, and scope are known.
 - Fetch analysis evidence only through the named datasets advertised by capabilities and `POST /api/finance/analysis-context`. Never request SQL, table names, column expressions, or an unregistered dataset.
+- Treat `finance.proposal-envelope/v1` in candidate datasets as a bounded hint: verify its resource keys and current versions, then use the named typed owner route. Never submit the hint itself as authority, a commit payload, or human confirmation.
 - Keep analysis output in three explicit layers: sourced facts, deterministic derived values, and AI interpretation. Never present an interpretation as a stored or reconciled fact.
 - Every analysis response must state goal, entity/account scope, as-of date, readiness status, datasets used, source/resource watermarks, material gaps, and exclusions. Ask for the highest-priority missing typed evidence before suggesting lower-impact cleanup.
 - Before importing account, balance, or cash activity facts, read `GET /api/finance/inventory` and the relevant readiness goal. Report existing identity, coverage, conflicts, and gaps before proposing writes.
@@ -45,6 +47,8 @@ Before operating on statements or rules, read the required references below. `AG
 - Never derive an official loan schedule, revolving-card interest, or future payment amount from APR, principal, or historical averages. Store only sourced facts; leave readiness partial when official evidence is missing.
 - Before changing a commitment template, inspect settled occurrences. Template edits must not rewrite settled history.
 - Investment quantities, prices, and FX rates must be canonical decimal strings. Every quote needs typed source evidence and an as-of date; never reuse a quote as timeless.
+- Keep native-currency balances and holding quantities unchanged during valuation refreshes. Store new dated FX/market evidence and derive TWD values; never replace a USD, JPY, BTC, or USDT fact with a TWD balance.
+- The current quote schema is date-grained. Create at most one canonical provider quote per instrument or currency pair per date, and make same-date retries idempotent; do not treat repeated intraday fetches as newer facts.
 - Never invent FX to complete a base-currency total. Options, futures, margin, DeFi, and tax lots require a separate context and must not be stored as ordinary quoted assets.
 - Manual property or private-asset values are Tier 2 snapshots: require method, date, currency, and source evidence, and never turn them into cash-flow or P&L facts.
 - Reconcile transfers and settlements through their typed match routes. A one-sided or low-confidence match stays queued; never force it confirmed to make totals agree.
@@ -67,6 +71,8 @@ Read only the files needed for the current task:
 - `references/monthly-workflow.md`: executable Flow A and Flow B checklists, ledger schema, and acceptance output.
 - `references/operator-contract.md`: role, privacy, source handling, and completion contract.
 - `references/financial-data-foundation.md`: financial inventory/readiness, governed analysis context, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
+- `references/fx-and-market-valuation-refresh.md`: executable daily FX/crypto quote refresh, evidence capture, TWD conversion semantics, idempotency, same-day limits, validation, and scheduling guidance.
+- `references/analysis-recipes.md`: executable recipes for fixed/variable spend, work/personal/reimbursement, descriptive income floor, installment audit, unresolved transfers, and three-statement readiness.
 
 ## Error Recovery
 

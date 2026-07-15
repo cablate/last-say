@@ -3,7 +3,7 @@
 Status: Draft
 Authority: Repository evidence and inferred target state
 Owner approval required: Yes
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## 文件用途
 
@@ -45,7 +45,7 @@ Last validated against repository: 2026-07-15
 ### Needs owner decision
 
 - 是否維持「個人／家戶優先」且不進入多人共同編輯與多租戶產品。
-- 正式 Balance Sheet／Cash Flow 應先於 Control Center，或依現有計畫在可信 position 後與 control 能力分階段交錯落地。
+- 三張管理報表是否永久維持personal-management boundary，或未來另建接近statutory accounting的獨立產品範圍。
 - 專案是否仍以開源、自己架設的 localhost 工具為唯一部署姿態。
 
 ## 目標、角色與工作
@@ -159,18 +159,18 @@ flowchart LR
 
 ## 核心能力支柱
 
-| 支柱 | 理想成熟狀態 | 目前狀態（2026-07-15） | 主要差距／前置能力 | 成熟判定 |
+| 支柱 | 理想成熟狀態 | 目前狀態（2026-07-16） | 主要差距／前置能力 | 成熟判定 |
 |---|---|---|---|---|
-| Product | 從資料補齊到風險行動的完整閉環 | **Confirmed:** transaction review、P&L、Data Center、readiness 可用 | 正式 BS/CF、forecast、safe-to-spend、alerts | 貼文式情境能在扣款前指出風險與選項 |
-| Domain | account／obligation／investment／reconciliation 語意一致 | **Confirmed:** foundation Phase 0–7 完成 | control projection 與 cross-report consistency | 同一事件跨 surface 不重複、不遺失 |
-| Data | canonical facts、source、freshness、scope、audit 完整 | **Confirmed:** SQLite v6、typed contexts、migration、watermarks | 真實資料 onboarding、coverage quality、formal statements | 可由來源重建並解釋每個重要數字 |
-| Automation | AI 做機械工作，人類處理裁決 | **Confirmed:** self-contained operator Skill、preview/commit、rule learning | 真實使用摩擦與 recurring/forecast learning | 維護成本與重複錯誤可量測下降 |
+| Product | 從資料補齊到風險行動的完整閉環 | **Confirmed:** transaction review、Data Center、unified workbench、三張management reports、readiness可用 | runtime forecast、safe-to-spend、alerts與owner真實流程acceptance | 貼文式情境能在扣款前指出風險與選項 |
+| Domain | account／obligation／investment／reconciliation 語意一致 | **Confirmed:** foundation Phase 0–7、三時間線kernel、typed reconciliation與cross-report fixtures完成 | Control projection／policy semantics | 同一事件跨 surface 不重複、不遺失 |
+| Data | canonical facts、source、freshness、scope、audit 完整 | **Confirmed:** code schema v9、typed contexts、watermarks與server reports；formal DB仍v6 | 正式升級、真實onboarding與coverage quality | 可由來源重建並解釋每個重要數字 |
+| Automation | AI 做機械工作，人類處理裁決 | **Confirmed:** operator Skill、12 datasets、proposal envelope、preview/commit與unified review | owner代表性驗收、recurring／forecast learning | 維護成本與重複錯誤可量測下降 |
 | Integration | 可替換 AI 與來源 adapter | **Partial:** local REST + external AI；無 bank connector | adapter contract、failure/retry/privacy boundary | 新來源不需改核心 domain |
-| Reliability | 失敗可見、可重試、可反轉、可恢復 | **Partial:** atomic ingestion、reversal、backup/restore/health、bounded Chromium E2E、release verifier | 更廣browser coverage、owner-approved recovery operation、observability | 故障演練可重現且無資料遺失 |
+| Reliability | 失敗可見、可重試、可反轉、可恢復 | **Partial:** atomic ingestion、reversal、verified backup、temporary migration rehearsal、5-case Chromium、release verifier | formal migration/postflight、owner-approved recovery policy、observability | 故障演練可重現且無資料遺失 |
 | Security | 部署邊界與資料權限相稱 | **Confirmed local-only:** localhost、no auth、confirmation guard | 公開部署前需完整 authz/security redesign | 威脅模型與實際部署一致 |
 | Operations | 可升級、備份、還原、回復與診斷 | **Partial:** CLI backup/restore、health endpoint | 排程、保留策略、升級/rollback與 log runbook | 新機還原與版本升級有定期證據 |
-| Developer experience | 新 session 可定位 owner 並選對驗證 | **Partial:** AGENTS/contracts/tests 強；入口與 current status 曾缺失 | 本次文件系統、module routing、E2E | 不靠聊天記憶可安全完成 slice |
-| Governance | 目標、contract、roadmap、實作狀態一致 | **Partial:** artifacts 多，但 plan header 已漂移 | 文件 owner、更新 gate、owner decisions | release 時無重大 docs/code drift |
+| Developer experience | 新 session 可定位 owner 並選對驗證 | **Confirmed baseline:** docs入口、current status、module routing、contracts、tests與release gate已同步 | 持續防止docs drift；擴充真實journey evidence | 不靠聊天記憶可安全完成 slice |
+| Governance | 目標、contract、roadmap、實作狀態一致 | **Partial:** LTG、Gate F plan、Control plan與contracts已同步 | owner批准LTG與完成MP-07 acceptance | release 時無重大 docs/code drift |
 
 ## 長期架構原則
 
@@ -185,7 +185,7 @@ flowchart LR
 9. 文件、Skill、API、schema、tests 與 UI 必須在同一變更中同步。
 10. 先證明第二個消費者與真實需求，再新增抽象層或平台能力。
 
-目前最大原則差距是：巨型client components仍集中責任；正式BS／CF與foundation facts尚未接成可信read model；Control Phase 0只有pure reference而無runtime adapter；browser coverage仍窄；owner尚未核准與落地recovery policy。Data Center money boundary、誠實report unavailable state、單條Chromium E2E與backup health基礎已於2026-07-15補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
+目前最大原則差距是：巨型client components仍集中責任；Control Phase 0只有pure reference而無runtime adapter；正式DB尚未發布v9；真實typed matching與position／cash boundaries仍使三張表partial；browser coverage仍屬bounded；owner尚未完成Gate F acceptance。Unified review workbench、server-backed BS／CF、5條Chromium流程與verified backup→migration rehearsal已於2026-07-16補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
 
 ## 非目標
 
@@ -229,7 +229,7 @@ flowchart LR
 
 ### 現在在哪裡
 
-**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness／manual-entry stabilization、bounded browser E2E、backup health，以及Control Phase 0 reference已完成。Owner將目前階段定義為資料基礎建設的業務流程收斂：技術phase完成不等於實際AI輸入／UI確認流程已永久封版。財務控制中心是下一階段；正式Balance Sheet／Cash Flow、runtime forecast、safe-to-spend、alerts與scenario尚未完成。
+**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness、AI context／proposal contract、unified review workbench、management P&L／Balance Sheet／Cash Flow、bounded browser E2E、backup health，以及Control Phase 0 reference已在repository code完成。Owner將目前階段定義為資料基礎建設的業務流程收斂：正式DB仍是v6，真實報表coverage仍partial，owner acceptance未完成。財務控制中心是下一階段；runtime forecast、safe-to-spend、alerts與scenario尚未完成。
 
 ### 不能直接跳到終點的原因
 
@@ -256,12 +256,12 @@ flowchart LR
 
 1. **Completed 2026-07-15：** 修正status／doc truth、money／report／manual-entry correctness，建立bounded E2E與backup health基線。
 2. **Reference completed 2026-07-15；owner approval pending：** Financial Control Phase 0 contracts、metric dictionary、synthetic fixture與pure timeline projector。
-3. **Current：** 讓各類基礎資料以AI主輸入→typed preview／commit→UI確認／少量修正的真實業務流程完整跑順；只修正實際阻礙與資料正確性，不做提前優化。
-4. **Next stage：** 以既有foundation建立trusted position與commitment timeline，開始Control Center；不另建canonical facts。
-5. 到forecast／safe-to-spend切片時，才由owner決定base currency／FX、reserve與reliable income等必要policy，不拿它們阻擋目前foundation工作。
-6. 建立deterministic runtime 90-day forecast、reconciliation delta與source watermarks。
-7. 在coverage guard下推出safe-to-spend與persistent alerts。
-8. 最後完成Cash Flow、cross-report consistency、settlement／forecast error learning，以及operations／observability／restore-upgrade drills與必要優化。
+3. **Completed in code 2026-07-16：** 三時間線語意、typed reimbursement／transfer／obligation lifecycle、12 datasets、proposal envelope、unified review workbench、三張management statements與17-case Skill eval。
+4. **Current：** 以verified backup與temporary rehearsal保護正式DB，完成v9 publication、真實material review與owner acceptance；只修正實際阻礙，不做提前優化。
+5. **Next stage：** 讓Control Center直接消費既有position／statements與commitment timeline；不另建canonical facts。
+6. 到forecast／safe-to-spend切片時，才由owner決定reserve與reliable income等必要policy，不拿它們阻擋目前foundation工作。
+7. 建立deterministic runtime 90-day forecast、reconciliation delta與source watermarks。
+8. 在coverage guard下推出safe-to-spend與persistent alerts，再完成settlement／forecast error learning、operations／observability與必要優化。
 
 詳細切片、前置條件與驗收見 [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md)。
 
@@ -272,7 +272,7 @@ flowchart LR
 | `G1/G2/G8` | current truth、money correctness、bounded E2E／backup health | Roadmap Stage 0（completed） | audit report、tests、docs gate |
 | `G2/G4/G5` | control contracts、metrics、synthetic reference | Roadmap Stage 1 reference（completed；policy pending） | contracts、metric dictionary、golden test |
 | `G1/G3/G6/G8` | AI主輸入→canonical commit→UI確認／少量修正的foundation業務閉環 | Current Foundation Closure Gate | operator Skill、typed API、browser evidence、owner acceptance |
-| `G1/G4` | trusted position + formal Balance Sheet | Roadmap Stage 2 | position contract、query tests、browser evidence |
+| `G1/G4` | trusted position + formal Balance Sheet | Gate F MP-05 completed in code；real-data acceptance current | position contract、query tests、browser evidence、Gate F postflight |
 | `G4/G5` | obligations + deterministic forecast | Roadmap Stage 3–4 | golden fixture、forecast tests、watermarks |
 | `PG-1/G5/G6` | safe-to-spend + alerts + human policy | Roadmap Stage 5 | coverage states、alert lifecycle、mobile E2E |
 | `G3/G7` | settlement／forecast-error learning | Roadmap Stage 6–7 | next-period evidence、error attribution |

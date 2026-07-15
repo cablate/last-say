@@ -6,7 +6,7 @@
 > balance-sheet read model and must not recreate canonical account, balance,
 > liability, or valuation facts.
 
-> Status: planning contract.
+> Status: frozen implementation contract (`finance.balance-sheet/v1`).
 > Scope: management balance sheet / net worth statement.
 
 ## Purpose
@@ -17,17 +17,23 @@ transaction rows alone.
 
 ## Required Inputs
 
-Account register:
+Account register (current repository fields):
 
 - account id;
 - entity id;
 - account kind: `cash`, `bank`, `credit_card`, `loan`, `investment`,
   `e_wallet`, `receivable`, `payable`, `fixed_asset`, `equity`, `other`;
-- report role: `asset`, `liability`, `equity`, `contra`;
 - normal balance: debit or credit;
 - currency;
 - active flag;
-- required-for-scope flag or account-scope preset.
+- `included_in_analysis` flag.
+
+The current schema has no independent `report_role` column. The first release
+therefore maps role deterministically from `account_kind`: cash/bank/e-wallet/
+investment/receivable/fixed-asset are assets; credit-card/loan/payable are
+liabilities; equity is equity. `other` is excluded with a coverage blocker until
+the owner gives it a typed account kind. Do not add a parallel role store in the
+report query.
 
 Balance snapshots:
 
@@ -46,6 +52,23 @@ Balance sheet completeness depends on snapshots.
 Transaction-derived running balances may be hints, but they are not complete
 balance-sheet evidence unless the statement/source explicitly provides the
 ending balance for the as-of date.
+
+For investment accounts, an active account-level balance snapshot is the total
+owner when present. Holding snapshots may provide drilldown but must not be added
+again. If no account-level snapshot exists, the report may use the sum of current
+holding valuations only when every included holding has a usable base-currency
+value; otherwise it remains partial.
+
+`valued_items` are separate tier-2 assets/liabilities and use their latest active
+valuation on or before the as-of date. A liability profile or payment schedule is
+an obligation timeline, not evidence of current principal; current debt enters
+the balance-sheet total only through a balance/statement snapshot. The report may
+show unsupported obligation rows separately as blockers.
+
+Liability balance snapshots store an unsigned outstanding magnitude. The report
+presents that amount in the liabilities section and derives net worth as assets
+minus liabilities; source/import code must not encode debt by depending on a
+negative snapshot sign.
 
 ## Freshness Policy
 
@@ -109,6 +132,11 @@ explicit equity ledger exists.
 }
 ```
 
+Every line also carries `resource_type`, `resource_key`, `source_key`, actual
+`snapshot_date`, `native_currency`, native amount, conversion watermark when
+used, and `drillback_ids`. Unknown conversion or missing snapshots never become
+zero-valued lines.
+
 ## Human Review Requirements
 
 Review queue must expose:
@@ -153,3 +181,9 @@ change imported transaction facts.
 - Query fixture for stale snapshot.
 - API response includes coverage and blockers.
 - UI/browser evidence for partial and complete states when implemented.
+
+## Update Rule
+
+Update this contract when account-role ownership, snapshot precedence,
+investment/FX valuation, liability-current-balance evidence, or the public
+response changes. Last validated against repository: 2026-07-16.

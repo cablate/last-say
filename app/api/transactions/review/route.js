@@ -13,9 +13,12 @@ export async function POST(request) {
     } catch {
       return NextResponse.json({ error: '請求內容不是有效的 JSON' }, { status: 400 });
     }
-    const ids = Array.isArray(body && body.ids) ? body.ids : [];
-    const result = markReviewed(ids);
-    return NextResponse.json({ ok: true, ...result });
+    const items = Array.isArray(body && body.items)
+      ? body.items
+      : (Array.isArray(body && body.ids) ? body.ids : []);
+    const result = markReviewed(items);
+    const conflict = result.conflicts?.length > 0;
+    return NextResponse.json({ ok: !conflict, ...result, ...(conflict ? { error: '交易已被更新，請重新載入後再確認。', code: 'VERSION_CONFLICT' } : {}) }, { status: conflict ? 409 : 200 });
   } catch (err) {
     return NextResponse.json(
       { error: safeErrorMessage(err) },

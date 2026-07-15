@@ -19,11 +19,14 @@ test('data-center forms use shared currency-aware money helpers and expose canon
   assert.doesNotMatch(obligations, /BigInt\(match\[2\]\) \* 100n/);
 });
 
-test('unfinished statements render honest unavailable states instead of static readiness claims', () => {
+test('all three statements are server-backed and do not fall back to static readiness claims', () => {
   const reports = source('components/reports/ReportsView.jsx');
-  assert.match(reports, /title="資產負債表"/);
-  assert.match(reports, /title="現金流量表"/);
-  assert.match(reports, /正式報表尚未實作/);
-  assert.doesNotMatch(reports, /StatementReadinessTable|BalanceSheetPreview|CashFlowPreview/);
-  assert.doesNotMatch(reports, /目前能看到信用卡消費與繳款流水|目前只有交易流水/);
+  const hooks = source('lib/hooks.js');
+  assert.match(reports, /useBalanceSheet/);
+  assert.match(reports, /useCashFlow/);
+  assert.match(reports, /<BalanceSheet report=/);
+  assert.match(reports, /<CashFlowStatement report=/);
+  assert.doesNotMatch(reports, /StatementUnavailable|StatementReadinessTable|BalanceSheetPreview|CashFlowPreview/);
+  assert.match(hooks, /\/api\/reports\/balance-sheet/);
+  assert.match(hooks, /\/api\/reports\/cash-flow/);
 });

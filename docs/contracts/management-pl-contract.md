@@ -1,6 +1,6 @@
 # Management P&L Contract
 
-> Status: planning contract.
+> Status: active implementation contract (`finance.management-pl/v1`).
 > Scope: income statement / profit and loss for management reporting.
 
 ## Purpose
@@ -26,6 +26,10 @@ Default basis is `card_accrual_management`:
   involved;
 - future `accrual` basis requires explicit manual adjustments or imported
   receivable/payable data.
+
+This is the only implemented basis in `finance.management-pl/v1`. Requests for
+`cash` or future `accrual` fail closed instead of returning the same calculation
+under a different label.
 
 ## Required Inputs
 
@@ -188,3 +192,9 @@ Review queue must expose:
 - P&L query fixture for loan principal exclusion.
 - API response shape test.
 - Drilldown test from statement line to underlying transactions.
+
+## Update Rule
+
+Update this contract when report-line precedence, economic recognition,
+owner-unresolved treatment, coverage, or response fields change. Last validated
+against repository: 2026-07-16.

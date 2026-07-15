@@ -2,7 +2,7 @@
 
 用途：讓維護者快速找到每個第一方模組的責任、入口、主要消費者與風險；檔案清單不是完整 API reference。
 
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
 
 ## Web 與 UI
 
@@ -24,13 +24,13 @@ Last validated against repository: 2026-07-15
 |---|---|---|
 | Legacy transaction | `app/api/transactions/**`、`import-ledger`、`rules/**`、`corrections/**` | 交易審查、分類、rules、learning、匯入 |
 | Overview／trend | `app/api/summary/route.js`、`breakdown`、`spending`、`trend`、`balance-history` | legacy transaction-derived dashboard read models |
-| Reports | `app/api/reports/**` | income statement、mapping rules、coverage |
+| Reports | `app/api/reports/**` | management P&L、balance sheet、cash flow、mapping rules與coverage |
 | Foundation discovery | `/api/finance/capabilities`、`inventory`、`readiness`、`analysis-context` | agent 開始工作與分析前的 governed read path |
 | Shared kernel | `/api/finance/entities/**`、`institutions/**`、`accounts/**`、`sources/**`、`scope-attestations/**` | canonical identity、source、scope、balances |
 | Ingestion | `/api/finance/imports/**` | preview、staging、commit、reverse preview／confirmed reverse |
 | Obligations | `/api/finance/credit-cards/**`、`liabilities/**`、`commitments/**` | cards、loans、schedules、allocations、commitment occurrences |
 | Investments／valuations | `/api/finance/investments/**`、`fx-quotes`、`valued-items/**` | instruments、trades、holdings、quotes、FX、other assets；manual holding／quote／FX routes會原子建立source與typed fact |
-| Reconciliation／review | `/api/finance/reconciliation/**`、`source-conflicts/**`、`review-tasks/**` | cross-context match、conflict resolution、work queue |
+| Reconciliation／review | `/api/finance/reconciliation/**`、`reimbursements/**`、`source-conflicts/**`、`review-tasks/**`、`review-workbench` | cross-context match、typed decisions、conflict resolution與統一workbench projection |
 | Identity／authority | `/api/finance/identity-merges/**`、`identity-redirects/**`、`human-confirmations/**` | previewed merge、redirect resolution、高風險確認 |
 
 所有 route handler 都在同一 Next.js process；不是獨立微服務。
@@ -46,11 +46,11 @@ Last validated against repository: 2026-07-15
 | `lib/finance/ingestion/index.js` | staged payload、context dispatch、atomic commit | import commit route |
 | `lib/finance/ingestion/reversal.js` | reverse preview、依賴檢查、soft reversal | import reverse routes |
 | `lib/finance/readiness/policy.js` | 8 goal requirements、gap priority、next action、watermark | inventory/readiness query、API、agent |
-| `lib/finance/analysis/registry.js` | 7 named datasets、filter allowlist、response limits | analysis-context query／route |
+| `lib/finance/analysis/registry.js`、`proposal-envelope.js` | 12 named datasets、filter allowlist、response limits與candidate proposal hints | analysis-context query／route、external AI |
 | `lib/finance/capabilities.js` | 支援 context／endpoint／policy 描述 | capability route、skill |
 | `lib/finance/http.js` | typed API error envelope／request helpers | finance routes |
-| `lib/reporting/report-lines.js` | management P&L line semantics | mapping query、income statement、UI、skill |
-| `lib/reporting/coverage.js` | report coverage status／warning | reports query／UI |
+| `lib/reporting/report-lines.js` | management report-line與deterministic exclusion semantics | income statement、cash fallback、UI、skill |
+| `lib/reporting/coverage.js` | 三張表的coverage status／blocker／warning | reports queries／UI |
 | `lib/normalize.js` | legacy transaction／merchant normalizer | import、transactions、rules、learning |
 | `lib/constants.js` | editable fields與 legacy categories／rules constants | routes、queries、UI |
 
@@ -62,7 +62,7 @@ Last validated against repository: 2026-07-15
 - `lib/queries/rules.js`：rule mutation、impact、reclassification、rule history。
 - `lib/queries/learning.js`：AI/operator learning context 與 correction-derived rules。
 - `lib/queries/corrections.js`：correction log read model。
-- `lib/queries/reports/**`：income statement與 report mapping rules。
+- `lib/queries/reports/**`：income statement、balance sheet、cash flow與report mapping rules；所有會計語意在server read model計算。
 
 ### Typed foundation owner modules
 
@@ -70,16 +70,16 @@ Last validated against repository: 2026-07-15
 - `obligations.js`：cards、liabilities、loan schedules／allocations、commitments。
 - `investments.js`：instruments、trades、holdings、quotes、FX、cash matches、valuation，以及manual source+fact atomic composites。
 - `valued-items.js`：非證券資產及估值快照。
-- `reconciliation.js`、`source-conflicts.js`、`review-tasks.js`：對帳與 review work queue。
+- `reconciliation.js`、`reimbursements.js`、`source-conflicts.js`、`review-tasks.js`、`review-workbench.js`：typed matching、對帳與material review projection。
 - `human-confirmations.js`、`authorization.js`：browser proof與一次性授權。
 - `identity-merges.js`：merge preview／apply 與 redirect。
 - `inventory.js`、`analysis-context.js`、`cash-activity.js`：governed read models。
 
 ## Persistence 與 migration
 
-- `lib/db.js`：`SCHEMA_VERSION=6`、default DB path、lazy singleton、PRAGMAs、legacy compatibility schema、transaction helper。
+- `lib/db.js`：`SCHEMA_VERSION=9`、default DB path、lazy singleton、PRAGMAs、legacy compatibility schema、transaction helper。
 - `lib/db/migration-runner.js`：migration ledger、SHA-256 checksum、順序／drift／newer-version guard。
-- `lib/db/migrations/0001-legacy-baseline.js`至`0006-reconciliation.js`：legacy baseline、shared kernel、ingestion/balances、obligations、investments、reconciliation。
+- `lib/db/migrations/0001-legacy-baseline.js`至`0009-transfer-match-lifecycle.js`：legacy baseline、shared kernel、ingestion/balances、obligations、investments、reconciliation、報銷配對、obligation ingestion lifecycle與transfer decision versioning。
 
 **Legacy / compatibility：** `lib/db.js` 仍內嵌 legacy `CREATE TABLE IF NOT EXISTS` 與 column upgrade paths；versioned migrations 是新 canonical evolution path。兩者共存是相容策略，也增加 schema owner 的理解成本。
 
@@ -96,7 +96,7 @@ Last validated against repository: 2026-07-15
 | `scripts/verify-release.mjs` | lint、audit、Node tests、browser E2E、skill eval、build、runtime smoke、working-tree privacy、demo、backup/restore orchestration |
 | `scripts/smoke-runtime.mjs` | 在隔離 DB 啟動 server 並檢查 health／runtime surface |
 | `.claude/skills/last-say-ops/**` | 外部 AI 如何 discovery、preview、commit、review、analysis；不得視為 server code |
-| `test/**` + `e2e/**` | 47 個 Node test files、1個 Playwright spec與匿名／synthetic financial fixtures |
+| `test/**` + `e2e/**` | Node／Playwright suites與匿名／synthetic financial fixtures；精確基線見Current Status |
 
 ## 耦合與維護熱點
 

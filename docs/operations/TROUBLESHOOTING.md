@@ -71,10 +71,12 @@ Last validated against repository: 2026-07-15
 - UI 已共用 `lib/finance/money/presentation.js` 的 canonical exponent；JPY 應為 0 位，TWD／USD目前為 2 位，輸入超過允許精度時應拒絕而不是四捨五入。
 - 若仍出現倍率錯誤，確認畫面來源 currency 與 API fact currency一致，並用匿名隔離 DB重現；不要直接改真實 DB數值補償顯示問題。
 
-### Balance Sheet／Cash Flow 意外顯示正式數字
+### Balance Sheet／Cash Flow 顯示partial或未對平
 
-- 目前這兩個 tab 應明確顯示「尚不可用」，不會渲染靜態 readiness 表或正式 statement。
-- 目前只有 management P&L 是 data-backed report。若 Balance Sheet／Cash Flow 出現正式數字，先停止使用該輸出，檢查是否啟動了舊 process／舊 build artifact，再以當前 commit重建。
+- 目前三個report tab都由server read model提供數字。先看coverage blockers，不要把partial當成query故障。
+- Balance Sheet常見原因是missing／stale account snapshot、current liability balance、valuation或FX；Cash Flow常見原因是缺期初／期末boundary、unmatched transfer／card settlement、loan allocation或owner-unresolved cash。
+- `unreconciled`表示已知期初＋期間流量不等於期末snapshot。檢查drillback與typed owners，不要加入hardcoded adjustment把差額湊成零。
+- 若畫面數字與API response不同，才檢查舊process／舊build與client formatting；React不應自行重算report totals。
 
 ### Readiness顯示 blocked／stale
 

@@ -17,3 +17,14 @@ test('readiness policy covers every initial goal and account scope does not clai
   const goals=['spending_history','cash_position','net_worth','debt_obligations','investment_value','cash_flow_statement','liquidity_forecast_90d','tax_or_derivatives'];for(const goal of goals){const result=readinessForGoal(goal,{asOfDate:'2026-07-14'},db);assert.equal(result.policy_version,'finance-readiness/1');assert.ok(Array.isArray(result.requirements));assert.ok(result.source_watermark);assert.ok(result.gaps.every(gap=>gap.priority&&gap.impact&&gap.effort_hint&&gap.next_action));}
   const scoped=readinessForGoal('cash_position',{asOfDate:'2026-07-14',accountKey:account.account_key},db);assert.equal(scoped.status,'complete');assert.deepEqual(scoped.scope,{kind:'account',entity_key:'personal',account_key:account.account_key});assert.equal(scoped.scope_evidence.kind,'account');const tax=readinessForGoal('tax_or_derivatives',{asOfDate:'2026-07-14'},db);assert.equal(tax.status,'unsupported');assert.equal(tax.gaps[0].gap,'separate_context_required');
 }finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}});
+
+test('cash-flow readiness does not call snapshots without cash activity complete',()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'last-say-ready-cash-flow-'));const db=openDatabase(path.join(dir,'test.sqlite'));initializeDatabase(db);try{
+  const account=createAccount({display_name:'Synthetic cash',account_kind:'bank',currency:'TWD',authority:'user_confirmed',review_state:'confirmed'}, {},db);
+  createBalanceSnapshot({account_key:account.account_key,as_of_date:'2026-06-01',observed_at:'2026-06-01T00:00:00Z',balance_kind:'ledger',amount_minor:'500000',currency:'TWD',authority:'user_confirmed',review_state:'confirmed'}, {},db);
+  createBalanceSnapshot({account_key:account.account_key,as_of_date:'2026-06-30',observed_at:'2026-06-30T00:00:00Z',balance_kind:'ledger',amount_minor:'500000',currency:'TWD',authority:'user_confirmed',review_state:'confirmed'}, {},db);
+  const readiness=readinessForGoal('cash_flow_statement',{asOfDate:'2026-06-30',accountKey:account.account_key},db);
+  assert.notEqual(readiness.status,'complete');
+  assert.ok(readiness.gaps.some((gap)=>gap.gap==='no_cash_activity'));
+  assert.equal(readiness.evidence.cash_activity_rows,0);
+  assert.equal(readiness.report_available,true);
+}finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}});

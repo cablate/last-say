@@ -6,15 +6,17 @@ Status: Final
 Audit date: 2026-07-15
 Repository baseline: `main` at `4a4ac68` when audit began
 Current delivery state: audited and remediated delivery scope; exact branch and commit are recorded by Git
-Last validated against repository: 2026-07-15
+Last validated against repository: 2026-07-16
+
+Post-audit closure addendum（2026-07-16）：repository code已到schema v9，完成reimbursement owner、obligation reversal lifecycle、versioned transfer decisions、12個governed analysis datasets、proposal envelope、unified impact review workbench，以及server-backed management P&L／Balance Sheet／Cash Flow。最新已執行證據包含Node suite 195/195、Skill eval 17/17、Chromium 5/5與production build pass。正式DB仍為v6且沒有canonical write；已建立並驗證最新DB-only backup，且在temporary restored copy證明v6→v9、integrity=`ok`、0 FK violations與三張真實資料報表可安全執行。2026-07-15的數量與unavailable-state只保留於明確標示的historical ledger；目前truth以本addendum、`CURRENT-STATUS.md`與active contracts為準。
 
 ## Executive conclusion
 
 **Confirmed：** Last Say已超過單純帳單分類器。它是local-first、single-user、localhost財務事實與審查平台：保留legacy交易學習與management P&L，同時具備typed accounts、sources、balances、cards、liabilities、commitments、investments、valuations、reconciliation、review、readiness與governed analysis contexts。
 
-**Confirmed：** Financial Data Foundation Phase 0–7 release line已完成，證據由`e28f8af`至`4a4ac68`、schema v6、active contracts與release verification共同提供。2026-07-15本輪又完成trust／correctness stabilization：currency-aware UI money、完整account-kind create、manual investment／quote／FX entry、誠實BS／CF unavailable state、可設定loopback port、Chromium E2E、backup health check，以及Control Phase 0 contracts／metrics／synthetic reference。
+**Confirmed：** Financial Data Foundation Phase 0–7 release line與2026-07-15 trust stabilization構成baseline；2026-07-16再完成AI proposal→typed human review→three-view reporting的code closure。正式發布仍受MP-07 backup、migration postflight與owner acceptance gate約束。
 
-**Confirmed：** 整體產品仍未抵達長期終點。Formal trusted position、Balance Sheet／Cash Flow、foundation-to-forecast runtime adapter、safe-to-spend、alerts與scenario lifecycle尚未實作。`projectCashTimeline`只對explicit synthetic inputs計算，不能被描述為使用者現有財務預測。
+**Confirmed：** 整體產品仍未抵達長期終點。Formal management Balance Sheet／Cash Flow已實作，但真實coverage仍partial；foundation-to-forecast runtime adapter、safe-to-spend、alerts與scenario lifecycle尚未實作。`projectCashTimeline`仍只對explicit synthetic inputs計算，不能被描述為使用者現有財務預測。
 
 **Owner direction recorded after audit（2026-07-15）：** AI是主要輸入方式，UI負責確認與少量修正；目前先讓foundation業務流程完整跑順，Financial Control Center排在下一階段並只能消費foundation。Reserve／reliable income與其他優化延後到真正需要時，不是current blocker。
 
@@ -57,9 +59,9 @@ Last validated against repository: 2026-07-15
 | Runtime | Node 22.5+、Next.js 15、React 19、JavaScript／JSX、Tailwind 4、`node:sqlite` |
 | Process | 單一Next UI＋API process；`127.0.0.1`固定loopback，port預設3127且可設定；單一SQLite |
 | Pages | 8：overview、transactions、reports、data、trend、corrections、rules、confirmations |
-| API | 78個`route.js`；57個位於`app/api/finance/**` |
-| Persistence | schema v6、migrations 0001–0006、WAL、FK、busy timeout、checksummed ledger |
-| Tests | 47個`.test.js` files／148 tests，加1個Playwright browser spec |
+| API | 84個`route.js`；61個位於`app/api/finance/**` |
+| Persistence | repository schema v9／migrations 0001–0009；正式DB仍為v6；WAL、FK、busy timeout、checksummed ledger |
+| Tests | 58個`.test.js` files，加2個Playwright specs／5個Chromium cases |
 | AI | `.claude/skills/last-say-ops/**`外部operator contract；server無LLM call |
 | Operations | seed、local launcher、backup／restore／health、skill eval、browser E2E、runtime smoke、release verifier |
 | CI | Ubuntu／Node22、Playwright Chromium、release verifier；JavaScript CodeQL |
@@ -80,7 +82,8 @@ Last validated against repository: 2026-07-15
 - card installment／payment matching、loan schedules／allocations、commitment occurrences。
 - deterministic investments／FX／valuations、other valued items與manual evidence composites。
 - transfer matching、source conflicts、review queue與identity merge／redirect。
-- 8 readiness goals、7 allowlisted analysis datasets、source watermarks與response limits。
+- 8 readiness goals、12 allowlisted analysis datasets、proposal envelope、source watermarks與response limits。
+- unified impact review workbench，以及reimbursement／obligation／transfer的versioned typed owners。
 - browser nonce＋same-origin＋one-time authorization的high-risk boundary。
 - checksummed migrations、backup／restore／health與release rehearsal。
 
@@ -88,10 +91,10 @@ Last validated against repository: 2026-07-15
 
 ### F3 — Reports信任呈現
 
-- **Confirmed current：** management P&L、mapping與coverage是正式data-backed能力。
+- **Confirmed current：** management P&L、Balance Sheet與direct-method Cash Flow皆是正式server-backed能力，並共用coverage／blocker／drillback呈現。
 - **Original issue：** Balance Sheet／Cash Flow曾與P&L並列顯示static readiness claims；不是硬編碼財務金額，但仍可能誤導成熟度，且文字落後foundation。
-- **Resolved：** `components/reports/ReportsView.jsx#StatementUnavailable`現在只顯示明確不可用狀態並連到Data Center；`test/data-center-ui-contract.test.js`與Playwright鎖定。
-- **Remaining gap：** formal BS／CF query、coverage與statement UI尚未實作；unavailable state不是報表。
+- **Resolved：** `lib/queries/reports/{balance-sheet,cash-flow}.js`、對應routes與React consumers已實作；typed transfer、settlement、loan allocation、investment與reimbursement ownership有cross-view tests，React不自行加總語意。
+- **Remaining gap：** 正式DB仍需migration與owner acceptance；真實報表因缺少部分boundary、current liability facts、card／transfer matches而維持partial／unreconciled。這是資料coverage，不是程式把未知補成0。
 
 ### F4 — Data Center UI／backend落差
 
@@ -122,9 +125,9 @@ Last validated against repository: 2026-07-15
 
 ### F8 — Verification已強化，但coverage仍有限
 
-- **Current strength：** 148 Node tests、1條isolated Chromium E2E、8-case skill eval、production build、runtime smoke、working-tree privacy scan、anonymous demo與backup rehearsal都在release gate。
-- **Actual browser QA：** Data Center與Cash Flow unavailable state在in-app browser檢查，console 0 error／warning。
-- **Remaining limits：** E2E只有一條critical journey；沒有完整legacy import／review、mobile、多瀏覽器、long-running、large-DB或concurrency suite；沒有TypeScript typecheck與coverage threshold。
+- **Current strength：** 58個Node test files、2個Playwright specs／5個Chromium cases、17-case skill eval、production build、runtime smoke、privacy scan、anonymous demo與backup rehearsal均納入整合驗證。
+- **Actual browser evidence：** Data Center／三張reports與unified review workbench的empty、partial、typed-owner、conflict及exact transaction deep-link flows通過。
+- **Remaining limits：** 沒有完整legacy import、真實AI ingestion、mobile、多瀏覽器、long-running、large-DB或concurrency suite；沒有TypeScript typecheck與coverage threshold。真實owner browser acceptance不得由synthetic E2E代替。
 
 ### F9 — Recovery能力有工具、尚無實際政策
 
@@ -143,34 +146,34 @@ Last validated against repository: 2026-07-15
 | Capability group | Current status | Primary evidence |
 |---|---|---|
 | Transaction review／learning | Implemented | `lib/queries/transactions.js`、`rules.js`、`learning.js`與tests |
-| Management reporting | P&L implemented；BS／CF unavailable | `lib/queries/reports/**`、`lib/reporting/**`、`ReportsView.jsx` |
+| Management reporting | P&L／Balance Sheet／Cash Flow implemented；真實coverage partial | `lib/queries/reports/**`、`lib/reporting/**`、`ReportsView.jsx`、report tests |
 | Shared kernel／typed ingestion | Implemented | migrations 0002–0003、ingestion modules／routes／tests |
 | Obligations | Typed backend implemented；manual profile UI partial | migration 0004、`obligations.js`、card／liability／commitment tests |
 | Investments／valuation | Backend＋bounded manual valuation UI implemented | migration 0005、manual routes、investment／valuation tests |
-| Reconciliation／review | Implemented | migration 0006、reconciliation／conflict／task／identity tests |
-| Readiness／analysis | Implemented | readiness policy、analysis registry／query／API tests |
+| Reconciliation／review | Transfer／reimbursement／source conflict／unified workbench implemented in code | migrations 0006–0009、reconciliation／workbench／versioning tests |
+| Readiness／analysis | Implemented；12 governed datasets＋proposal envelope | readiness policy、analysis registry／query／API tests |
 | Human authority | Implemented for designated high-risk flows | confirmation／authorization modules／tests |
 | Backup／restore／health | Implemented CLI; policy not operationalized | `lib/db/backup.js`、scripts、tests、operations docs |
 | Financial Control | Phase 0 pure reference only | draft contracts、metric dictionary、fixture、projector test |
 
 ## Highest remaining risks and debt
 
-1. **P1 product／semantic：** 缺trusted financial position與formal BS，無法把foundation轉成可信starting point。
-2. **P1 forward control：** pure projector無runtime adapter／owner policies，不能回答真實risk date或safe-to-spend。
-3. **Security boundary：** 一般write APIs依賴loopback；任何remote exposure都會使風險急升。
-4. **Recovery：** backup工具已存在，但真實RPO／RTO／schedule／drill未知。
-5. **Maintainability：** schema compatibility雙軌與大型UI／query模組增加change radius。
-6. **Observability／scale：** 只有health與console；效能、lock contention與長期運行沒有baseline。
+1. **P1 release gate：** repository code為schema v9，但正式DB仍v6；formal migration、postflight與owner browser acceptance尚未完成，不能宣稱Gate F關閉。
+2. **P1 data coverage：** 真實card settlement、loan allocation、transfer／reimbursement matching與部分boundary／snapshot仍缺，三張表會誠實partial但尚不能完整回答所有財務問題。
+3. **P1 forward control：** pure projector無runtime adapter／owner policies，不能回答真實risk date或safe-to-spend。
+4. **Security boundary：** 一般write APIs依賴loopback；任何remote exposure都會使風險急升。
+5. **Recovery／operations：** 新backup已驗證且restore→migration rehearsal成功，但RPO／RTO、schedule、retention與定期drill政策仍未知。
+6. **Maintainability／observability：** schema compatibility雙軌、大型UI／query模組、僅health＋console，仍增加change radius且缺長期baseline。
 
 詳細優先級、evidence、effort與acceptance見[`../planning/GAPS-RISKS-AND-DEBT.md`](../planning/GAPS-RISKS-AND-DEBT.md)。
 
 ## Recommended next actions
 
-1. **完成Foundation Business-Flow Closure。** 以AI operator為主要入口，實際走accounts／balances／cards／loans／commitments／investments／sources的preflight→preview→commit→UI確認／少量修正；只修正具體correctness與流程阻礙。驗收由owner明確確認業務邏輯已順暢。
-2. **Foundation獲owner接受後，建立trusted financial position read model。** 只讀existing canonical facts，輸出scope／as-of／coverage／reconciliation；先用explicit currency／TWD simple default，不建立全域偏好系統。
-3. **建立commitment／liability timeline。** 統一card、installment、loan與general commitment future events；驗證purchase／payment與principal／interest不重複。
-4. **進入forecast時才接Phase 0 projector與決定policy。** 建立governed DB adapter後，再決定reliable income、reserve與safe-to-spend；partial／stale／unknown時仍須Unavailable。
-5. **其他維運與架構維持簡單default。** 現階段沿用loopback、manual backup／health與bounded UI；只有成為實際業務blocker時才做schedule、remote、完整admin或大規模重構。
+1. **由owner關閉MP-07 formal gate。** 重驗最新backup後明確授權v6→v9 migration，立即跑integrity／FK／aggregate postflight；任何差異都停止並走reversal／restore，不手改SQLite。
+2. **用真實常用問題完成AI→UI acceptance。** 讓AI讀named context／reports、只把material ambiguity送到workbench，由owner確認代表性card、loan、transfer與reimbursement案例；保存aggregate evidence與known gaps。
+3. **補最影響coverage的typed facts。** 依report blockers優先補cash boundary、current debt snapshot、card payment match與own-transfer identity；每批preview／commit／postflight，驗收是blocker可追溯下降而非硬湊complete。
+4. **Gate F接受後才接Financial Control。** 重用現有Balance Sheet facts做position adapter，再建立commitment／liability timeline；不得另建第二套帳戶、資產、負債或投資資料。
+5. **進入forecast時才決定policy。** 先接governed DB adapter，再討論reliable income、reserve與safe-to-spend；partial／stale／unknown仍須Unavailable，其他維運優化維持簡單default。
 
 ## Owner decisions required
 
@@ -184,31 +187,31 @@ Last validated against repository: 2026-07-15
 
 最近已提交主線是可辨識的foundation序列：shared kernel → ingestion／balances → obligations → investments → reconciliation → governed analysis → release。這支持「foundation完成」結論。
 
-盤點開始baseline為`main`／`4a4ac68`。本輪依owner後續「通通處理」授權，delivery新增／修改product UI、query composites、API routes、operator scripts、tests、Playwright dev dependency／lockfile、CI與Markdown；未修改schema／migration，未讀寫真實DB。最終branch與commit狀態以Git為準。
+盤點開始baseline為`main`／`4a4ac68`。後續依owner授權完成stabilization與Gate F MP-00至MP-06：新增schema migrations 0007–0009、semantic owners、analysis contexts、review workbench、三張reports、Skill／evals、tests與文件。正式DB沒有migration或canonical write；只做read-only inventory、ignored backup與temporary restored-copy rehearsal。最終branch與commit狀態以Git為準。
 
 ## Validation record
 
 | Command／check | Result | Classification／impact |
 |---|---|---|
-| `npm run verify:release` | PASS，exit 0，89.5s | 完整gate成功；`data/finance.sqlite`明示未開啟 |
+| `npm run verify:release` | PASS，exit 0，86.3s | 完整gate成功；script明示`data/finance.sqlite`未開啟 |
 | ESLint | PASS，0 warnings | source／scripts／tests無lint regression |
 | production dependency audit | PASS，0 vulnerabilities at moderate or above | 驗證日供應鏈gate通過 |
-| `node --test` | PASS，148／148，0 fail／skip／todo | 47個test files；legacy、foundation與新slice全通過 |
-| Playwright Chromium E2E | PASS，1／1 | isolated empty DB；JPY account、manual valuation、BS／CF unavailable flow |
-| external AI skill eval | PASS，8／8 | operator fixed cases通過 |
-| Next production build | PASS | 8 pages與78 route source files可build；新manual routes包含在build output |
-| runtime smoke | PASS | isolated DB、schema 6、health、transactions shell、production CSP無`unsafe-eval` |
+| `node --test` | PASS，195／195，0 fail／skip／todo | 58個test files；legacy、foundation、semantics、reports與review全通過 |
+| Playwright Chromium E2E | PASS，5／5 | Data Center＋三張reports＋unified workbench的typed owner／stale／partial／retry flows |
+| external AI skill eval | PASS，17／17 | operator fixed／adversarial cases通過 |
+| Next production build | PASS | 8 pages、84 API routes、71 static-generation entries可build |
+| runtime smoke | PASS | isolated DB、schema 9、health、transactions shell、production CSP無`unsafe-eval` |
 | working-tree privacy scan | PASS | tracked＋untracked non-ignored JS／JSX／MJS／JSON／Markdown無verifier定義的敏感pattern |
 | anonymous demo | PASS | 180 transactions、6 months、foundation contexts與review work存在 |
-| backup→new-path restore | PASS | integrity=`ok`、0 FK violations、schema 6、180 transactions、34 change-evidence rows |
+| anonymous backup→new-path restore | PASS | integrity=`ok`、0 FK violations、schema 9、180 transactions、34 change-evidence rows |
+| real DB-only backup check | PASS | manifest hash／freshness／integrity／FK／schema v6 verified；bundle ignored且未追蹤 |
+| real backup temporary migration rehearsal | PASS | 全新OS temp copy v6→v9、integrity=`ok`、0 FK violations；三張reports與workbench可查詢，formal DB未改 |
 | screenshots | PASS | 3份committed anonymous screenshots存在且非空 |
-| in-app browser QA | PASS | Data Center／Cash Flow state；browser console 0 error／warning |
-| `codegraph sync/status/context/impact` | PASS | 269 files、2,338 nodes、5,426 edges、pending 0；cwd為project root |
-| Markdown inventory／links／fences | PASS | 66 files；missing links 0、unbalanced fences 0、required docs 20／20、validation stamps／update rules完整 |
+| Markdown inventory／links／fences | PASS | 74個current Markdown files；missing relative links 0、unbalanced fences 0 |
 | `git diff --check` | PASS | 0 whitespace error；package files只有既有line-ending warning，非diff error |
-| delivery inventory | PASS with expected scope | source／docs／tests／CI變更均屬本輪盤點與stabilization；無generated DB／build output |
+| delivery inventory | PASS with expected scope | source／docs／tests／Skill變更均屬MP-00–06；無generated DB／build output／formal data |
 
-第一次full gate在新擴大的`.mjs` privacy scan找到verifier註解中的示例號碼而fail；移除註解數字、保留擴大後scan scope，再完整重跑後通過。這是verification coverage改善，不是以縮減guard換取綠燈。
+Chromium整合初跑5條中4條通過，失敗指出synthetic owner-unresolved fixture重複宣告`transaction_id`，使deep-link assertion收到舊值。移除重複欄位並增加server read-model ID assertion後，focused test與完整5／5 browser flow通過；未修改產品語意來迎合測試。
 
 Node 22在tests與server中輸出`node:sqlite` ExperimentalWarning；屬runtime warning，不是test failure。沒有為了通過驗證而修改既有assertions或schema。
 

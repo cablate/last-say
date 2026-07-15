@@ -348,7 +348,7 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const result = await patchTxn(row.id, draft)
+      const result = await patchTxn(row.id, { ...draft, expected_updated_at: row.updated_at })
       setSavedAt(Date.now())
       onSaved?.(result?.transaction || { ...row, ...draft, classification_source: "human", reviewed: 1 })
       onClose?.()
@@ -579,7 +579,7 @@ export default function TransactionTable() {
   const [ruleSeed, setRuleSeed] = useState(null)
   const [ruleDialogOpen, setRuleDialogOpen] = useState(false)
 
-  // 分類只能選標準 14 類（STANDARD_CATEGORIES），避免自由文字（如「餐飲」）進 correction_log / 規則。
+  // 分類只能選標準 15 類（STANDARD_CATEGORIES），避免自由文字（如「餐飲」）進 correction_log / 規則。
   // 現有非標準值不在選項內——表格 CategoryBadge 仍顯示原值，但編輯時須改選標準覆蓋。
   const categoryOptions = STANDARD_CATEGORIES
 
@@ -695,7 +695,8 @@ export default function TransactionTable() {
   const handleConfirm = useCallback(
     async (id) => {
       try {
-        await reviewTxns([id])
+        const row = rows.find((item) => item.id === id)
+        await reviewTxns([{ id, expected_updated_at: row?.updated_at }])
         markRowsReviewed([id])
         moveActive(1)
         refetch()
@@ -704,7 +705,7 @@ export default function TransactionTable() {
         // 失敗 toast 已由 useReviewTxns 處理
       }
     },
-    [markRowsReviewed, moveActive, refetch, refetchMeta, reviewTxns],
+    [markRowsReviewed, moveActive, refetch, refetchMeta, reviewTxns, rows],
   )
 
   const gotoPage = useCallback(
@@ -721,6 +722,14 @@ export default function TransactionTable() {
       push({ view: null, sort: null, direction: null, page: null })
     } else {
       push({ view: "needs-review", sort: "confidence", direction: "asc", page: null })
+    }
+  }, [view, push])
+
+  const toggleUnresolved = useCallback(() => {
+    if (view === "unresolved") {
+      push({ view: null, sort: null, direction: null, page: null })
+    } else {
+      push({ view: "unresolved", sort: "date", direction: "asc", page: null })
     }
   }, [view, push])
 
@@ -781,7 +790,7 @@ export default function TransactionTable() {
     const ids = group.rows.map((row) => row.id)
     try {
       await postJson("/api/transactions/batch", {
-        corrections: ids.map((id) => ({ id, category_primary: category })),
+        corrections: group.rows.map((row) => ({ id: row.id, category_primary: category, expected_updated_at: row.updated_at })),
       })
       group.rows.forEach((row) => patchLocalRow({ ...row, category_primary: category, classification_source: "human", reviewed: 1 }))
       markRowsReviewed(ids)
@@ -800,7 +809,7 @@ export default function TransactionTable() {
   const handleGroupConfirm = useCallback(async (group) => {
     const ids = group.rows.map((row) => row.id)
     try {
-      await reviewTxns(ids)
+      await reviewTxns(group.rows.map((row) => ({ id: row.id, expected_updated_at: row.updated_at })))
       markRowsReviewed(ids)
       refetch()
       refetchMeta()
@@ -831,11 +840,25 @@ export default function TransactionTable() {
         >
           只看待審（AI 沒把握）
         </Button>
+        <Button
+          type="button"
+          variant={view === "unresolved" ? "default" : "outline"}
+          size="sm"
+          aria-pressed={view === "unresolved"}
+          onClick={toggleUnresolved}
+        >
+          只看無法確認
+        </Button>
         {view === "needs-review" && (
           <span className="text-xs text-muted-foreground">
             本次已審 {reviewedIds.size} 筆 · 目前範圍待審剩 {remainingReviewCount} 筆
           </span>
         )}
+        {view === "unresolved" ? (
+          <span className="text-xs text-muted-foreground">
+            共 {total} 筆；保留現金移動，但不計入已確認收入或支出
+          </span>
+        ) : null}
         {view === "needs-review" ? (
           <Button
             type="button"
@@ -924,11 +947,19 @@ export default function TransactionTable() {
             <EmptyMedia variant="icon">
               <CheckIcon />
             </EmptyMedia>
-            <EmptyTitle>{view === "needs-review" ? "目前範圍已審完" : "沒有符合條件的交易"}</EmptyTitle>
+            <EmptyTitle>
+              {view === "needs-review"
+                ? "目前範圍已審完"
+                : view === "unresolved"
+                  ? "目前範圍沒有無法確認的交易"
+                  : "沒有符合條件的交易"}
+            </EmptyTitle>
             <EmptyDescription>
               {view === "needs-review"
                 ? "這個月份與篩選條件下已沒有需要確認的交易。"
-                : "調整月份、範圍或搜尋條件，或清除篩選重新查看。"}
+                : view === "unresolved"
+                  ? "這個月份與篩選條件下沒有暫記為無法確認的現金移動。"
+                  : "調整月份、範圍或搜尋條件，或清除篩選重新查看。"}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -964,7 +995,7 @@ export default function TransactionTable() {
                         className={cn(
                           open && "border-b-0",
                           active && "bg-muted/50",
-                          reviewed && "opacity-65",
+                          reviewed && view !== "unresolved" && "opacity-65",
                         )}
                         onClick={() => setActiveTxnId(row.id)}
                       >
