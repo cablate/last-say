@@ -21,7 +21,7 @@ change_context:
 
 ## Consumers And Entrypoints
 
-- Phase 1 `lib/finance/contracts/*`、`lib/queries/finance/{entities,institutions,accounts,sources}.js`。
+- `lib/finance/contracts/*`、`lib/queries/finance/entities.js`、`institutions.js`、`accounts.js`、`sources.js`。
 - `GET /api/finance/capabilities`、typed entity/account/source APIs。
 - `reporting_entities`、`institutions`、`institution_aliases`、既有 `accounts` 的 additive columns、`account_aliases`、既有 `sources` 的 additive columns。
 - `scope_attestations`、`source_expectations`、`source_expectation_goals`、`data_change_log`。

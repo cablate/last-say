@@ -2,7 +2,7 @@
 schema_version: behavior-contract/v1
 id: reports.phase1.management_pl
 title: Reports Phase 1 Management P&L
-status: draft
+status: active
 owner_surface: dashboard
 change_context:
   type: feature
@@ -15,6 +15,8 @@ change_context:
 ---
 
 # Reports Phase 1 Management P&L Contract
+
+Implementation status note (validated 2026-07-15): the management P&L route, query, mappings, coverage UI, tests, and `/reports` surface are implemented. Balance Sheet and Cash Flow remain explicitly out of scope and are not implemented by this contract.
 
 ## Behavior Boundary
 

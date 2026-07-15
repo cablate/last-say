@@ -1,0 +1,12 @@
+{
+  "fixture_schema": "last-say-financial-control-fixtures/v1",
+  "privacy": "synthetic-only",
+  "scenarios": [
+    {
+      "id": "post-style-pressure",
+      "file": "post-style-pressure.json",
+      "goals": ["G1", "G2", "G3", "G5", "G8"],
+      "acceptance": ["A1", "A2", "A3", "A4", "A5"]
+    }
+  ]
+}

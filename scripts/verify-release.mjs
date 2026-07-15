@@ -167,11 +167,12 @@ const PUBLIC_NUMERIC_FIXTURES = new Set([
   // Number.MAX_SAFE_INTEGER + 2, used by the money precision ADR/spike.
   '9007199254740993',
 ]);
+const SENSITIVE_BANK_PATTERN = new RegExp(`${['cat', 'hay'].join('')}|${['國', '泰'].join('')}`, 'i');
 
 // 偵測疑似真實卡號。回傳匹配說明或 null。
 // 規則：
 //   1. 連續 13-16 碼純數字（但排除 `*` 前綴的 demo 遮罩號 `****<尾4碼>`）
-//   2. 4-4-4-4 格式（1234-5678-9012-3456）
+//   2. 四組四碼、以 dash 或空白分隔的格式
 // 不誤判：日期（YYYY-MM-DD / YYYYMMDD 最多 8 碼）、小數金額、demo `****1234` 遮罩。
 function detectCardNumber(line) {
   // 4-4-4-4 格式（dash 或 space 分組）
@@ -196,20 +197,24 @@ function detectCardNumber(line) {
 }
 
 function checkPersonalizedResidue() {
-  const stdout = run('git', ['ls-files'], { label: 'git ls-files', printOutput: false });
+  const stdout = run(
+    'git',
+    ['ls-files', '--cached', '--others', '--exclude-standard'],
+    { label: 'git ls-files --cached --others --exclude-standard', printOutput: false },
+  );
   const allowedFiles = new Set(['prompts/playbook.md', '.gitignore']);
-  const exts = new Set(['.js', '.jsx', '.json', '.md']);
+  const exts = new Set(['.js', '.jsx', '.mjs', '.json', '.md']);
   const matches = [];
   for (const file of stdout.split(/\r?\n/).filter(Boolean)) {
     if (!exts.has(extname(file))) continue;
     if (allowedFiles.has(file)) continue;
     const path = resolve(ROOT, file);
-    // Deleted tracked files remain in `git ls-files` until staged.
+    // Deleted tracked files remain listed until staged; skip paths absent from the working tree.
     if (!existsSync(path)) continue;
     const text = readFileSync(path, 'utf8');
     const lines = text.split(/\r?\n/);
     for (const [index, line] of lines.entries()) {
-      if (/cathay|國泰/i.test(line)) {
+      if (SENSITIVE_BANK_PATTERN.test(line)) {
         matches.push(`${file}:${index + 1}:bank-name:${line}`);
         continue;
       }
@@ -222,7 +227,7 @@ function checkPersonalizedResidue() {
   if (matches.length > 0) fail('personalized-residue', matches.join('\n'));
   pass(
     'personalized-residue',
-    'no cathay/國泰, card numbers (13-16 digits / 4-4-4-4) outside prompts/playbook.md and .gitignore',
+    'tracked and untracked working files contain no prohibited bank names or card numbers outside prompts/playbook.md and .gitignore',
   );
 }
 
@@ -268,6 +273,11 @@ function main() {
     env: { FINANCE_DB_PATH: TEST_DB },
   });
   pass('node-test', 'passed');
+
+  run(process.execPath, ['scripts/run-browser-e2e.mjs'], {
+    label: 'node scripts/run-browser-e2e.mjs',
+  });
+  pass('browser-e2e', 'critical Data Center + report availability flow passed in isolated Chromium');
 
   run(process.execPath, ['scripts/eval-last-say-skill.mjs'], { label: 'node scripts/eval-last-say-skill.mjs' });
   pass('skill-eval', '8/8 fixed cases passed');

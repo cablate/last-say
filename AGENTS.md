@@ -4,6 +4,14 @@
 > **這個工具本身不做 AI。** 帳單處理、分類、規則維護由外部 AI 依 `.claude/skills/last-say-ops/SKILL.md` 操作（該 Skill 目錄自含完整 API 契約與 SOP）。
 > **本檔給「修改這包程式碼」的 AI 遵守。** 如果你的任務是處理帳單／操作資料 → 改讀 Last Say Skill，不是這裡。`prompts/playbook.md` 只保留為舊入口轉址。
 
+## Cold start：先重建專案認知
+
+1. 先讀根目錄 [`Final-Long-Term-Goal.md`](./Final-Long-Term-Goal.md)，區分 Confirmed、Inferred 與 Needs owner decision。
+2. 再讀 [`docs/README.md`](./docs/README.md)、[`docs/project/PROJECT-OVERVIEW.md`](./docs/project/PROJECT-OVERVIEW.md) 與 [`docs/project/CURRENT-STATUS.md`](./docs/project/CURRENT-STATUS.md)。
+3. 依任務讀相關架構、資料流、功能、development／operations、active contracts、ADRs 與 plans；提案前檢查 gaps／risks 與 Roadmap。被取代的文件不保留在working tree；需要歷史脈絡時才查Git history，不得重建第二套文件入口。
+4. 文件只提供冷啟動底座，修改前仍須重新驗證相關程式碼、測試與 Git 狀態；完成後回寫受影響文件。
+5. 使用 CodeGraph 時，cwd 必須是這個 `finance-viewer` 專案根目錄，不得在其上層 workspace 執行。
+
 ## 架構一句話
 
 外部 AI（讀帳單、檢索歷史證據、分類、websearch、建規則、報表映射）→ REST API → SQLite；人類在 Web UI 終審。工具只做 CRUD ＋ 唯讀經驗檢索 ＋ 匯入時機械式套用規則 ＋ 報表列映射。關鍵路徑：`app/api/*`（route）→ `lib/queries/*`（SQL）→ `lib/db.js`（schema 單例）；`lib/constants.js` 前後端共用常數；`lib/normalize.js` 是規則比對鍵演算法；AI 經驗檢索走 `lib/queries/learning.js`，只排序證據、不自行分類；報表映射另走 `lib/reporting/*`（report-lines 的 `REPORT_LINE_DEFINITIONS` 白名單 + coverage）+ `lib/queries/reports/*`（income-statement / mappings）+ `app/api/reports/*`（route）。
@@ -37,7 +45,7 @@
 
 1. **文件宣稱 ≠ 現實**：任何「已完成／已移除／0 殘留」的說法，用 grep / `git status` / `git diff` 驗過再信。交接文件記的 bug 歸因，**先重現再修**——某層有 try/catch 不代表錯誤來自那層。
 2. **隱私紅線掃描**：真實財務資料會流經 `uploads/`、`data/`、`outputs/`（import 路徑白名單的三個目錄 = 高風險點）。改動任何資料流前，用 `git check-ignore` 確認落地路徑被 gitignore 覆蓋。
-3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / Last Say Skill / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ Skill。改 **report_line 白名單**（`lib/reporting/report-lines.js` 的 `REPORT_LINE_DEFINITIONS`）→ 同步 Skill 的 API／月度流程 references／`components/reports/ReportsView`（UI 顯示）——漏一處外部 AI 會拿著過期白名單打 `POST /api/reports/mappings` 被 400 擋。改完 grep 舊值歸零才算完成。
+3. **同步觸點意識**：這個專案的概念改動幾乎都是多點同步。改分類清單 → `lib/constants.js` / Last Say Skill / `README.md` / `scripts/seed-demo.js` / UI。加分類維度 → constants 的 EDITABLE_FIELDS 三件組 / `validateRule`／`decodeRule` / UI（編輯＋批次＋badge＋篩選）/ Skill。改 **report_line 白名單**（`lib/reporting/report-lines.js` 的 `REPORT_LINE_DEFINITIONS`）→ 同步 Skill 的 API／月度流程 references／`components/reports/ReportsView.jsx`（UI 顯示）——漏一處外部 AI 會拿著過期白名單打 `POST /api/reports/mappings` 被 400 擋。改完 grep 舊值歸零才算完成。
 4. **契約文件是介面**：`.claude/skills/last-say-ops/` 是外部 AI 的唯一操作契約——任何 API、資料模型、normalize 或學習證據行為的改動，Skill references 必須同步，否則操作員 AI 會拿著過期契約打 API。
 
 ### 問題拆層（「分類分不準」類問題的固定解法）

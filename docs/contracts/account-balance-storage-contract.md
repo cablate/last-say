@@ -66,7 +66,8 @@ test_mapping:
 
 ## Evidence
 
-- Fixture：`test/fixtures/financial-data/canonical/account-balances.json`。
+- `test/account-balances.test.js`、`test/financial-scope.test.js`。
+- `test/fixtures/financial-data/manifest.json`與其synthetic source mappings提供compound rehearsal範圍；repository沒有獨立按account-balance命名的canonical fixture。
 
 ## Intentional Changes
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { FileText, Landmark, ReceiptText, WalletCards } from "lucide-react"
 
@@ -11,14 +12,6 @@ import CoveragePanel from "@/components/reports/CoveragePanel"
 import IncomeStatement from "@/components/reports/IncomeStatement"
 import ReportSummary from "@/components/reports/ReportSummary"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   Select,
   SelectContent,
@@ -35,15 +28,6 @@ import {
 } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 const REPORT_PARAM_KEYS = ["month", "entity_id", "basis", "currency"]
 const STATEMENTS = new Set(["income", "balance", "cash"])
@@ -104,157 +88,18 @@ function ReportsSkeleton() {
   )
 }
 
-function statusBadge(status) {
-  const tone = {
-    "部分可用": "border-warning/30 bg-warning/10 text-warning",
-    "待補資料": "border-muted-foreground/20 bg-muted text-muted-foreground",
-    "待建規則": "border-warning/30 bg-warning/10 text-warning",
-  }
+function StatementUnavailable({ icon: Icon, title, description }) {
   return (
-    <Badge variant="outline" className={tone[status] || ""}>
-      {status}
-    </Badge>
-  )
-}
-
-function BalanceSheetPreview() {
-  const rows = [
-    {
-      group: "資產",
-      item: "現金與銀行帳戶",
-      status: "部分可用",
-      currentBasis: "交易資料含部分帳戶餘額欄位",
-      gap: "仍需要每個帳戶的期末餘額快照、帳戶角色與幣別。",
-    },
-    {
-      group: "負債",
-      item: "信用卡應付與貸款",
-      status: "待補資料",
-      currentBasis: "目前能看到信用卡消費與繳款流水",
-      gap: "需要信用卡帳單應付餘額、貸款本金餘額與結帳日。",
-    },
-    {
-      group: "淨值",
-      item: "資產減負債",
-      status: "待補資料",
-      currentBasis: "尚未有完整資產與負債同日快照",
-      gap: "等資產與負債都能在同一截止日估值後才輸出淨值。",
-    },
-  ]
-
-  return (
-    <StatementReadinessTable
-      icon={Landmark}
-      title="資產負債表"
-      description="這裡會放截止日的資產、負債與淨值。現在先明確列出缺口，避免把流水帳誤當資產負債表。"
-      caption="資產負債表目前的資料可用性與缺口。"
-      rows={rows}
-    />
-  )
-}
-
-function CashFlowPreview({ report }) {
-  const transactionLabel = report?.transaction_count
-    ? `${report.transaction_count} 筆交易`
-    : "尚未取得交易筆數"
-  const rows = [
-    {
-      group: "營業活動",
-      item: "日常收入與支出",
-      status: "部分可用",
-      currentBasis: transactionLabel,
-      gap: "需要先完成審核，並排除內部轉帳與信用卡繳款後才能穩定輸出。",
-    },
-    {
-      group: "投資活動",
-      item: "投資買入、賣出與資產移轉",
-      status: "待建規則",
-      currentBasis: "部分交易可由報表科目辨識",
-      gap: "需要投資帳戶與資產移轉規則，避免把買入誤認成一般支出。",
-    },
-    {
-      group: "融資活動",
-      item: "貸款本金、業主投入與提領",
-      status: "待補資料",
-      currentBasis: "目前只有交易流水",
-      gap: "需要本金、利息、業主往來的明確報表科目與帳戶角色。",
-    },
-  ]
-
-  return (
-    <StatementReadinessTable
-      icon={WalletCards}
-      title="現金流量表"
-      description="這裡會把現金流拆成營業、投資、融資活動。現在先顯示哪些資料已可用、哪些規則還缺。"
-      caption="現金流量表目前的資料可用性與缺口。"
-      rows={rows}
-    />
-  )
-}
-
-function StatementReadinessTable({ icon: Icon, title, description, caption, rows }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardDescription>{description}</CardDescription>
-        <CardTitle className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="hidden overflow-x-auto md:block">
-          <Table>
-            <TableCaption>{caption}</TableCaption>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">區段</TableHead>
-                <TableHead scope="col">科目</TableHead>
-                <TableHead scope="col">狀態</TableHead>
-                <TableHead scope="col">現有依據</TableHead>
-                <TableHead scope="col">還缺什麼</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={`${row.group}:${row.item}`}>
-                  <TableCell className="whitespace-nowrap font-medium">{row.group}</TableCell>
-                  <TableCell className="min-w-36">{row.item}</TableCell>
-                  <TableCell className="whitespace-nowrap">{statusBadge(row.status)}</TableCell>
-                  <TableCell className="min-w-48 text-muted-foreground">
-                    {row.currentBasis}
-                  </TableCell>
-                  <TableCell className="min-w-64">{row.gap}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        <ul className="divide-y md:hidden">
-          {rows.map((row) => (
-            <li key={`${row.group}:${row.item}`} className="space-y-2 py-4 first:pt-0 last:pb-0">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs text-muted-foreground">{row.group}</p>
-                  <p className="font-medium">{row.item}</p>
-                </div>
-                {statusBadge(row.status)}
-              </div>
-              <dl className="grid gap-2 text-sm">
-                <div>
-                  <dt className="text-xs text-muted-foreground">現有依據</dt>
-                  <dd>{row.currentBasis}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">還缺什麼</dt>
-                  <dd>{row.gap}</dd>
-                </div>
-              </dl>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <Empty className="min-h-72 border">
+      <EmptyHeader>
+        <EmptyMedia variant="icon"><Icon /></EmptyMedia>
+        <EmptyTitle>{title}正式報表尚未實作</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+        <EmptyDescription>
+          <Link href="/data">前往財務資料中心檢查帳戶、餘額、負債、持倉與對帳狀態</Link>
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   )
 }
 
@@ -381,11 +226,19 @@ export default function ReportsView() {
         </TabsContent>
 
         <TabsContent value="balance" className="space-y-4">
-          <BalanceSheetPreview />
+          <StatementUnavailable
+            icon={Landmark}
+            title="資產負債表"
+            description="目前已有 typed 財務資料與就緒度檢查，但尚未有正式的同日估值、coverage 與資產＝負債＋權益查詢；這裡不先顯示推測結果。"
+          />
         </TabsContent>
 
         <TabsContent value="cash" className="space-y-4">
-          <CashFlowPreview report={data} />
+          <StatementUnavailable
+            icon={WalletCards}
+            title="現金流量表"
+            description="目前尚未完成營業、投資、融資活動的正式分類與期初期末現金 reconciliation；這裡不以交易筆數或靜態規則暗示報表可用。"
+          />
         </TabsContent>
       </Tabs>
     </div>

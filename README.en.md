@@ -77,8 +77,10 @@ Open [http://127.0.0.1:3127](http://127.0.0.1:3127). The demo contains fictional
 If `3127` is already in use:
 
 ```bash
-npx next dev -H 127.0.0.1 -p 3128
+PORT=3128 npm run dev
 ```
+
+In PowerShell, use `$env:PORT='3128'; npm run dev`. The launcher keeps the host bound to `127.0.0.1`; use the actual URL printed in the terminal.
 
 > Do not run a reset seed against an existing database. Development and tests must use a separate `FINANCE_DB_PATH`, never `data/finance.sqlite`.
 
@@ -105,13 +107,16 @@ The Skill contains bank quirks, category boundaries, web research guidance, conf
 | Correction evidence, rule quality, historical reclassification | Ready |
 | Monthly overview, movers, recurring baseline, trends | Ready |
 | Management P&L with explicit coverage | Ready, coverage-dependent |
-| Financial Data Center | Ready: typed accounts, sources, balances, cards, loans, commitments, investments, FX, Tier 2 values, and review tasks |
+| Financial Data Center | Ready: all typed account kinds, sources, balances, cards, loans, commitments, manual investments/quotes/FX, Tier 2 values, and review tasks |
 | AI analysis preflight | Ready: 8 readiness goals, prioritized gaps, scoped/as-of checks, 7 named datasets, and provenance watermarks |
-| Balance sheet | Data foundation ready; final statement UI still incomplete and scope-dependent |
-| Cash flow statement | Readiness checks ready; final statement UI still incomplete and requires cash boundaries plus reconciliation |
+| Control Phase 0 reference | Complete but not a runtime capability: contracts, metric dictionary, synthetic fixture, and pure 90-day timeline projector; no real DB/API/UI adapter yet |
+| Balance sheet | Data foundation ready; UI honestly reports unavailable until a scoped, reconciled read model exists |
+| Cash flow statement | Readiness checks ready; UI honestly reports unavailable until cash boundaries and reconciliation exist |
 | Tax, options, and complex derivatives | Unsupported; requires a separate typed context |
 
-Last Say is currently a single-user localhost application with no authentication or tenant isolation. Do not expose port `3127` to a network or reverse proxy. See [SECURITY.md](./SECURITY.md).
+Last Say is currently a single-user localhost application with no authentication or tenant isolation. Do not expose any configured port to a network or reverse proxy. See [SECURITY.md](./SECURITY.md).
+
+Start with the [documentation index](./docs/README.md) for the evidence-backed project map, architecture, data flows, operations, risks, and AI bootstrap order. The proposed end state and backward path are in [Final Long-Term Goal](./Final-Long-Term-Goal.md); it is still a Draft and requires owner approval.
 
 ## Feedback and contributions
 
@@ -126,22 +131,19 @@ Last Say is currently a single-user localhost application with no authentication
 npm run dev
 npm run lint
 npm test
+npm run test:e2e
 npm run build
 npm run audit:prod
 npm run verify:release
 ```
 
-The release verifier runs lint, dependency audit, tests, an isolated `.next-verify` build, and a real runtime smoke test without rewriting the live `.next` directory. It also scans tracked files for personal finance residue, checks demo metrics, and validates committed screenshots.
+The release verifier runs lint, dependency audit, Node tests, an isolated Chromium E2E flow, an isolated build, and a real runtime smoke test without opening `data/finance.sqlite`. It scans tracked and non-ignored untracked working files for personal finance residue, checks demo metrics, rehearses backup/restore, and validates committed screenshots.
 
 ## Roadmap
 
-The canonical product direction is defined in the [Last Say Long-Term Goal](./docs/long-term-goal.md). The near-term [Financial Data Foundation Master Plan](./docs/plans/financial-data-foundation-master-plan.md) establishes traceable data and gap detection before forecasting and proactive control. New capabilities must improve trustworthy financial understanding, earlier risk control, or the long-term cost of human-AI collaboration.
+Financial Data Foundation Phases 0-7 plus the trust-stabilization and Control Phase 0 reference slice are complete; see [Current Status](./docs/project/CURRENT-STATUS.md). The current priority is to make the AI-primary input → typed commit → UI confirmation/minor-correction foundation workflow run smoothly in real use. Financial Control Center is the next stage; base-currency, reserve, and reliable-income policies are deferred until their runtime consumers actually need them.
 
-- Account roles and balance snapshots for a reconcilable balance sheet.
-- Transfer matching and a direct-method cash flow statement.
-- Configurable objective dimensions such as personal versus business.
-- More shareable, sanitized bank format adapters.
-- Read-only monthly AI insights that never mutate financial facts.
+See the evidence-derived [Roadmap](./docs/planning/ROADMAP.md) for gates and acceptance criteria, and [Open Questions](./docs/planning/OPEN-QUESTIONS.md) for decisions that still belong to the project owner.
 
 ## License
 

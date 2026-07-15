@@ -20,15 +20,17 @@
     "sqlite"
   ],
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 3127",
+    "dev": "node scripts/run-next-local.mjs dev",
     "build": "next build",
-    "start": "next start -H 127.0.0.1 -p 3127",
+    "start": "node scripts/run-next-local.mjs start",
     "lint": "eslint . --max-warnings=0",
     "audit:prod": "npm audit --omit=dev --audit-level=moderate",
     "test": "node --test",
+    "test:e2e": "node scripts/run-browser-e2e.mjs",
     "smoke:runtime": "node scripts/smoke-runtime.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "eval:skill": "node scripts/eval-last-say-skill.mjs",
+    "backup:check": "node scripts/finance-backup-check.mjs",
     "seed": "node scripts/seed-from-ledger.js",
     "seed:reset": "node scripts/seed-from-ledger.js --reset",
     "seed:demo": "node scripts/seed-demo.js",
@@ -55,8 +57,9 @@
     }
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.1",
     "@eslint/eslintrc": "^3.3.5",
+    "@playwright/test": "^1.61.1",
+    "@tailwindcss/postcss": "^4.3.1",
     "eslint": "^9.39.2",
     "eslint-config-next": "^15.5.20",
     "shadcn": "^4.12.0",

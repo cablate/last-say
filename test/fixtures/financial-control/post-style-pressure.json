@@ -1,0 +1,62 @@
+{
+  "fixture_schema": "last-say-financial-control-scenario/v1",
+  "id": "post-style-pressure",
+  "privacy": "synthetic-only",
+  "description": "Synthetic cash-pressure scenario with two banks, two cards, one loan and incomplete obligation coverage.",
+  "facts": {
+    "accounts": [
+      { "fact_key": "account-bank-a", "kind": "bank", "currency": "TWD", "balance_minor": "8000000", "as_of_date": "2026-07-15", "freshness": "current" },
+      { "fact_key": "account-bank-b", "kind": "bank", "currency": "TWD", "balance_minor": "4000000", "as_of_date": "2026-07-15", "freshness": "current" },
+      { "fact_key": "account-card-a", "kind": "credit_card", "currency": "TWD", "freshness": "current" },
+      { "fact_key": "account-card-b", "kind": "credit_card", "currency": "TWD", "freshness": "stale" },
+      { "fact_key": "account-loan-a", "kind": "loan", "currency": "TWD", "freshness": "current" }
+    ],
+    "scope": { "cash_accounts": "declared_complete", "credit_cards": "declared_complete", "liabilities": "declared_complete", "commitments": "declared_partial" }
+  },
+  "forecast_input": {
+    "as_of_date": "2026-07-15",
+    "horizon_days": 90,
+    "currency": "TWD",
+    "opening_liquid_cash_minor": "12000000",
+    "reserve_floor_minor": "6000000",
+    "uncertainty_buffer_minor": "0",
+    "coverage": {
+      "status": "partial",
+      "gaps": [
+        { "kind": "stale_source", "fact_key": "account-card-b" },
+        { "kind": "unknown_commitment_amount", "fact_key": "utility-unknown-aug" }
+      ]
+    },
+    "events": [
+      { "event_key": "card-charge-jul", "kind": "card_charge", "date": "2026-07-16", "cash_effect_minor": "0", "economic_amount_minor": "1000000", "reliability": "committed", "linked_event_key": "card-a-payment-jul", "source_fact_keys": ["account-card-a"] },
+      { "event_key": "subscription-jul", "kind": "subscription", "date": "2026-07-20", "cash_effect_minor": "-50000", "reliability": "committed", "source_fact_keys": ["commitment-subscription"] },
+      { "event_key": "salary-jul", "kind": "salary", "date": "2026-07-25", "cash_effect_minor": "5500000", "reliability": "dependable", "source_fact_keys": ["commitment-salary"] },
+      { "event_key": "card-a-payment-jul", "kind": "card_payment", "date": "2026-07-28", "cash_effect_minor": "-4500000", "reliability": "committed", "source_fact_keys": ["account-card-a", "statement-card-a-jul"] },
+      { "event_key": "loan-jul", "kind": "loan_payment", "date": "2026-07-30", "cash_effect_minor": "-2000000", "reliability": "committed", "components_minor": { "principal": "1900000", "interest": "100000", "fee": "0" }, "source_fact_keys": ["account-loan-a", "schedule-loan-a"] },
+      { "event_key": "rent-aug", "kind": "rent", "date": "2026-08-01", "cash_effect_minor": "-1200000", "reliability": "committed", "source_fact_keys": ["commitment-rent"] },
+      { "event_key": "card-b-payment-aug", "kind": "card_payment", "date": "2026-08-05", "cash_effect_minor": "-3900000", "reliability": "committed", "source_fact_keys": ["account-card-b", "statement-card-b-jul"] },
+      { "event_key": "freelance-aug", "kind": "other_income", "date": "2026-08-10", "cash_effect_minor": "3000000", "reliability": "uncertain", "source_fact_keys": ["income-candidate-freelance"] },
+      { "event_key": "utility-unknown-aug", "kind": "utility", "date": "2026-08-15", "cash_effect_minor": null, "reliability": "committed", "source_fact_keys": ["commitment-utility"] },
+      { "event_key": "subscription-aug", "kind": "subscription", "date": "2026-08-20", "cash_effect_minor": "-50000", "reliability": "committed", "source_fact_keys": ["commitment-subscription"] },
+      { "event_key": "salary-aug", "kind": "salary", "date": "2026-08-25", "cash_effect_minor": "5500000", "reliability": "dependable", "source_fact_keys": ["commitment-salary"] },
+      { "event_key": "loan-aug", "kind": "loan_payment", "date": "2026-08-30", "cash_effect_minor": "-2000000", "reliability": "committed", "components_minor": { "principal": "1910000", "interest": "90000", "fee": "0" }, "source_fact_keys": ["account-loan-a", "schedule-loan-a"] },
+      { "event_key": "rent-sep", "kind": "rent", "date": "2026-09-01", "cash_effect_minor": "-1200000", "reliability": "committed", "source_fact_keys": ["commitment-rent"] },
+      { "event_key": "insurance-sep", "kind": "insurance", "date": "2026-09-15", "cash_effect_minor": "-1800000", "reliability": "committed", "source_fact_keys": ["commitment-insurance"] },
+      { "event_key": "subscription-sep", "kind": "subscription", "date": "2026-09-20", "cash_effect_minor": "-50000", "reliability": "committed", "source_fact_keys": ["commitment-subscription"] },
+      { "event_key": "salary-sep", "kind": "salary", "date": "2026-09-25", "cash_effect_minor": "5500000", "reliability": "dependable", "source_fact_keys": ["commitment-salary"] },
+      { "event_key": "loan-sep", "kind": "loan_payment", "date": "2026-09-30", "cash_effect_minor": "-2000000", "reliability": "committed", "components_minor": { "principal": "1920000", "interest": "80000", "fee": "0" }, "source_fact_keys": ["account-loan-a", "schedule-loan-a"] },
+      { "event_key": "rent-oct", "kind": "rent", "date": "2026-10-01", "cash_effect_minor": "-1200000", "reliability": "committed", "source_fact_keys": ["commitment-rent"] }
+    ]
+  },
+  "expected": {
+    "coverage_status": "partial",
+    "minimum_projected_cash_minor": "5800000",
+    "minimum_projected_cash_date": "2026-08-20",
+    "first_reserve_breach_date": "2026-08-05",
+    "cash_runway_days": 21,
+    "safe_to_spend_minor": null,
+    "included_card_charge_cash_effect_minor": "0",
+    "loan_july_cash_effect_minor": "-2000000",
+    "excluded_event_keys": ["freelance-aug", "utility-unknown-aug"]
+  }
+}

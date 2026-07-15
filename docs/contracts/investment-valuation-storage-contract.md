@@ -70,7 +70,7 @@ test_mapping:
 ## Evidence
 
 - ADR：`docs/adr/0002-money-decimal-representation.md`。
-- Fixtures：`test/fixtures/financial-data/canonical/investments.json`。
+- `test/investment-storage.test.js`、`test/investment-valuation.test.js`、`test/manual-investment-entry.test.js`與synthetic builders；repository沒有獨立按investment命名的canonical fixture。
 
 ## Intentional Changes
 

@@ -68,7 +68,8 @@ test_mapping:
 
 ## Evidence
 
-- Fixtures：`test/fixtures/financial-data/canonical/credit-cards.json`、`liabilities.json`、`commitments.json`。
+- `test/credit-card-storage.test.js`、`test/credit-card-installments.test.js`、`test/liability-storage.test.js`、`test/commitments.test.js`。
+- Compound rehearsal使用`test/fixtures/financial-data/source-mappings/card-statement.json`、`loan-statement.json`與`canonical/additional-contexts.json`；repository沒有三份按domain拆開的canonical fixture。
 
 ## Intentional Changes
 

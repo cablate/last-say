@@ -68,7 +68,8 @@ test_mapping:
 
 ## Evidence
 
-- Spike：`docs/adr/spikes/node-sqlite-bigint-wal-backup.md`。
+- Blocking spike summary：`docs/adr/spikes/phase0-blocking-spikes.md`。
+- Runtime evidence：`test/backup-restore.test.js`、`test/backup-health.test.js`。
 
 ## Intentional Changes
 

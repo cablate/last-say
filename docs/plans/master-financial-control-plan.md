@@ -1,14 +1,16 @@
 # Last Say 完整財務掌控 Master Plan
 
-> - 狀態：Spec-plan，Ready for Phase 0，後續 Phase 需依前置驗收逐步解鎖
-> - 日期：2026-07-13
-> - 適用範圍：個人與家戶優先；local-first；外部 AI + 人類審核；TWD 單幣別 MVP
+> - 狀態：Spec-plan；Control Center已確認為資料基礎建設之後的下一階段；Phase 0 reference已完成，Phase 1-6排在foundation業務流程收斂之後
+> - 日期：2026-07-15（原始規劃 2026-07-13）
+> - 適用範圍（proposed）：個人與家戶優先；local-first；AI主輸入＋UI確認／少量修正；Control MVP沿用TWD簡單default，需要時再擴充
 > - 上位目標：把 Last Say 從「事後看懂交易」推進為「在未來義務追上現金以前，先看見風險並採取行動」
-> - Canonical goal：[Last Say Long-Term Goal](../long-term-goal.md) `LTG-1`
-> - 上游資料 owner：[財務資料基礎建設 Master Plan](./financial-data-foundation-master-plan.md)
-> - 關聯規格：[Accounting Reports Architecture Spec](../accounting-reports-spec.md)
+> - Canonical goal：[Final Long-Term Goal](../../Final-Long-Term-Goal.md)／原始 `LTG-1`
+> - 上游資料 owner：已實作的foundation code與[`financial-data-core-contract.md`](../contracts/financial-data-core-contract.md)、[`account-balance-storage-contract.md`](../contracts/account-balance-storage-contract.md)、[`liability-and-commitment-storage-contract.md`](../contracts/liability-and-commitment-storage-contract.md)、[`investment-valuation-storage-contract.md`](../contracts/investment-valuation-storage-contract.md)
+> - 報表關聯契約：[`reports-phase1-implementation-contract.md`](../contracts/reports-phase1-implementation-contract.md)、[`balance-sheet-contract.md`](../contracts/balance-sheet-contract.md)、[`cash-flow-contract.md`](../contracts/cash-flow-contract.md)、[`report-coverage-contract.md`](../contracts/report-coverage-contract.md)
 
 執行順序固定為「財務資料基礎建設 → 本計畫」。本計畫擁有 projection、policy、safe-to-spend、alerts 與 scenario semantics；entity、account、source、balance、card、liability、commitment、investment、valuation 與 reconciliation 的 canonical persistence 由上游資料基礎計畫擁有。本文提到的資料表或欄位若與上游衝突，以資料基礎計畫與其 behavior contracts 為準，不建立第二套資料真相。
+
+Owner於2026-07-15進一步確認：目前仍屬foundation業務流程收斂期；AI是主要輸入方式，UI只負責確認與少量修正。只有owner對foundation實際流程滿意後才啟動本計畫runtime phases。Reserve、reliable income與其他進階policy延後到對應consumer，不是目前工作。
 
 ## 1. 結論先行
 
@@ -45,7 +47,7 @@
 
 ## 2. Repo Reality：目前能支援到哪裡
 
-以下判定以 2026-07-13 的實際程式碼為準，不以 UI 標籤或舊計畫推測。
+以下判定已於2026-07-15依實際程式碼、tests與本輪驗證更新，不以UI標籤或舊計畫推測。
 
 | 能力 | 現況 | 可支援程度 | 主要證據／限制 |
 |---|---|---:|---|
@@ -55,13 +57,15 @@
 | 月度支出／分類／趨勢 | 已有 | 中高 | Overview、Breakdown、Trend、Top movers、固定底盤；回答「發生了什麼」。 |
 | 全期間總覽 | 已有 | 中 | `month=all` 可跨月查詢，但仍以已匯入交易為界。 |
 | 管理損益表 | 已有第一版 | 中 | 可做 scoped P&L、coverage、report mapping；不是稅務或完整權責制報表。 |
-| 資產負債表 | 只有規格與 readiness preview | 低 | 缺正式 balance snapshot、完整帳戶角色與負債餘額；不能把預覽視為報表。 |
-| 現金流量表 | 只有規格與 readiness preview | 低 | 缺期初／期末 snapshot、transfer match 與 reconciliation。 |
-| 帳戶資料 | 只有基本表 | 低 | `accounts` 僅有名稱、機構、類型、末碼；不夠表達流動性、實體、幣別、負債角色與活躍狀態。 |
-| 當前信用卡暴險 | 沒有 | 無 | 沒有結帳週期、繳款日、已出帳金額、未出帳餘額、最低應繳與分期。 |
-| 貸款契約與還款表 | 沒有 | 無 | 無剩餘本金、利率、期數、下次扣款與官方攤還表。 |
-| 固定／週期承諾 | 沒有 | 無 | 「固定底盤」是歷史統計，不是未來具日期的付款承諾。 |
-| 每日現金預測 | 沒有 | 無 | 目前查詢都是歷史聚合，沒有 future event timeline。 |
+| 資產負債表 | foundation facts已有；正式read model／報表未完成 | 低 | UI明確顯示unavailable；需position scope、FX freshness與reconciliation，不能把inventory當報表。 |
+| 現金流量表 | readiness已有；正式read model／報表未完成 | 低 | UI明確顯示unavailable；需cash boundary、mapping與begin/end reconciliation。 |
+| 帳戶資料 | typed foundation與manual UI已有 | 高 | entity、institution、account kind、currency、status、aliases與balance snapshots已存在；所有account kinds可由Data Center建立。 |
+| 當前信用卡暴險 | typed facts已有，統一timeline未完成 | 中 | profiles、statements、items、payment matches、installments已存在；尚無Control read model整合未出帳／已出帳／due。 |
+| 貸款契約與還款表 | typed facts已有，Control projection未完成 | 中 | liability profile、schedule entries、payment allocations已存在；尚無統一future cash timeline。 |
+| 固定／週期承諾 | typed templates／occurrences已有 | 中 | 可保存recurring／one-off facts；unknown amount／due與materialization仍需Control policy。 |
+| 投資與FX | typed facts與manual UI已有 | 中高 | instruments、holdings、quotes、FX與valuation存在；manual source＋fact原子寫入，正式statement／trade import仍走operator/API。 |
+| Control Phase 0 | pure reference已完成 | 中（語意）／無（runtime） | 四份contracts、metric dictionary、synthetic fixture與90日timeline projector已驗證；不讀真實DB、無API／UI。 |
+| 每日現金預測 | 只有pure reference | 無runtime能力 | 尚缺trusted starting position、DB adapter、統一future events、owner policies與runtime surface。 |
 | 安全可花金額 | 沒有 | 無 | 沒有 reserve floor、forecast coverage、支付工具時點模型。 |
 | 預算與警示 | 沒有 | 無 | 無 alert rule、事件、確認／處理紀錄與通知節流。 |
 | 情境模擬 | 沒有 | 無 | 無「多花 X、延後 Y、收入晚到」的 before/after projection。 |
@@ -78,7 +82,7 @@
 
 **PG-1：使用者在未來付款義務造成現金短缺以前，能可靠知道可安全動用的金額、風險發生日與原因，並完成一個可驗證的因應行動。**
 
-PG-1 是 canonical [`LTG-1`](../long-term-goal.md) 在本計畫 Phase 0-4 的階段性 operationalization。這個目標不能被「新增預算功能」「做一張現金圖」或「完成 build」取代。
+PG-1 是 canonical [Final Long-Term Goal](../../Final-Long-Term-Goal.md) 在本計畫 Phase 0-4 的階段性 operationalization。這個目標不能被「新增預算功能」「做一張現金圖」或「完成 build」取代。
 
 ### 3.2 Actors And Jobs
 
@@ -341,7 +345,7 @@ AI operator：
 
 ## 7. 目標資料架構
 
-本節保留 decision-layer 的邏輯需求與歷史命名，**不是 canonical DDL**。實作前由 Phase 0 將 account、snapshot、card、liability、commitment 與 reconciliation 全部映射到 [財務資料基礎建設 Master Plan](./financial-data-foundation-master-plan.md) 的 owner；重複名稱應改成引用或 read model，不得照本文另建同義 tables。
+本節保留 decision-layer 的邏輯需求與歷史命名，**不是 canonical DDL**。實作前由 Phase 0 將 account、snapshot、card、liability、commitment 與 reconciliation 全部映射到既有foundation owner；現行責任切分以[`financial-data-core-contract.md`](../contracts/financial-data-core-contract.md)及各storage contracts為準。重複名稱應改成引用或 read model，不得照本文另建同義 tables。
 
 ### 7.1 四層資料責任
 
@@ -569,9 +573,11 @@ components/financial-control/
 
 ## 10. 分階段實作計畫
 
-> 本文件的 Phase 編號是 Financial Control Plan，不取代 Accounting Reports Spec 的 Phase 編號。共用 schema／API 時，由較早落地的 Phase 建立 owner，後續不得重建平行表。
+> 本文件的 Phase 編號只描述Financial Control工作；現行reporting與foundation責任分別由active contracts及既有code擁有。共用schema／API時，由較早落地的owner建立，後續不得重建平行表。
 
 ### Phase 0：Outcome Contracts、Metric Dictionary、Demo Fixtures
+
+**Execution status：Completed as a reference package on 2026-07-15；owner financial policies intentionally deferred to their runtime consumers。**
 
 #### Goal Contribution
 
@@ -586,7 +592,7 @@ components/financial-control/
 - metric dictionary：每個指標的 numerator、denominator、as-of、coverage、unknown policy。
 - anonymized fixtures：銀行、兩張卡、信貸、薪資、房租、訂閱、缺資料與風險情境。
 - 引用並驗證 foundation migration／rollback／newer-version evidence；本計畫不另做 migration ledger 決策。
-- 將既有 Accounting Spec 的「規格／已實作」漂移標記清楚。
+- 將既有reporting contracts與實作之間的「規格／已實作」狀態標記清楚。
 
 #### Invariants And Boundaries
 
@@ -600,6 +606,15 @@ components/financial-control/
 - 同一 fixture 能算出明確的 90 天最低現金、card due、loan due 與 coverage expectation。
 - 每個 Goal ID 都映射到 requirement、Phase 與 acceptance example。
 - 所有測試 DB 使用 `FINANCE_DB_PATH` 隔離路徑。
+
+#### 2026-07-15 Execution Record
+
+- Contracts：`docs/contracts/financial-position-contract.md`、`commitment-and-liability-contract.md`、`cash-forecast-contract.md`、`financial-alert-contract.md`。
+- Metrics：`docs/planning/FINANCIAL-CONTROL-METRIC-DICTIONARY.md`。
+- Synthetic fixture：`test/fixtures/financial-control/post-style-pressure.json`，涵蓋兩銀行、兩卡、貸款、薪資、房租、訂閱、保險、不確定收入、stale card與unknown commitment。
+- Pure projector：`lib/finance/control/project-cash-timeline.js`；duplicate、loan component sum、uncertain income exclusion、coverage degradation、reserve breach、runway與safe-to-spend gate都有test。
+- Fixed fixture result：coverage=`partial`、最低現金TWD minor `5800000`（2026-08-20）、首次reserve breach 2026-08-05、runway 21日、safe-to-spend=`null`。
+- Boundary：尚無DB adapter、API、UI或forecast persistence；不得對外宣稱runtime forecast可用。
 
 ### Phase 1：Trusted Financial Position
 
@@ -718,7 +733,7 @@ components/financial-control/
 
 #### Deliverables
 
-- 完成 Accounting Spec 尚未落地的 Balance Sheet 與 Cash Flow。
+- 完成active contracts中尚未落地的 Balance Sheet 與 Cash Flow。
 - 消費 foundation transfer matches 與 beginning／ending cash facts，完成 report reconciliation projection。
 - report review queue 與 control alert 共用 blocker references。
 - 月結 occurrence settlement 與 forecast accuracy。
@@ -988,19 +1003,19 @@ KPI 不只量「使用者有沒有打開 App」，而要證明它真的提早揭
 
 ## 17. Execution Readiness Verdict
 
-### Verdict：Ready for Phase 0 contract alignment；runtime blocked by data foundation
+### Verdict：Phase 0 reference complete；runtime plan queued behind Foundation Business-Flow Closure
 
-本計畫的 Phase 0 可以先做 outcome contract 對齊與 fixture 預期值，但不得建立 canonical account／balance／card／liability／commitment schema。Runtime Phase 1-6 必須等 [財務資料基礎建設 Master Plan](./financial-data-foundation-master-plan.md) Phase 0-7 驗收完成；之後再依本計畫順序實作 projection、policy、alerts 與 control surfaces。
+財務資料基礎Phase 0-7與本計畫Phase 0 reference已完成。Owner已確認Control Center是下一階段，但目前先收斂AI輸入→typed commit→UI確認／少量修正的foundation業務閉環；因此Phase 1-6不是current execution。Reserve、reliable income與進階policy到真正consumer需要時再決定。Pure projector不能直接接UI冒充真實forecast，也不得重建canonical account／balance／card／liability／commitment schema。
 
-### 第一個實作切片建議
+### Foundation closure後的第一個runtime切片
 
-不要先做首頁 UI。第一個切片應是：
+只有owner明確確認foundation flow已滿意後才執行。不要先做首頁UI：
 
-1. 建立四份 behavior contracts 與一套貼文式 anonymized fixture，引用資料基礎 contracts，不複製 canonical payload。
-2. 定義 forecast／policy／alert coverage；account／liability／commitment schema 直接引用資料基礎 owner。
-3. 用 pure function 對 fixture 算出 expected daily cash timeline。
-4. 先證明 card charge、card payment、loan principal／interest 不重複。
-5. 再進入 migration 與 API。
+1. 先記錄Foundation Business-Flow Closure的owner acceptance與仍存在的known gaps。
+2. 依`financial-position-contract.md`建立foundation position adapter與coverage read model；request使用explicit currency／TWD simple default，不先建立全域偏好系統。
+3. 以synthetic DB fixture證明assets、liabilities、net position、scope／freshness／reconciliation降級。
+4. 與Phase 2 commitment timeline的event contract對接，但不先做safe-to-spend、reserve或income policy。
+5. 只有read model責任證明需要persistence後，才另立migration contract與rollback evidence；reserve／reliable income留到Phase 3／4。
 
 下一個執行 agent 必須先回答：
 
@@ -1013,5 +1028,5 @@ KPI 不只量「使用者有沒有打開 App」，而要證明它真的提早揭
 ## 18. 參考框架
 
 - CFPB, [Financial well-being scale user guide](https://files.consumerfinance.gov/f/201512_cfpb_financial-well-being-user-guide-scale.pdf)：產品結果不只是一個帳戶餘額，也包含日常控制、承受衝擊、目標進度與選擇自由；本計畫將其轉成可觀測產品能力，但不直接複製成單一健康分數。
-- Last Say [Accounting Reports Architecture Spec](../accounting-reports-spec.md)：account、snapshot、transfer、coverage 與三大管理報表的既有上游規格。
+- Last Say [`reports-phase1-implementation-contract.md`](../contracts/reports-phase1-implementation-contract.md)、[`balance-sheet-contract.md`](../contracts/balance-sheet-contract.md)、[`cash-flow-contract.md`](../contracts/cash-flow-contract.md)與[`report-coverage-contract.md`](../contracts/report-coverage-contract.md)：現行statement、transfer、coverage與presentation語意。
 - Last Say [Operator Skill](../../.claude/skills/last-say-ops/SKILL.md)：外部 AI 與人類審核的現有操作契約。
