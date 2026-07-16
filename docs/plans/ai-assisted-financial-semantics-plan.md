@@ -4,14 +4,14 @@
 
 | Field | Value |
 |---|---|
-| Lifecycle | Active execution；MP-00至MP-06 complete；MP-07 backup／isolated rehearsal complete，formal migration與owner acceptance pending |
+| Lifecycle | Active execution；MP-00至MP-06 complete；MP-07 operator／migration／real-data closure complete，owner-only confirmations與acceptance pending |
 | Profile | Master |
 | Canonical role | Current Gate F 唯一 AI 語意與真實資料閉環執行計畫 |
 | Owner | Project owner；Foundation integration owner 由執行 session 指定 |
 | Repository／scope | `finance-viewer`；Foundation Business-Flow Closure |
 | Branch／base commit | `codex/repository-audit-and-stabilization`／`f633ada491d1eb90c3a4e6e138dfaabe6b3f97d0` |
 | Created | 2026-07-16 |
-| Last verified | 2026-07-16，repository、tests、contracts 與 local DB read-only inspection |
+| Last verified | 2026-07-16，repository、199 tests、17 Skill evals、5 browser flows、release verifier與formal DB v10 postflight |
 | Inputs | Owner 近期決策、[`CURRENT-STATUS.md`](../project/CURRENT-STATUS.md)、[`ROADMAP.md`](../planning/ROADMAP.md)、[`master-financial-control-plan.md`](master-financial-control-plan.md)、現有 behavior contracts |
 | Known relevant drift | Working tree 已有未提交的 transaction classification、owner-unresolved、reporting、UI 與 Skill 變更；MP-00 已將其納入共享語意邊界，每個後續 package 仍須做 scoped diff preflight，不得覆蓋既有工作 |
 
@@ -118,7 +118,7 @@
 | F-04 | Fact | Transfer match、source conflict、review task schema 與 query 已存在 | migration `0006`；`reconciliation.js`；`review-tasks.js` | same | 重用 reconciliation owner |
 | F-05 | Fact | Readiness 與 allowlisted analysis-context 已存在；現有 datasets 為 cash、balances、debt、investments、valued items、reconciliation、net worth | `inventory.js`、`analysis-context.js`、`analysis/registry.js` | same | 新 semantic datasets 擴充 registry，不開 arbitrary endpoint |
 | F-06 | Fact | 管理損益主要由 transaction/report mappings 動態分類 | `report-lines.js::classifyTransactionForReport`、`income-statement.js::getIncomeStatement` | same | WP1 必須先鎖跨報表 semantics |
-| F-07 | Fact | Local DB 有 1,078 筆 transactions；12 個 obligation／reconciliation typed tables皆 0；integrity `ok`、0 FK violations | read-only `node:sqlite` count／PRAGMA，`data/finance.sqlite` | 2026-07-16 | 目前是 capability skeleton，不是 real-data closure |
+| F-07 | Fact | Formal DB為schema v10、1,078筆transactions、13 accounts、24 sources；typed facts含card profile／statement／payment match、3 liabilities、2 commitments與1 proposed reimbursement；integrity `ok`、0 FK violations | typed APIs、read-only `node:sqlite` count／PRAGMA，`data/finance.sqlite` | 2026-07-16 MP-07 postflight | Real-data closure已執行；coverage仍依missing scope／snapshot／matching維持partial |
 | F-08 | Fact | Synthetic tests 已覆蓋 storage、preview／commit、reversal、readiness、transfer matching、installments 與 demo fixture | `test/financial-*.test.js`、`credit-card-*.test.js`、`liability-storage.test.js` 等 | HEAD＋dirty snapshot | 可由既有 suite 延伸，不從零開始 |
 | F-09 | Fact | Working tree 有尚未提交的 AI classification、owner-unresolved、reporting、UI 與 Skill 變更 | `git status --short` | 2026-07-16 | 第一個 package 必須先形成乾淨 scope baseline |
 | F-10 | Fact | Repository沒有reimbursement match schema/query/route/ingestion context；現有`transfer_matches`只能表達own-account from/to legs | repo-wide reimbursement search；migration `0006`；`reconciliation.js` | 2026-07-16 MP-02 preflight | 一對多報銷需要additive typed owner，不能塞入transfer或memo |
@@ -143,7 +143,7 @@
 | Gap | Evidence | Affected | Consequence if unchanged |
 |---|---|---|---|
 | 三時間線沒有單一可測 semantic contract | 分散於 reporting、cash activity、obligation contracts | G-02、G-06 | 分期／card payment／報銷可能重複或跨期錯置 |
-| 真實 obligation／transfer owners 空白 | F-07 | G-03、G-08 | Balance sheet、fixed obligations 與 Control entry gate 仍 partial |
+| 真實transfer／loan allocation與部分card evidence不完整 | F-07 | G-03、G-08 | 已知facts已有typed owner；缺失matching／schedule與歷史card normalization仍使reports partial／unreconciled |
 | Reimbursement缺canonical relationship owner | F-10 | G-03、G-06 | 每次分析都需重新猜補貼與交通／住宿關係，或誤列收入／淨額 |
 | AI context 缺 recurring／installment anomaly／reimbursement candidate datasets | registry 現況 | G-04 | AI 每次需重掃或依聊天上下文猜測 |
 | Review 尚未以跨報表 impact 統一排序 | 現有 transaction、review-task、confirmation surfaces | G-05 | 使用者負擔高，重要歧義與普通低信心混在一起 |
@@ -328,7 +328,7 @@ flowchart LR
 
 ### MP-02R — Additive reimbursement matching owner
 
-**Status：Completed（2026-07-16）。** Evidence：migration `0007`、`reimbursements.js`、finance routes、compound ingestion／reversal、reconciliation summary與`test/reimbursement-matching.test.js`；isolated focused tests 16 passed、focused ESLint passed、full `npm test` 166 passed、isolated production build passed。正式DB尚未執行v6→v7 migration，留待MP-07 backup gate。
+**Status：Completed（2026-07-16）。** Evidence：migration `0007`、`reimbursements.js`、finance routes、compound ingestion／reversal、reconciliation summary與`test/reimbursement-matching.test.js`；isolated focused tests 16 passed、focused ESLint passed、full `npm test` 166 passed、isolated production build passed。此package完成當時刻意未碰正式DB；後續MP-07已依backup gate完成v6→v9→v10正式升級與postflight。
 
 - **Contribution：** G-03、G-06；R-01、R-05、I-01、I-04–I-08。
 - **Depends：** MP-01；[`reimbursement-matching-contract.md`](../contracts/reimbursement-matching-contract.md)。
@@ -394,7 +394,7 @@ flowchart LR
 
 ### MP-07 — Guarded real-data closure and owner acceptance
 
-**Status：Owner-gated closure in progress（2026-07-16）。** `npm run verify:release`完整通過；已建立最新ignored DB-only backup並驗證manifest hash、freshness、`integrity_check=ok`、0 FK violations與schema v6；已把該backup restore到全新temporary path，僅在temporary copy完成v6→v9 migration、三張report preflight與review-workbench aggregate inventory，再安全移除temporary copy。正式`data/finance.sqlite`維持v6且未做canonical mutation。待owner醒來後才可執行formal migration、逐項真實流程/browser acceptance與GATE-F6。
+**Status：Operator與formal-data工作完成；owner-only closure pending（2026-07-16）。** 升級前schema v6 backup已驗證並於temporary restore演練v6→v9；正式升級後另建schema v9 backup並演練v9→v10。正式`data/finance.sqlite`目前為v10，兩段migration均保留1,078筆交易與相同交易雜湊，`integrity_check=ok`、0 FK violations；real-data closure後另建立並驗證最新schema v10 DB-only backup。已透過typed API提交可追溯的card、liability與commitment facts，並建立一筆不代替人決策的reimbursement proposal；三張reports與workbench已完成正式postflight。`npm run verify:release`再次完整通過（199 Node tests、17 Skill evals、5 Chromium flows、build/runtime/privacy/backup evidence）。只剩owner在browser執行scope／proposal decisions並接受known gaps後，才可關閉GATE-F2與GATE-F6。
 
 - **Contribution：** G-01、G-08；R-05、全部 invariants。
 - **Scope：** Local real DB、ignored evidence outputs、Gate F docs；單一 operator 串行執行。
@@ -493,13 +493,13 @@ flowchart LR
 
 ## Readiness Verdict
 
-### Verdict: Ready for owner-gated MP-07 only
+### Verdict: MP-07 is ready for owner-only acceptance
 
-**Blockers：** 自主code／synthetic工作無blocker；formal DB migration與代表性真實流程 acceptance必須由owner授權／操作，不能由AI把備份存在當成人類接受。個別真實交易、分期與schedule未知維持Unknown／partial，不迫使implementation猜測。
+**Blockers：** 自主code、migration、typed real-data與postflight工作無blocker；只剩scope attestation、reimbursement proposal決策與GATE-F6 acceptance必須由owner操作。個別真實交易、歷史card normalization、分期與schedule未知維持Unknown／partial，不迫使implementation猜測。
 
 **Execution risks：** 本輪整合diff涵蓋schema、semantics、queries、UI、tests、Skill與文件；必須在privacy scan、full release verifier、scoped diff review與commit後才形成可交棒baseline。正式資料路徑不得被test／migration演練開啟。
 
-**Next executable package：** 僅MP-07剩餘owner-gated步驟：重驗backup／release evidence，取得formal migration authority，以小批preview／typed commit／postflight走代表性來源，再由owner在browser完成常用分析與接受known gaps。不得提前啟動Control policy或forecast。
+**Next executable package：** 僅MP-07的owner-only步驟：在`/confirmations`確認或拒絕目前proposal、建立並確認五類scope attestation，再以常用問題驗收三張表與known gaps。AI不得代按browser confirmation，也不得在GATE-F6前啟動Control policy或forecast。
 
 **Preflight before every package：** 比較當前 HEAD／dirty diff；重驗 owner、public contract、schema、tests、DB safety；若 drift 改變三時間線、authority、canonical owner、migration 或 DAG，修復本 master plan 與所有 downstream packages後再執行。
 

@@ -47,6 +47,9 @@ It is not a CRUD administration console and it does not own financial semantics.
    transaction edit/audit path.
 6. A stale version, expired confirmation, missing source, or changed resource
    fails closed and causes a full workbench refresh.
+7. `GET /api/finance/review-workbench` and confirmation list reads are
+   side-effect free. Expiry is evaluated at query time for projection/filtering;
+   only an explicit browser confirmation attempt may persist an expired state.
 
 ## Read Model
 
@@ -142,6 +145,10 @@ ARIA live region or an equivalent toast plus persistent state update.
 - Existing `/api/finance/human-confirmations`, `/review-tasks`, typed mutation,
   and reconciliation routes remain public and compatible.
 - An unsupported task kind remains visible as a blocker with no unsafe action.
+- A source conflict must carry a human-readable `reason`; an optional
+  `impact_note` explains which readiness/report conclusion remains blocked.
+  The workbench projects both fields and never asks the owner to choose between
+  two opaque source labels.
 - If one resource hydration fails, return the remaining sections and a typed
   `partial_errors` entry; a database/contract failure that invalidates all counts
   returns the normal finance error response.

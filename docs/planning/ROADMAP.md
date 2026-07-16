@@ -4,14 +4,14 @@
 
 Last validated against repository: 2026-07-16
 
-Status: Foundation Gate F is in guarded real-data acceptance; review workbench and three management statements are implemented; Control runtime remains behind owner acceptance
+Status: Foundation Gate F system/operator work is complete on formal DB v10; owner-only scope, proposal, and acceptance actions remain; Control runtime stays behind that gate
 
 ## 推導原則
 
 ```mermaid
 flowchart LR
     C["Implemented foundation + unified review + three statements"] --> S["Completed: synthetic and browser stabilization"]
-    S --> W["Current: guarded real-data closure\nformal DB upgrade + owner acceptance"]
+    S --> W["Current: owner-only Gate F closure\nscope + proposal + acceptance"]
     S -.-> M
     M["Completed planning reference:\ncontrol semantics + fixtures"] -.-> P
     W --> P["Next stage: Control Center\nposition adapter + obligations timeline"]
@@ -26,13 +26,15 @@ flowchart LR
 
 不能直接從foundation跳到漂亮control dashboard：若purchase／payment、loan principal／interest、internal transfer、scope、FX與reserve語意未鎖定，同一事件會被重複計算或以不完整資料做過度結論。
 
-**Current gate：** 先讓資料基礎的真實業務流程跑順：AI作為主要輸入，經typed preview／commit保存canonical facts，UI負責確認、歧義與少量修正。Reserve與reliable income不是目前要解的問題，不阻擋foundation工作。
+**Current gate：** AI主輸入、typed preview／commit、正式DB v10、代表性真實facts與postflight已完成。現在只由owner在UI處理scope、1筆proposal與最終接受；20筆真正未知可以明示保留。Reserve與reliable income不是目前要解的問題，不阻擋foundation closure。
 
 **Next stage：** Owner已確認Financial Control Center接在foundation之後。Stage 2的management Balance Sheet與Stage 6的direct-method Cash Flow read model已由Gate F MP-05提前完成，下一階段不重做報表；它建立foundation→Control position／obligation adapter，只有走到forecast／safe-to-spend真正需要時才決定policy。Phase 0 pure projector不得直接接UI冒充可用forecast。
 
 ## Current Gate F — Foundation Business-Flow Closure
 
 **Active canonical master plan：** [`../plans/ai-assisted-financial-semantics-plan.md`](../plans/ai-assisted-financial-semantics-plan.md)。順序是先鎖定 economic event／cash settlement／obligation 語意與回歸樣本，再完成真實 typed obligations／reconciliation、AI context／review、三視角報表、operator Skill與owner acceptance；這些是進入 Financial Control Center 前的 foundation closure，不是另一套產品或資料真相。
+
+**Execution status（2026-07-16）：** 上述code、正式DB migration、typed real-data代表流程與postflight均已完成。此gate不再接受新的自主foundation package；只剩owner在browser完成scope／proposal decisions並明確接受known gaps。歷史card normalization repair是既有foundation maintenance，不阻止保留partial狀態，也不授權建立第二套truth。
 
 ### 階段目標
 

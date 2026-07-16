@@ -32,7 +32,7 @@ change_context:
 - Match amount為positive minor units；同一active cash leg的累計allocation不得超過該leg絕對金額。
 - One-sided match只能是`proposed`；confirmed match必須有兩邊。
 - `proposed`只能用version-checked PATCH轉成`confirmed`或`rejected`；resolution同時關閉對應review task並留audit evidence。
-- 只有active、尚未被non-rejected transfer match擁有的transfer-shaped cash rows可出現在unmatched candidates。Candidate只表明值得調查，不宣稱用途或對手腿。
+- 只有active、尚未被non-rejected typed owner擁有，且帳戶類型是`cash`、`bank`、`e_wallet`或`investment`的transfer-shaped cash rows可出現在unmatched candidates。`credit_card`帳戶內的繳款鏡像腿不是自有現金轉帳候選；銀行扣款腿在建立`credit_card_payment_matches`前仍可保持待對帳。Candidate只表明值得調查，不宣稱用途或對手腿。
 - AI／estimated commitment必須是`provisional`＋`needs_review`；建立後產生`commitment_candidate` review task。升格為非provisional且具human／official authority時關閉task；仍為candidate時task保持open。
 
 ## Outputs And Side Effects

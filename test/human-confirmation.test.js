@@ -1,7 +1,7 @@
 const test=require('node:test');const assert=require('node:assert/strict');const fs=require('node:fs');const os=require('node:os');const path=require('node:path');
 const {openDatabase,initializeDatabase}=require('../lib/db');
 const {createScopeAttestation}=require('../lib/queries/finance/scope');
-const {createHumanConfirmation,confirmHumanConfirmation,consumeHumanConfirmation}=require('../lib/queries/finance/human-confirmations');
+const {createHumanConfirmation,listHumanConfirmations,confirmHumanConfirmation,consumeHumanConfirmation}=require('../lib/queries/finance/human-confirmations');
 
 function fixture(run){const dir=fs.mkdtempSync(path.join(os.tmpdir(),'last-say-confirm-'));const db=openDatabase(path.join(dir,'test.sqlite'));initializeDatabase(db);try{return run(db);}finally{db.close();fs.rmSync(dir,{recursive:true,force:true});}}
 function payload(){return{entity_key:'personal',scope_kind:'cash_accounts',as_of_date:'2026-07-14',coverage_state:'declared_complete',authority:'user_confirmed'};}
@@ -24,3 +24,14 @@ test('receipt is bound to payload/version, one-time, and commits atomically',()=
 }));
 
 test('expired confirmation fails closed and leaves the pending queue',()=>fixture(db=>{const old=new Date('2026-07-14T00:00:00Z');const proposal=createHumanConfirmation({action_kind:'declare_scope_complete',resource_type:'scope_attestation',payload:payload()},db,old);assert.throws(()=>confirmHumanConfirmation(proposal.proposal_key,{browserConfirmed:true},db,new Date('2026-07-14T00:11:00Z')),/expired/);assert.equal(db.prepare('SELECT status FROM human_confirmation_requests WHERE proposal_key=?').get(proposal.proposal_key).status,'expired');}));
+
+test('confirmation list evaluates expiry without writing through a read model',()=>fixture(db=>{
+  const createdAt=new Date('2026-07-14T00:00:00Z');
+  const proposal=createHumanConfirmation({action_kind:'declare_scope_complete',resource_type:'scope_attestation',payload:payload()},db,createdAt);
+  db.exec('PRAGMA query_only=ON');
+  const now=new Date('2026-07-14T00:11:00Z');
+  assert.equal(listHumanConfirmations({status:'pending',now},db).length,0);
+  assert.equal(listHumanConfirmations({status:'expired',now},db)[0].proposal_key,proposal.proposal_key);
+  assert.equal(listHumanConfirmations({status:'all',now},db)[0].status,'expired');
+  assert.equal(db.prepare('SELECT status FROM human_confirmation_requests WHERE proposal_key=?').get(proposal.proposal_key).status,'pending');
+}));

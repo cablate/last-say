@@ -20,7 +20,7 @@ flowchart TB
             Queries["lib/queries"]
             DBFacade["lib/db.js\nlazy DatabaseSync singleton"]
         end
-        SQLite[("data/finance.sqlite\nWAL + code schema v9")]
+        SQLite[("data/finance.sqlite\nWAL + formal schema v10")]
         PrivateFiles["uploads / outputs / source files"]
     end
 

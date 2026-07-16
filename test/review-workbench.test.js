@@ -98,6 +98,8 @@ test('review workbench hydrates every authority class and keeps counts aligned',
     left_source_key: left.source_key,
     right_source_key: right.source_key,
     authority: 'ai_inferred',
+    reason: 'Synthetic valuation evidence disagrees.',
+    impact_note: 'Valuation completeness remains conflicted.',
   }, {}, db);
 
   const ownerUnresolved = cash(db, checking, -800, 'Synthetic unresolved row', 'expense', '無法確認');
@@ -126,6 +128,8 @@ test('review workbench hydrates every authority class and keeps counts aligned',
   assert.equal(result.sections.owner_unresolved[0].actions[0].kind, 'open_transaction_correction');
   assert.equal(result.sections.owner_unresolved[0].transaction_id, ownerUnresolved.id);
   assert.equal(result.sections.conflicts[0].evidence.length, 2);
+  assert.equal(result.sections.conflicts[0].reason, 'Synthetic valuation evidence disagrees.');
+  assert.deepEqual(result.sections.conflicts[0].impact.notes, ['Valuation completeness remains conflicted.']);
 
   const transferItem = result.sections.actionable_reviews.find((item) => item.item_kind === 'transfer_match');
   assert.equal(transferItem.resource.key, transfer.match_key);

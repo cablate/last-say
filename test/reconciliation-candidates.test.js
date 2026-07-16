@@ -17,8 +17,8 @@ function isolated(run) {
   finally { db.close(); fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-function account(db, name) {
-  return createAccount({ display_name: name, account_kind: 'bank', currency: 'TWD', authority: 'user_confirmed', review_state: 'confirmed' }, {}, db);
+function account(db, name, kind = 'bank') {
+  return createAccount({ display_name: name, account_kind: kind, currency: 'TWD', authority: 'user_confirmed', review_state: 'confirmed' }, {}, db);
 }
 
 function transferCash(db, target, amount, name, category = '轉帳/內部移轉') {
@@ -43,6 +43,17 @@ test('detectable unmatched transfer-shaped cash prevents false complete status',
   assert.equal(summary.status, 'unreconciled');
   assert.equal(summary.unmatched_transfer_candidates.length, 2);
   assert.deepEqual(new Set(summary.unmatched_transfer_candidates.map((row) => row.candidate_reason)), new Set(['owner_unresolved_transfer_shape', 'unmatched_internal_transfer']));
+}));
+
+test('credit-card ledger settlements are not proposed as own-account cash transfers', () => isolated((db) => {
+  const bank = account(db, 'Bank');
+  const card = account(db, 'Card', 'credit_card');
+  const bankLeg = transferCash(db, bank, '-100000', 'BANK CARD PAYMENT');
+  transferCash(db, card, '100000', 'CARD LEDGER PAYMENT');
+
+  const summary = reconciliationSummary(db);
+  assert.equal(summary.status, 'unreconciled');
+  assert.deepEqual(summary.unmatched_transfer_candidates.map((row) => row.transaction_key), [bankLeg.transaction_key]);
 }));
 
 test('rejected transfer leaves evidence but returns both legs to candidate scope', () => isolated((db) => {

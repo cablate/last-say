@@ -21,7 +21,8 @@ Last validated against repository: 2026-07-16
 | ID | Priority | 缺口 | Impact | Urgency | Confidence | Effort | Risk | Dependency | Reversibility | Alignment |
 |---|---|---|---|---|---|---|---|---|---|---|
 | R6 | P1 — next stage | Phase 0只有純reference；缺runtime 90日forecast／safe-to-spend／alerts | High | Medium | High | L | High financial interpretation | R4、obligation timeline、later owner policies | Medium | G4, G5 |
-| R7 | P1 — current gate | AI-primary、unified review與三張表已實作；正式DB升級與owner真實流程驗收仍未完成 | High | High | High | M | High data release | verified backup＋MP-07 owner authority | Medium | G3, G8 |
+| R7 | P1 — owner gate | AI-primary、unified review、三張表、正式DB v10與代表性typed flow已完成；scope／proposal／owner acceptance未關閉 | High | High | High | S（owner操作） | High authority | browser-bound confirmation＋owner acceptance | High | G3, G8 |
+| R15 | P1 — foundation maintenance | 2026-01至05官方卡片月檔與既有normalized rows總額不一致；現有source-conflict選擇語意不能修復轉換差異 | Medium | Medium | High | M | High data repair | reversible re-import／transaction repair contract | Medium | G2, G3, G8 |
 | R8 | Later | legacy／typed schema與money語意雙軌 | Medium | Low | High | L | High migration | stable business flow＋compatibility evidence | Low | G1, G8 |
 | R9 | Later | 大型UI／query模組責任集中 | Medium | Low | High | L | Medium regression | actual flow pain＋characterization | High | G8 |
 | R10 | Later / Needs owner decision | 已有backup health與policy worksheet；缺實際排程、retention、RPO／RTO、restore drill與graceful shutdown | High | Low | High | M | High recovery | actual operations need＋owner policy | Medium | G6, G8 |
@@ -35,7 +36,7 @@ Last validated against repository: 2026-07-16
 
 - **完成證據：** `lib/queries/reports/balance-sheet.js`、API route、`BalanceSheet.jsx`、`balance-sheet-contract.md`與`test/reporting-three-view.test.js`。
 - **已關閉風險：** Account snapshot優先、完整holding fallback、tier-2 valuation、FX／source／snapshot watermarks、missing／stale blockers與derived net worth均由server read model提供；current debt不由original principal或schedule猜測。
-- **仍不宣稱：** 正式DB尚未v9 publication且真實position coverage是partial，因此R4實作完成不等於owner已取得complete balance sheet。
+- **仍不宣稱：** 正式DB已發布v10，但真實position coverage仍因missing current card balance與stale cash snapshot為partial；R4實作完成不等於owner已取得complete balance sheet。
 
 ### R6 — 缺runtime forecast／safe-to-spend／alerts
 
@@ -53,11 +54,19 @@ Last validated against repository: 2026-07-16
 ### R7 — AI-primary foundation workflow仍需實際收斂
 
 - **Owner decision：** AI是主要輸入方式；UI只負責確認、歧義、高風險授權與少量修正，不追求純GUI full onboarding。
-- **現況證據：** Account／investment UI、12 analysis datasets、proposal envelope、unified review workbench與三張server reports均已存在；Node／browser／Skill tests通過。Verified backup可還原並在temporary copy升到v9。
-- **剩餘缺口：** 正式DB仍是v6；20筆owner-unresolved與transfer／card／loan／reimbursement evidence待owner；GATE-F6沒有人工acceptance evidence。
+- **現況證據：** Account／investment UI、12 analysis datasets、proposal envelope、unified review workbench與三張server reports均已存在；正式DB已先備份／演練後升至v10，代表性card／liability／commitment facts及reimbursement proposal均走typed API；199 Node tests、17 Skill evals、5 browser flows與完整release verifier通過。
+- **剩餘缺口：** 五類scope尚未由browser-bound human confirmation聲明；1筆reimbursement proposal待owner確認／拒絕；20筆真正未知仍刻意owner-unresolved；GATE-F6沒有人工acceptance evidence。
 - **不處理後果：** 技術table雖齊全，實際使用仍可能卡在Skill指引、錯誤訊息、identity／source缺口或confirmation，而被誤判為foundation完成。
 - **Recommended：** 以真實workflow發現的摩擦做最小修正；優先Skill、contract、error recovery與bounded confirmation UI，不以CRUD數量衡量進度。
 - **驗證：** Owner常用來源不需直接改SQLite即可完成canonical commit與必要UI確認，並由owner明確接受流程。
+
+### R15 — 歷史信用卡normalization差異
+
+- **問題／證據：** 2026-01至05的官方月檔總額與現有normalized card rows各有差異；2026-06可精確對上150筆items與唯一bank payment。差異可能包含漏列分期與正負號處理，但目前沒有足夠證據逐筆指定repair。
+- **影響：** 歷史月份的P&L／card settlement不能宣稱statement-level reconciliation complete；強行建立statement會把錯誤normalization包裝成正式事實。
+- **語意限制：** `source_conflicts`適用於兩個互斥來源由人選一個；此處是官方source與derived rows間的轉換缺口，選source不會修復transactions，因此目前正式conflict count保持0。
+- **Recommended：** 先建立可preview、可逐筆diff、可reversal的card transaction repair／re-import contract；以官方statement totals與row identity驗證，不直接SQL修補。
+- **驗證：** 每期items合計等於官方statement total、credits／installments保持正確符號與timeline、re-import idempotent、P&L不重複、payment match唯一且完整。
 
 ### R8 — Legacy／typed schema雙軌
 

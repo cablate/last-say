@@ -7,7 +7,7 @@ Last validated against repository: 2026-07-16
 ## 資料庫與表示規則
 
 - **Confirmed：** 單一 SQLite，預設 `data/finance.sqlite`，可由 `FINANCE_DB_PATH` 覆寫。
-- **Confirmed：** repository code schema version 9；`schema_migrations` ledger 由 `lib/db/migration-runner.js` 管理 checksum 與順序。2026-07-16 read-only檢查時正式DB仍為v6，尚未在本package執行migration。
+- **Confirmed：** repository code與正式DB schema version 10；`schema_migrations` ledger由`lib/db/migration-runner.js`管理checksum與順序。2026-07-16正式postflight確認ledger `1..10`、1,078筆legacy transactions與交易雜湊在v6→v9→v10後保持不變，`integrity_check=ok`且0 FK violations。
 - **Confirmed：** money 的 typed canonical 表示是 integer minor units + ISO-like currency；`lib/finance/money/decimal.js` 定義 TWD／USD 等 exponent 2、JPY exponent 0。
 - **Legacy / compatibility：** legacy transaction 欄位 DDL 宣告為 `REAL`，migration 後實際保存整數 cents。名稱與型別不表達現行語意，修改時不可假設是 major units。
 - **Confirmed：** dates／timestamps 以 ISO-like TEXT 保存；as-of、period 與 source freshness 是財務解釋的一部分。

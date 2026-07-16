@@ -163,10 +163,10 @@ flowchart LR
 |---|---|---|---|---|
 | Product | 從資料補齊到風險行動的完整閉環 | **Confirmed:** transaction review、Data Center、unified workbench、三張management reports、readiness可用 | runtime forecast、safe-to-spend、alerts與owner真實流程acceptance | 貼文式情境能在扣款前指出風險與選項 |
 | Domain | account／obligation／investment／reconciliation 語意一致 | **Confirmed:** foundation Phase 0–7、三時間線kernel、typed reconciliation與cross-report fixtures完成 | Control projection／policy semantics | 同一事件跨 surface 不重複、不遺失 |
-| Data | canonical facts、source、freshness、scope、audit 完整 | **Confirmed:** code schema v9、typed contexts、watermarks與server reports；formal DB仍v6 | 正式升級、真實onboarding與coverage quality | 可由來源重建並解釋每個重要數字 |
+| Data | canonical facts、source、freshness、scope、audit 完整 | **Confirmed:** code與formal DB schema v10、typed real-data contexts、watermarks與server reports；migration／postflight完成 | owner scope attestation、歷史card normalization、snapshot／matching coverage quality | 可由來源重建並解釋每個重要數字 |
 | Automation | AI 做機械工作，人類處理裁決 | **Confirmed:** operator Skill、12 datasets、proposal envelope、preview/commit與unified review | owner代表性驗收、recurring／forecast learning | 維護成本與重複錯誤可量測下降 |
 | Integration | 可替換 AI 與來源 adapter | **Partial:** local REST + external AI；無 bank connector | adapter contract、failure/retry/privacy boundary | 新來源不需改核心 domain |
-| Reliability | 失敗可見、可重試、可反轉、可恢復 | **Partial:** atomic ingestion、reversal、verified backup、temporary migration rehearsal、5-case Chromium、release verifier | formal migration/postflight、owner-approved recovery policy、observability | 故障演練可重現且無資料遺失 |
+| Reliability | 失敗可見、可重試、可反轉、可恢復 | **Partial:** atomic ingestion、reversal、兩段verified backup→rehearsal→formal migration、5-case Chromium、release verifier與formal postflight | owner-approved recovery policy、排程與observability | 故障演練可重現且無資料遺失 |
 | Security | 部署邊界與資料權限相稱 | **Confirmed local-only:** localhost、no auth、confirmation guard | 公開部署前需完整 authz/security redesign | 威脅模型與實際部署一致 |
 | Operations | 可升級、備份、還原、回復與診斷 | **Partial:** CLI backup/restore、health endpoint | 排程、保留策略、升級/rollback與 log runbook | 新機還原與版本升級有定期證據 |
 | Developer experience | 新 session 可定位 owner 並選對驗證 | **Confirmed baseline:** docs入口、current status、module routing、contracts、tests與release gate已同步 | 持續防止docs drift；擴充真實journey evidence | 不靠聊天記憶可安全完成 slice |
@@ -185,7 +185,7 @@ flowchart LR
 9. 文件、Skill、API、schema、tests 與 UI 必須在同一變更中同步。
 10. 先證明第二個消費者與真實需求，再新增抽象層或平台能力。
 
-目前最大原則差距是：巨型client components仍集中責任；Control Phase 0只有pure reference而無runtime adapter；正式DB尚未發布v9；真實typed matching與position／cash boundaries仍使三張表partial；browser coverage仍屬bounded；owner尚未完成Gate F acceptance。Unified review workbench、server-backed BS／CF、5條Chromium流程與verified backup→migration rehearsal已於2026-07-16補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
+目前最大原則差距是：巨型client components仍集中責任；Control Phase 0只有pure reference而無runtime adapter；真實typed matching、歷史card normalization與position／cash boundaries仍使三張表partial；browser coverage仍屬bounded；owner尚未完成Gate F acceptance。Formal DB v10、unified review workbench、server-backed BS／CF、5條Chromium流程與verified backup→rehearsal→migration postflight已於2026-07-16補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
 
 ## 非目標
 
@@ -229,7 +229,7 @@ flowchart LR
 
 ### 現在在哪裡
 
-**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness、AI context／proposal contract、unified review workbench、management P&L／Balance Sheet／Cash Flow、bounded browser E2E、backup health，以及Control Phase 0 reference已在repository code完成。Owner將目前階段定義為資料基礎建設的業務流程收斂：正式DB仍是v6，真實報表coverage仍partial，owner acceptance未完成。財務控制中心是下一階段；runtime forecast、safe-to-spend、alerts與scenario尚未完成。
+**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness、AI context／proposal contract、unified review workbench、management P&L／Balance Sheet／Cash Flow、bounded browser E2E、backup health、formal DB v10 real-data closure，以及Control Phase 0 reference已完成。Owner將目前階段定義為資料基礎建設的業務流程收斂：系統／operator工作完成，真實報表coverage仍partial，owner scope／proposal confirmation與acceptance未完成。財務控制中心是下一階段；runtime forecast、safe-to-spend、alerts與scenario尚未完成。
 
 ### 不能直接跳到終點的原因
 
@@ -257,7 +257,7 @@ flowchart LR
 1. **Completed 2026-07-15：** 修正status／doc truth、money／report／manual-entry correctness，建立bounded E2E與backup health基線。
 2. **Reference completed 2026-07-15；owner approval pending：** Financial Control Phase 0 contracts、metric dictionary、synthetic fixture與pure timeline projector。
 3. **Completed in code 2026-07-16：** 三時間線語意、typed reimbursement／transfer／obligation lifecycle、12 datasets、proposal envelope、unified review workbench、三張management statements與17-case Skill eval。
-4. **Current：** 以verified backup與temporary rehearsal保護正式DB，完成v9 publication、真實material review與owner acceptance；只修正實際阻礙，不做提前優化。
+4. **System work completed 2026-07-16；owner action current：** 已以verified backups與temporary rehearsals完成formal DB v10 publication、代表性typed real-data flow與postflight；現在只完成scope／material proposal確認與owner acceptance，並保留已知partial gaps。
 5. **Next stage：** 讓Control Center直接消費既有position／statements與commitment timeline；不另建canonical facts。
 6. 到forecast／safe-to-spend切片時，才由owner決定reserve與reliable income等必要policy，不拿它們阻擋目前foundation工作。
 7. 建立deterministic runtime 90-day forecast、reconciliation delta與source watermarks。

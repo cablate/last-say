@@ -43,7 +43,7 @@ function seedFoundationDemo(db) {
 
   const valuedItem = createValuedItem({ item_type: 'vehicle', display_name: 'Household vehicle', position: 'asset', authority: 'user_confirmed', review_state: 'confirmed' }, ACTOR, db);
   createValuation(valuedItem.item_key, { source_key: valuationSource.source_key, as_of_date: '2026-06-30', value_minor: '63800000', currency: 'TWD', valuation_method: 'user_estimate', authority: 'user_confirmed', review_state: 'confirmed', note: 'Anonymized demo estimate.' }, ACTOR, db);
-  createSourceConflict({ target_context: 'valuation', semantic_key: 'demo:vehicle:2026-06-30', left_source_key: valuationSource.source_key, right_source_key: alternateValuationSource.source_key, authority: 'ai_inferred', review_state: 'needs_review' }, ACTOR, db);
+  createSourceConflict({ target_context: 'valuation', semantic_key: 'demo:vehicle:2026-06-30', left_source_key: valuationSource.source_key, right_source_key: alternateValuationSource.source_key, authority: 'ai_inferred', review_state: 'needs_review', reason: 'Synthetic valuation sources disagree.', impact_note: 'The vehicle valuation remains conflicted until one source is selected.' }, ACTOR, db);
 
   for (const scopeKind of ['cash_accounts', 'credit_cards', 'liabilities', 'investments', 'valued_items']) {
     createScopeAttestation({ entity_key: 'personal', scope_kind: scopeKind, as_of_date: '2026-07-14', coverage_state: 'declared_partial', included_note: 'Anonymized demo inventory; intentionally partial.', authority: 'user_confirmed', review_state: 'confirmed' }, ACTOR, db);

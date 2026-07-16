@@ -36,7 +36,7 @@ Last validated against repository: 2026-07-16
 | valued items／valuation snapshots | Implemented；operator-first | `/api/finance/valued-items/**` |
 | transfer matching | Implemented, versioned | reconciliation routes、`transfer_matches`、transfer tests |
 | reimbursement one-to-many matching | Implemented in code schema v7+ | reimbursement routes、`reimbursement_matches`、matching tests |
-| source conflicts／identity merge／redirect | Implemented | source conflict、identity routes與tests |
+| source conflicts／identity merge／redirect | Implemented | source conflict（含必填reason與可選impact note）、identity routes與tests |
 | browser-bound human confirmation | Implemented | `/api/finance/human-confirmations/**` |
 
 ## Analysis、review與reports
@@ -80,6 +80,6 @@ Last validated against repository: 2026-07-16
 - Tax／statutory reporting與derivatives不在目前支援範圍。
 - 不是GAAP／IFRS／audit-ready ledger；目前三張表是personal management views。
 - Large DB、multi-browser、long-running concurrency與remote deployment沒有成熟證據。
-- 正式DB尚未升到v9；code-level implemented不能誤寫成formal-data published。
+- 正式DB已發布v10與代表性typed real-data facts；但scope、snapshot、matching或source normalization缺口仍會讓個別report保持partial／unreconciled，不能把「已發布」誤寫成「資料完整」。
 
 更新觸發：功能、typed owner、API／UI、schema、report contract或驗證證據改變時更新。

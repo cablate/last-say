@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { openDatabase, initializeDatabase } = require('../lib/db');
+const { openDatabase, initializeDatabase, SCHEMA_VERSION } = require('../lib/db');
 const { createAccount } = require('../lib/queries/finance/accounts');
 const { createEntity } = require('../lib/queries/finance/entities');
 const { createCashActivity } = require('../lib/queries/finance/cash-activity');
@@ -35,8 +35,8 @@ function createTransaction(db, accountKey, amount, name) {
 test('reimbursement matching preserves gross facts and resolves through review', () => {
   const fixture = isolatedDb('finance-reimbursement-'); const { db } = fixture;
   try {
-    assert.equal(db.prepare('PRAGMA user_version').get().user_version, 9);
-    assert.equal(db.prepare('SELECT MAX(version) version FROM schema_migrations').get().version, 9);
+    assert.equal(db.prepare('PRAGMA user_version').get().user_version, SCHEMA_VERSION);
+    assert.equal(db.prepare('SELECT MAX(version) version FROM schema_migrations').get().version, SCHEMA_VERSION);
     const account = createAccount({ display_name: 'Test bank', account_kind: 'bank', currency: 'TWD', authority: 'user_confirmed' }, {}, db);
     const reimbursement = createTransaction(db, account.account_key, 5000, 'Travel reimbursement');
     const expenseA = createTransaction(db, account.account_key, -1200, 'Train');

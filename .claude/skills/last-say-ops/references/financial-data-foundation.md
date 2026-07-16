@@ -259,10 +259,14 @@ remain one-sided and `unreconciled`. AI-researched matches below 0.8 cannot be
 confirmed; leave them proposed for review.
 
 `GET /api/finance/review-tasks?status=open` is the unified work queue. Source
-conflicts are created and resolved through `/api/finance/source-conflicts`; a
+conflicts are created and resolved through `/api/finance/source-conflicts`;
+creation requires a specific `reason` and may include an `impact_note`, while a
 resolution must select one candidate source and include a human-readable note.
-Resolving the conflict closes the linked task with the selected source evidence.
-Do not close a task merely to improve readiness.
+Use this owner only when choosing one source genuinely resolves the semantic
+conflict. A raw-source versus normalized-row transformation mismatch needs a
+repair/re-import path instead. Resolving the conflict closes the linked task
+with the selected source evidence. Do not close a task merely to improve
+readiness.
 
 For duplicate institution, account, or instrument identity:
 
@@ -308,7 +312,9 @@ source artifacts. Bundles are sensitive and not encrypted by Last Say.
 - Complete-scope proposal: hand off to `/confirmations`.
 - Need an unregistered analysis dataset, arbitrary SQL, or complex investment
   context: report `unsupported` and request or design a separate typed context.
-- Missing official card statement, loan principal snapshot, or loan schedule:
-  report the exact readiness gap; never fill it with an AI estimate.
+- Missing official card statement, loan principal snapshot, verified loan start,
+  or loan schedule: report the exact readiness gap. Known loan facts may be
+  stored with `start_date=null`; never invent the date or derive a schedule from
+  APR. An estimated principal remains explicitly reviewable.
 - Options, futures, margin, DeFi, tax lots, or business consolidation: report
   `unsupported`; never store as `other` to claim complete support.
