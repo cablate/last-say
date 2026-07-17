@@ -5,6 +5,7 @@
   "source_mappings": [
     "source-mappings/bank-statement.json",
     "source-mappings/card-statement.json",
+    "source-mappings/card-transaction-lifecycle.json",
     "source-mappings/loan-statement.json",
     "source-mappings/investment-statement.json"
   ],
@@ -17,7 +18,7 @@
   "legacy_builder": "scripts/fixtures/financial-data/build-legacy-v0.2.3.mjs",
   "coverage": {
     "bank": ["checking", "savings", "cash", "e_wallet", "official_balance", "conflicting_balance"],
-    "credit_card": ["two_cards", "official_statement", "unbilled", "payment", "official_installments", "mismatched_installments"],
+    "credit_card": ["two_cards", "official_statement", "unbilled", "current_to_posted_lifecycle", "ambiguous_posting_match", "explicit_authorization_release", "payment", "official_installments", "mismatched_installments"],
     "liability": ["loan_profile", "official_schedule", "principal_interest_fee_split"],
     "investment": ["TWD_stock", "TWD_ETF", "USD_holding", "quote", "FX", "stale_quote", "missing_quote"],
     "commitment": ["salary", "rent", "insurance"],

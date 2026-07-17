@@ -1,0 +1,32 @@
+{
+  "fixture_schema": "last-say-financial-health-review/v1",
+  "privacy": "synthetic-only",
+  "contract_id": "finance.control.financial-health-review",
+  "request": {
+    "as_of_date": "2026-07-17",
+    "entity_id": "personal",
+    "currency": "TWD",
+    "taiwan_instrument_keys": "instrument:synthetic-taiwan-leveraged",
+    "taiwan_leverage_factor": "2"
+  },
+  "expected_semantics": {
+    "schema_version": "finance.analysis-read-model/v1",
+    "analysis_id": "financial_health_review",
+    "formula_version": "financial-health-review/1",
+    "must_include": [
+      "facts.position",
+      "facts.liquidity",
+      "facts.debt",
+      "facts.investments",
+      "derived.stress_tests",
+      "coverage.missing_inputs",
+      "source_watermark.resource_keys",
+      "drillback"
+    ],
+    "must_not_include": [
+      "ai_answer",
+      "raw_transactions",
+      "report_snapshot_id"
+    ]
+  }
+}

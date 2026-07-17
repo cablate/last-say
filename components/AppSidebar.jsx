@@ -28,6 +28,7 @@ import { formatTWD } from "@/lib/format"
 import { OWNER_UNRESOLVED_CATEGORY } from "@/lib/constants"
 import {
   ChartNoAxesColumnIncreasing,
+  CircleDollarSign,
   Database,
   History,
   LayoutDashboard,
@@ -40,6 +41,7 @@ import {
 
 const NAV = [
   { href: "/", label: "總覽", icon: LayoutDashboard },
+  { href: "/control", label: "財務控制", icon: CircleDollarSign },
   { href: "/transactions", label: "交易明細", icon: ReceiptText },
   { href: "/reports", label: "報表", icon: ChartNoAxesColumnIncreasing },
   { href: "/data", label: "資料中心", icon: Database },

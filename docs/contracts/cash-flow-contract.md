@@ -62,7 +62,8 @@ Minimum sections:
 | Own-account transfer, one side missing | Partial or unreconciled |
 
 Typed owners take precedence over text classification. Confirmed transfer pairs
-are eliminated; typed card-payment matches are operating settlements; loan
+are eliminated; fully allocated card-payment matches written as `settled` (as well as
+legacy `confirmed` rows) are operating settlements, while `partial` remains unresolved; loan
 allocations split principal to financing and interest/fee to operating;
 investment cash matches are investing; confirmed reimbursement links preserve
 gross source cash while explaining the cross-view difference. A reimbursement
@@ -162,6 +163,7 @@ Review queue must expose:
 
 4. Card payment:
    - Bank outflow NT$10,000 paying credit card.
+   - Typed payment owner has fully allocated the cash row and stores `match_status=settled`.
    - Cash flow includes NT$10,000 cash outflow.
    - P&L does not count the card payment as an expense.
 
@@ -177,10 +179,11 @@ Review queue must expose:
 - Query fixture for complete reconciliation.
 - Query fixture for one-sided transfer blocker.
 - Query fixture for card payment treatment.
+- Focused regression using `createCardPaymentMatch` to prove `settled` is recognized and `partial` is not promoted.
 - API response shape test with reconciliation delta.
 
 ## Update Rule
 
 Update this contract when cash-equivalent scope, typed settlement precedence,
 snapshot boundaries, currency policy, or the public response changes. Last
-validated against repository: 2026-07-16.
+validated against repository: 2026-07-17.

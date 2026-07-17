@@ -124,8 +124,9 @@ PowerShell請使用`$env:PORT='3128'; npm run dev`。host固定為`127.0.0.1`；
 | 月結總覽與趨勢 | 可用 | 本月 vs 常態、Top movers、固定支出底盤、自動化率 |
 | 管理用損益表 | 可用但依覆蓋率 | 清楚標示 mapped、unmapped、needs review 與排除項目 |
 | 財務資料中心 | 可用 | 全類型typed帳戶、來源、餘額、卡片、貸款、承諾、manual投資／quote／FX、Tier 2估值與review queue |
-| AI 分析 preflight | 可用 | 8 個 readiness goals、優先缺口、scope/as-of、7 個白名單 datasets 與 provenance watermarks |
+| AI 分析 preflight | 可用 | 8 個 readiness goals、優先缺口、scope/as-of、12 個白名單 datasets 與 provenance watermarks |
 | Control Phase 0 reference | 已完成但非runtime能力 | contracts、metric dictionary、synthetic fixture與pure 90日timeline projector；尚未接真實DB／API／UI |
+| Financial Health Review v0 | 已完成第一個runtime read model；正式資料partial | `/api/finance/control/financial-health`即時重算position、liquidity、debt、明確投資因子曝險與stress，輸出compact AI Context Pack；不回答safe-to-spend／forecast |
 | 資產負債表 | 正式server-backed報表已實作 | 顯示資產、負債、淨值、scope、watermarks與coverage；缺快照、估值或FX時降級，不把未知當0 |
 | 現金流量表 | 正式direct-method報表已實作 | 依幣別與期間顯示營運／投資／融資流量、boundary reconciliation與blockers；缺matching或boundary時降級 |
 | 稅務、選擇權與複雜衍生品 | 不支援 | 明確回傳 unsupported，必須另建 typed context，不能偽裝成一般股票 |
@@ -157,11 +158,11 @@ npm run verify:release
 
 `verify:release` 會在隔離 DB 與 build output中執行lint、依賴稽核、Node tests、Chromium E2E、build與實際runtime smoke，並檢查tracked及未被ignore的untracked working files是否殘留銀行名稱、卡號或個人資料；不會開啟`data/finance.sqlite`。核心技術為Next.js 15、React 19、Tailwind CSS 4、shadcn/ui與Node內建SQLite。
 
-它也會重建匿名 foundation demo、執行固定的 8-case Skill eval，並做一次 DB-only backup→new-path restore rehearsal。個人正式備份仍應依 [Backup And Restore](./docs/operations/backup-restore.md) 定期演練。
+它也會重建匿名 foundation demo、執行固定的 18-case Skill eval，並做一次 DB-only backup→new-path restore rehearsal。個人正式備份仍應依 [Backup And Restore](./docs/operations/backup-restore.md) 定期演練。
 
 ## Roadmap
 
-財務資料基礎建設Phase 0-7與本輪trust stabilization／Control Phase 0 reference已完成；最新現況與證據見[Current Status](./docs/project/CURRENT-STATUS.md)。目前先讓AI主輸入→typed commit→UI確認／少量修正的foundation業務流程完整跑順。Financial Control Center是下一階段；base currency、reserve與reliable income等policy到真正需要時再決定，不提前阻擋基礎建設。
+財務資料基礎建設Phase 0-7與本輪trust stabilization／Control Phase 0 reference已完成；`FA-0 Financial Health Review v0`也已完成第一個runtime read model。最新現況與證據見[Current Status](./docs/project/CURRENT-STATUS.md)。目前先讓AI主輸入→typed commit→UI確認／少量修正的foundation業務流程完整跑順，並用五個核心問題驗收FA-0 Context Pack。Financial Control Center是下一階段；base currency、reserve與reliable income等policy到真正需要時再決定，不提前阻擋基礎建設。
 
 完整能力依賴、每階段驗收與「不應先做」事項見 [Roadmap](./docs/planning/ROADMAP.md)；待擁有者決定的產品與維運邊界見 [Open Questions](./docs/planning/OPEN-QUESTIONS.md)。
 

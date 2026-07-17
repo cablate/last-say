@@ -2,7 +2,7 @@
 
 用途：以目前程式、API、UI與驗證證據盤點能力。`Implemented`表示有可執行路徑，不表示真實資料coverage一定complete。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-17
 
 ## 狀態定義
 
@@ -30,6 +30,7 @@ Last validated against repository: 2026-07-16
 | balances | Implemented；manual UI available | `/api/finance/balance-snapshots`、`AccountRegister.jsx` |
 | typed ingestion／atomic commit／reversal | Implemented | `/api/finance/imports/**`、`lib/finance/ingestion/**` |
 | cards、statements、payments、installments | Implemented；operator-first beyond basic UI | `/api/finance/credit-cards/**`、`obligations.js` |
+| current／unbilled→posted card lifecycle | Implemented；real statement acceptance pending | `finance.card-transaction-lifecycle/v1`、`card-lifecycle.js`、typed reversal、4 focused tests |
 | liabilities、schedules、allocations | Implemented；operator-first | `/api/finance/liabilities/**` |
 | commitments／occurrences | Implemented；review workbench integrated | `/api/finance/commitments/**` |
 | instruments、trades、holdings、quotes、FX | Implemented；manual setup UI partial | `/api/finance/investments/**`、`InvestmentRegister.jsx` |
@@ -51,12 +52,14 @@ Last validated against repository: 2026-07-16
 | Balance sheet／net worth | Implemented | `balance-sheet.js`、API、`BalanceSheet.jsx`；snapshot／FX／valuation不足時partial |
 | Direct-method cash flow | Implemented | `cash-flow.js`、API、`CashFlowStatement.jsx`；按selected currency獨立scope，boundary／typed match不足時partial或unreconciled |
 | Shared report coverage | Implemented | `lib/reporting/coverage.js`；complete／partial／empty／unmapped／unreconciled |
+| Monthly Financial Pulse | Implemented；formal-data acceptance pending | `lib/queries/finance/control/monthly-pulse.js`、`/api/finance/control/monthly-pulse`、`/control`；query-time組合P&L、Cash Flow、typed debt／investment／reimbursement owner，不另存報表且不由AI算術 |
+| Financial Health Review v0 | Implemented；formal-data acceptance pending | `lib/queries/finance/control/financial-health.js`、`/api/finance/control/financial-health`、`financial-health-review` contract；query-time產出position、liquidity、debt、指定投資因子曝險與stress Context Pack；不回答safe-to-spend／runway，缺資料時partial／null |
 | 90-day forecast | Phase 0 reference only | pure synthetic projector；無foundation adapter／API／UI |
 | safe-to-spend、alerts、scenarios | Planned | Control plan only |
 
 ## UI surfaces
 
-`/`、`/transactions`、`/reports`、`/data`、`/trend`、`/corrections`、`/rules`、`/confirmations`均存在。
+`/`、`/transactions`、`/reports`、`/control`、`/data`、`/trend`、`/corrections`、`/rules`、`/confirmations`均存在。
 
 - `/reports`現在是三張server-backed報表，不再是Balance Sheet／Cash Flow占位頁。
 - `/confirmations`是material review workbench；typed decisions回到各自owner endpoint，owner-unresolved交易deep-link到精確transaction id。
@@ -71,7 +74,7 @@ Last validated against repository: 2026-07-16
 | release verifier | Implemented | `scripts/verify-release.mjs` |
 | runtime smoke | Implemented | isolated production server、health、CSP |
 | browser E2E | Implemented bounded suite | Data Center／reports + review workbench，最新5/5 |
-| Skill eval | Implemented | 17 adversarial cases |
+| Skill eval | Implemented | 18 adversarial cases；新增current／unbilled→posted不重複案例 |
 | general API auth | Not implemented | localhost `127.0.0.1` trust boundary only |
 | centralized monitoring／service deployment | Planned only if needed | health＋console目前為最小實作 |
 

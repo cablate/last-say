@@ -38,12 +38,14 @@ Before operating on statements or rules, read the required references below. `AG
 - For account, source, scope, or other financial-data work, start with `GET /api/finance/capabilities`; never guess an enum or field.
 - Before answering any financial-analysis question, run `health -> capabilities -> readiness` for the requested goal and scope. Do not fetch datasets or interpret values until readiness status, blockers, as-of date, and scope are known.
 - Fetch analysis evidence only through the named datasets advertised by capabilities and `POST /api/finance/analysis-context`. Never request SQL, table names, column expressions, or an unregistered dataset.
+- For financial-health, exposure, debt-capacity, or stress questions, after preflight prefer the advertised `analysis_read_models.financial_health_review` route. Give AI the compact Context Pack first; use raw named datasets only for drillback or a stated gap investigation, and never recompute its totals with a second ad hoc calculation.
 - Treat `finance.proposal-envelope/v1` in candidate datasets as a bounded hint: verify its resource keys and current versions, then use the named typed owner route. Never submit the hint itself as authority, a commit payload, or human confirmation.
 - Keep analysis output in three explicit layers: sourced facts, deterministic derived values, and AI interpretation. Never present an interpretation as a stored or reconciled fact.
 - Every analysis response must state goal, entity/account scope, as-of date, readiness status, datasets used, source/resource watermarks, material gaps, and exclusions. Ask for the highest-priority missing typed evidence before suggesting lower-impact cleanup.
 - Before importing account, balance, or cash activity facts, read `GET /api/finance/inventory` and the relevant readiness goal. Report existing identity, coverage, conflicts, and gaps before proposing writes.
 - Structured financial writes must use preview then commit. Inspect normalized actions and warnings; never skip preview or treat staging rows as canonical facts.
 - Credit-card payments are settlement matches, not a second expense. Installment entries are future obligations, not repeated merchant purchases.
+- Replace current/unbilled card evidence with a posted statement through `finance.card-transaction-lifecycle/v1`. Require unique strong identity, explicit authorization release, and a committable preview; never import the posted rows again as unrelated cash transactions.
 - Never derive an official loan schedule, revolving-card interest, or future payment amount from APR, principal, or historical averages. Store only sourced facts; leave readiness partial when official evidence is missing.
 - Before changing a commitment template, inspect settled occurrences. Template edits must not rewrite settled history.
 - Investment quantities, prices, and FX rates must be canonical decimal strings. Every quote needs typed source evidence and an as-of date; never reuse a quote as timeless.
@@ -73,6 +75,7 @@ Read only the files needed for the current task:
 - `references/financial-data-foundation.md`: financial inventory/readiness, governed analysis context, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
 - `references/fx-and-market-valuation-refresh.md`: executable daily FX/crypto quote refresh, evidence capture, TWD conversion semantics, idempotency, same-day limits, validation, and scheduling guidance.
 - `references/analysis-recipes.md`: executable recipes for fixed/variable spend, work/personal/reimbursement, descriptive income floor, installment audit, unresolved transfers, and three-statement readiness.
+- `docs/contracts/financial-health-review-contract.md`: FA-0 deterministic financial-health Context Pack, explicit exposure assumptions, stress boundaries, and AI handoff.
 
 ## Error Recovery
 

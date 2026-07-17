@@ -69,7 +69,7 @@ legacy CSV／ledger 流程仍存在：外部 AI 產生 ledger → `/api/import-l
 
 **Confirmed：** 資料基礎、AI proposal contract、統一待審工作台與三張管理報表已在code／synthetic／browser層完成，正式DB亦已經受保護的v6→v9→v10升級、typed real-data write與postflight。產品仍處於「可信事實、人工裁決與管理報表平台」到「主動財務控制工具」之間；剩餘foundation gate是owner-only scope／proposal confirmation與acceptance。
 
-- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、unified review workbench、readiness、analysis contexts、management P&L／Balance Sheet／Cash Flow、currency-aware Data Center、browser E2E、backup／restore／health，以及Control Phase 0 reference semantics。
+- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、unified review workbench、readiness、analysis contexts、management P&L／Balance Sheet／Cash Flow、currency-aware Data Center、browser E2E、backup／restore／health、Control Phase 0 reference semantics、FC-A2 Monthly Financial Pulse與FA-0 Financial Health Context Pack。
 - 尚未具備：owner Gate F acceptance、foundation-backed forecast API/UI、safe-to-spend、alerts、scenario policy、正式deployment／monitoring。部分真實報表因missing／stale snapshots、cash boundaries與matching維持partial／unreconciled。
 
 詳細狀態見 [`CURRENT-STATUS.md`](CURRENT-STATUS.md) 與 [`FEATURE-INVENTORY.md`](FEATURE-INVENTORY.md)。

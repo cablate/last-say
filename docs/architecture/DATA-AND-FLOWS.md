@@ -2,7 +2,7 @@
 
 用途：描述 Last Say 的持久資料模型、事實層次、資料生命週期、主要寫入／分析流程，以及一致性與資料遺失風險。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-17
 
 ## 資料庫與表示規則
 
@@ -115,6 +115,8 @@ stateDiagram-v2
 
 `lib/finance/ingestion/index.js#commitIngestion` dispatches typed contexts；route 是 `app/api/finance/imports/[key]/commit/route.js`。Unique keys、run state 與 transaction boundaries 支援 idempotency／atomicity。reversal 會先檢查依賴並保留 history，不做任意硬刪除。
 
+R16沿用同一組routes與run tables，但由`lib/finance/ingestion/card-lifecycle.js`擁有`finance.card-transaction-lifecycle/v1`。Preview以account／date／currency／signed amount及exact external id或normalized merchant找唯一provisional candidate，並列出new、ambiguous、explicit released與unresolved rows。Commit只晉升唯一match、只為new row建立transaction、在完整覆蓋後supersede current sources；reversal恢復effective prior status並移除該run新增的posted source association。若後續`credit_card_statement_items`已擁有晉升交易，reverse preview會fail closed。這個流程不新增table或migration。
+
 ## 流程 3：analysis readiness
 
 1. Agent 讀 `/api/health` 與 `/api/finance/capabilities`。
@@ -175,6 +177,45 @@ Generic `review_tasks.status`不是typed decision owner；transfer／reimburseme
 ## 流程 8：高風險確認
 
 browser 取得 session nonce → server 建立待確認 request → 同源頁面以 Origin／Sec-Fetch-Site與 cookie nonce確認 → server發一次性 receipt／authorization → scope declaration、import reversal 或 identity merge 消耗授權。確認資料有 expiry／status；重放應失敗。
+
+## 流程 9：Monthly Financial Pulse query-time composition
+
+`GET /api/finance/control/monthly-pulse?month=YYYY-MM`每次請求都由`lib/queries/finance/control/monthly-pulse.js`即時呼叫既有Management P&L與Cash Flow query owner，再從Cash Flow details提取card settlement、loan principal／interest、investment cash與confirmed reimbursement；proposed reimbursement只列為candidate，不先扣抵。
+
+```mermaid
+flowchart LR
+    Request["Month / entity / currency"] --> Pulse["Monthly Pulse query owner"]
+    Pulse --> PL["Management P&L owner"]
+    Pulse --> CF["Direct Cash Flow owner"]
+    CF --> Typed["Typed debt / card / investment / reimbursement movements"]
+    Pulse --> Candidate["Proposed reimbursement candidates"]
+    PL --> Envelope["finance.analysis-read-model/v1"]
+    Typed --> Envelope
+    Candidate --> Envelope
+    Envelope --> UI["/control presentation and drillback"]
+```
+
+此流程不寫report snapshot、不呼叫AI，也不在React重算財務語意。canonical fact確認、修正或反轉後，下一次查詢會產生新結果與deterministic source watermark；coverage仍可誠實維持partial／unreconciled。
+
+## 流程 10：FA-0 Financial Health Review query-time Context Pack
+
+`GET /api/finance/control/financial-health?as_of_date=YYYY-MM-DD&entity_id=personal&currency=TWD`每次請求都由`lib/queries/finance/control/financial-health.js`重用Balance Sheet、liability／card與investment owner，計算position、liquidity、debt、明確指定的投資因子曝險、-10%／-20% stress與coverage。`taiwan_instrument_keys`與`taiwan_leverage_factor`是request-level assumptions，不能把未確認的aggregate holding或factor scope寫成canonical fact。
+
+```mermaid
+flowchart LR
+    Request["As-of / entity / currency / explicit factor scope"] --> Health["Financial Health query owner"]
+    Health --> Position["Balance Sheet position"]
+    Health --> Debt["Liability / card owners"]
+    Health --> Investment["Investment positions / quotes / FX"]
+    Position --> Pack["finance.analysis-read-model/v1\ncompact Context Pack"]
+    Debt --> Pack
+    Investment --> Pack
+    Pack --> AI["AI interpretation / options"]
+    AI --> Human["Human decision / confirmation"]
+    Human --> Facts["Canonical facts or typed decision evidence"]
+```
+
+這個read model不寫report snapshot、不呼叫AI、不保存另一套資產／負債／投資資料，也不輸出買賣、還貸、safe-to-spend或runway結論。若缺current cash、debt schedule、reliable income、essential spend、position detail或factor mapping，回應必須保留`partial`、`null`與可追蹤missing inputs；canonical fact被新增或修正後，下一次查詢即時重算。
 
 ## 資料生命週期
 

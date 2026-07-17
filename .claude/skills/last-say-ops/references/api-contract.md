@@ -4,6 +4,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 
 ## Read Routes
 
+- `GET /api/finance/control/financial-health?as_of_date=&entity_id=&currency=&taiwan_instrument_keys=&taiwan_leverage_factor=`: FA-0 query-time financial position／liquidity／debt／investment-factor／stress Context Pack. Use explicit instrument keys and factor assumptions; missing assumptions remain `null` with coverage warnings. It is read-only, does not call AI, and does not persist a report snapshot. Use this compact read model for financial-health decisions; only fetch raw named datasets for drillback or a clearly stated missing-data investigation.
 - `GET /api/health`: `{ok, transactions, corrections, schema_version}`. Stop if it is not HTTP 200 or `ok` is not true; HTTP 503 means the database could not be initialized or read safely.
 - `GET /api/meta`: database path, counts, available months, sources, categories, and global `needsReview`.
 - `GET /api/transactions?month=&view=&search=&sort=&direction=&limit=&offset=`: transaction list. Use `view=needs-review&sort=confidence&direction=asc` for human review.
@@ -18,6 +19,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - `GET /api/reports/income-statement?month=&entity_id=&currency=&basis=card_accrual_management`: management P&L, coverage, blockers, source watermark, and drilldown IDs. Other bases fail closed until their recognition semantics exist.
 - `GET /api/reports/balance-sheet?as_of_date=&entity_id=&currency=`: management assets, liabilities, derived net worth, valuation/snapshot watermarks, obligations drillback, and coverage.
 - `GET /api/reports/cash-flow?month=&entity_id=&currency=` or explicit `period_start`/`period_end`: direct-method operating/investing/financing cash, internal-transfer elimination, unresolved cash, boundary snapshots, reconciliation delta, drillback, and coverage.
+- `GET /api/finance/control/monthly-pulse?month=&entity_id=&currency=`: query-time composition of management P&L, direct cash movement, typed card／loan／investment／reimbursement movements, proposed reimbursement candidates, coverage, deterministic source watermark, and drillback. It is read-only, does not call AI, and does not persist a report snapshot.
 - For all three report routes, the compatibility parameter is named `entity_id` but its value is the stable entity key (for example `personal`), not the numeric SQLite row id.
 - `GET /api/finance/review-workbench`: side-effect-free additive human-review projection grouped into browser confirmations, actionable typed reviews, owner-unresolved cash, and source conflicts. Counts are calculated from returned sections; expired confirmation status is evaluated at read time without cleanup writes.
 - `GET /api/finance/capabilities`: authoritative API/schema versions, enums, limits, readiness goals, and unsupported contexts.
@@ -48,6 +50,7 @@ Base URL: `http://127.0.0.1:3127`. All responses are JSON. Start ledger/rule run
 - Typed CRUD: `POST /api/finance/entities|institutions|accounts|sources|scope-attestations|source-expectations|balance-snapshots`; `PATCH` resource detail routes with `expected_version`; add aliases through `/institutions/:key/aliases` or `/accounts/:key/aliases`.
 - `POST /api/finance/imports/preview`: validate and stage an atomic `finance.ingestion-bundle/v1`; no canonical writes.
 - `POST /api/finance/imports/:runKey/commit`: atomically write all supported sections and purge staged payload.
+- The same preview/commit routes accept `finance.card-transaction-lifecycle/v1` for current/unbilled-to-posted replacement. Supply one existing or new official posted source, exact signed row totals, occurrence ordinals, current source keys to supersede, and explicit release transaction keys. Commit is blocked by ambiguous matches or any unresolved provisional row in the superseded boundary.
 - Existing-transaction AI judgment uses the bundle's `transaction_classifications` section with `transaction_key`, standard category, optional canonical flow type, confidence, specific reason, and `expected_updated_at`; authority is `ai_researched` or `ai_inferred`.
 - Obligations writes: `POST /api/finance/credit-cards`, `/credit-cards/statements`, `/credit-cards/installments`, `/credit-cards/payment-matches`, `/liabilities`, `/liabilities/:key/schedule`, `/liabilities/allocations`, `/commitments`, and `/commitments/:key/occurrences`. Profile/template updates use stable-key `PATCH` plus `expected_version`.
 - Investment writes: `POST /api/finance/investments/instruments|trades|holdings|quotes`, `/api/finance/fx-quotes`, and `/api/finance/investments/cash-matches`. Decimal facts are strings; quote source/as-of are mandatory.

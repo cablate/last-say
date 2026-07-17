@@ -1,0 +1,79 @@
+{
+  "fixture_schema": "last-say-monthly-financial-pulse/v1",
+  "privacy": "synthetic-only",
+  "request": {
+    "month": "2026-06",
+    "entity_id": "personal",
+    "currency": "TWD",
+    "basis": "card_accrual_management"
+  },
+  "expected": {
+    "schema_version": "finance.analysis-read-model/v1",
+    "analysis_id": "monthly_financial_pulse",
+    "formula_version": "monthly-financial-pulse/1",
+    "scope": {
+      "entity_id": "personal",
+      "period_start": "2026-06-01",
+      "period_end": "2026-06-30",
+      "as_of_date": null,
+      "currency": "TWD",
+      "basis": "card_accrual_management",
+      "defaulted_fields": []
+    },
+    "source_watermark": {
+      "source_keys": ["source:synthetic-bank-june", "source:synthetic-card-june"],
+      "fact_keys": ["transaction:synthetic-expense", "transaction:synthetic-income"],
+      "match_keys": ["match:synthetic-card-payment"],
+      "balance_snapshot_keys": ["snapshot:synthetic-beginning", "snapshot:synthetic-ending"],
+      "semantic_hash": "synthetic-semantic-hash",
+      "change_sequence": "synthetic-change-sequence"
+    },
+    "coverage": {
+      "status": "complete",
+      "blockers": [],
+      "warnings": []
+    },
+    "facts": {
+      "management_pl": {
+        "confirmed_revenue_minor": "10000000",
+        "confirmed_expense_minor": "6500000",
+        "net_result_minor": "3500000",
+        "owner_unresolved_inflow_minor": "0",
+        "owner_unresolved_outflow_minor": "0"
+      },
+      "cash_flow": {
+        "beginning_cash_minor": "20000000",
+        "ending_cash_minor": "22800000",
+        "operating_cash_minor": "4200000",
+        "investing_cash_minor": "-900000",
+        "financing_cash_minor": "-500000",
+        "unresolved_cash_minor": "0",
+        "net_cash_change_minor": "2800000",
+        "reconciliation_delta_minor": "0"
+      },
+      "typed_cash_movements": {
+        "confirmed_card_settlement_cash_minor": "-2500000",
+        "confirmed_loan_principal_cash_minor": "-500000",
+        "confirmed_loan_interest_fee_cash_minor": "-80000",
+        "confirmed_investment_cash_minor": "-900000",
+        "confirmed_reimbursement_cash_minor": "600000"
+      }
+    },
+    "derived": {
+      "economic_to_cash_gap_minor": "-700000",
+      "confirmed_obligation_settlement_cash_minor": "-3080000"
+    },
+    "candidates": [],
+    "drillback": {
+      "revenue_transaction_keys": ["transaction:synthetic-income"],
+      "expense_transaction_keys": ["transaction:synthetic-expense"],
+      "cash_transaction_keys": [],
+      "card_settlement_transaction_keys": [],
+      "loan_transaction_keys": [],
+      "investment_transaction_keys": [],
+      "reimbursement_transaction_keys": [],
+      "match_keys": ["match:synthetic-card-payment"],
+      "balance_snapshot_keys": ["snapshot:synthetic-beginning", "snapshot:synthetic-ending"]
+    }
+  }
+}

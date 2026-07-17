@@ -7,6 +7,24 @@
       "file": "post-style-pressure.json",
       "goals": ["G1", "G2", "G3", "G5", "G8"],
       "acceptance": ["A1", "A2", "A3", "A4", "A5"]
+    },
+    {
+      "id": "deterministic-analysis-response",
+      "file": "deterministic-analysis-response.json",
+      "goals": ["G5", "G8"],
+      "acceptance": ["FC-A1 query-time recomputation", "FC-A1 candidate separation"]
+    },
+    {
+      "id": "monthly-financial-pulse",
+      "file": "monthly-financial-pulse.json",
+      "goals": ["G1", "G5", "G8"],
+      "acceptance": ["FC-A2 cross-report composition", "FC-A2 typed movement separation"]
+    },
+    {
+      "id": "financial-health-review",
+      "file": "financial-health-review.json",
+      "goals": ["G4", "G5", "G9"],
+      "acceptance": ["FA-0 compact Context Pack", "FA-0 explicit exposure assumption", "FA-0 stress disclosure"]
     }
   ]
 }

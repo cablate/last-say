@@ -210,6 +210,25 @@ payment is linked through `credit_card_payment_matches`; never classify it as a
 second expense. Installment plans point to the one originating purchase. Their
 entries are obligations and cannot create additional P&L expenses.
 
+When an official posted export replaces current or unbilled evidence, use
+`finance.card-transaction-lifecycle/v1` through the shared ingestion preview
+and commit routes. Do not send the posted rows through an unrelated
+`cash_transactions` bundle. The lifecycle preview uses account, date,
+currency, signed amount, exact external id or normalized merchant, and an
+occurrence ordinal for source drillback. A unique strong identity may promote
+the existing provisional transaction; multiple candidates require an explicit
+`match_transaction_key` in a new preview. Name plus amount is never enough.
+
+List every complete current source being replaced in
+`supersede_source_keys`. A provisional authorization omitted from the posted
+statement stays unresolved until its transaction key is explicitly listed in
+`release_transaction_keys`; absence alone is not release evidence. Inspect
+`matched`, `new`, `ambiguous`, `released`,
+`unresolved_release_candidates`, row totals, and `committable` before commit.
+After commit, create the typed card statement from the returned canonical
+transaction keys. Reversal remains browser-confirmed and fails closed once a
+downstream statement owns a promoted row.
+
 Loan profile APR is only a reported fact. A schedule requires `official` or
 `user_confirmed` authority plus a source. Never calculate an authoritative
 schedule or revolving interest from principal and APR. Payment allocations must

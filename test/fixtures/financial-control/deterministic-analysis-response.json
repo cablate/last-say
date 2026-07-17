@@ -1,0 +1,162 @@
+{
+  "fixture_schema": "last-say-deterministic-analysis-response/v1",
+  "privacy": "synthetic-only",
+  "contract_id": "finance.control.deterministic-analysis-read-model",
+  "scenarios": [
+    {
+      "id": "same-query-recomputes-after-confirmed-source-change",
+      "request": {
+        "analysis_id": "monthly_financial_pulse",
+        "entity_id": "personal",
+        "period_start": "2026-06-01",
+        "period_end": "2026-06-30",
+        "currency": "TWD",
+        "basis": "card_accrual_management"
+      },
+      "before": {
+        "schema_version": "finance.analysis-read-model/v1",
+        "analysis_id": "monthly_financial_pulse",
+        "formula_version": "monthly-financial-pulse/1",
+        "scope": {
+          "entity_id": "personal",
+          "period_start": "2026-06-01",
+          "period_end": "2026-06-30",
+          "as_of_date": null,
+          "currency": "TWD",
+          "basis": "card_accrual_management",
+          "defaulted_fields": []
+        },
+        "source_watermark": {
+          "source_keys": ["source:synthetic-bank-june"],
+          "fact_keys": ["transaction:synthetic-income", "transaction:synthetic-expense-a"],
+          "change_sequence": "2"
+        },
+        "coverage": {
+          "status": "complete",
+          "blockers": [],
+          "warnings": []
+        },
+        "facts": {
+          "confirmed_income_minor": "10000000",
+          "confirmed_expense_minor": "6500000"
+        },
+        "derived": {
+          "net_result_minor": "3500000"
+        },
+        "candidates": [],
+        "drillback": {
+          "income_transaction_keys": ["transaction:synthetic-income"],
+          "expense_transaction_keys": ["transaction:synthetic-expense-a"]
+        }
+      },
+      "applied_change": {
+        "kind": "confirmed_transaction_created",
+        "resource_key": "transaction:synthetic-expense-b",
+        "amount_minor": "-500000"
+      },
+      "after": {
+        "schema_version": "finance.analysis-read-model/v1",
+        "analysis_id": "monthly_financial_pulse",
+        "formula_version": "monthly-financial-pulse/1",
+        "scope": {
+          "entity_id": "personal",
+          "period_start": "2026-06-01",
+          "period_end": "2026-06-30",
+          "as_of_date": null,
+          "currency": "TWD",
+          "basis": "card_accrual_management",
+          "defaulted_fields": []
+        },
+        "source_watermark": {
+          "source_keys": ["source:synthetic-bank-june"],
+          "fact_keys": ["transaction:synthetic-income", "transaction:synthetic-expense-a", "transaction:synthetic-expense-b"],
+          "change_sequence": "3"
+        },
+        "coverage": {
+          "status": "complete",
+          "blockers": [],
+          "warnings": []
+        },
+        "facts": {
+          "confirmed_income_minor": "10000000",
+          "confirmed_expense_minor": "7000000"
+        },
+        "derived": {
+          "net_result_minor": "3000000"
+        },
+        "candidates": [],
+        "drillback": {
+          "income_transaction_keys": ["transaction:synthetic-income"],
+          "expense_transaction_keys": ["transaction:synthetic-expense-a", "transaction:synthetic-expense-b"]
+        }
+      }
+    },
+    {
+      "id": "candidate-and-unknown-remain-outside-confirmed-totals",
+      "request": {
+        "analysis_id": "spending_structure",
+        "entity_id": "personal",
+        "period_start": "2026-06-01",
+        "period_end": "2026-06-30",
+        "currency": "TWD",
+        "basis": "card_accrual_management"
+      },
+      "expected": {
+        "schema_version": "finance.analysis-read-model/v1",
+        "analysis_id": "spending_structure",
+        "formula_version": "spending-structure/1",
+        "scope": {
+          "entity_id": "personal",
+          "period_start": "2026-06-01",
+          "period_end": "2026-06-30",
+          "as_of_date": null,
+          "currency": "TWD",
+          "basis": "card_accrual_management",
+          "defaulted_fields": []
+        },
+        "source_watermark": {
+          "source_keys": ["source:synthetic-card-june"],
+          "fact_keys": ["transaction:synthetic-work-expense", "reimbursement:synthetic-proposal"],
+          "change_sequence": "7"
+        },
+        "coverage": {
+          "status": "partial",
+          "blockers": [
+            {
+              "kind": "unknown_commitment_amount",
+              "severity": "blocks_complete",
+              "resource_key": "commitment:synthetic-variable-service",
+              "recommended_action": "confirm_commitment_amount"
+            }
+          ],
+          "warnings": [
+            {
+              "kind": "proposed_reimbursement_excluded",
+              "resource_key": "reimbursement:synthetic-proposal"
+            }
+          ]
+        },
+        "facts": {
+          "gross_business_expense_minor": "1200000",
+          "confirmed_reimbursement_minor": "0",
+          "confirmed_fixed_obligation_minor": null
+        },
+        "derived": {
+          "confirmed_personal_net_burden_minor": "1200000"
+        },
+        "candidates": [
+          {
+            "candidate_kind": "reimbursement_match",
+            "resource_key": "reimbursement:synthetic-proposal",
+            "proposed_amount_minor": "1000000",
+            "included_in_confirmed_totals": false
+          }
+        ],
+        "drillback": {
+          "business_expense_transaction_keys": ["transaction:synthetic-work-expense"],
+          "confirmed_reimbursement_match_keys": []
+        }
+      }
+    }
+  ]
+}

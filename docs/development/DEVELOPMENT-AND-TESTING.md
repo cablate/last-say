@@ -67,6 +67,7 @@ npm run verify:release
 | security／errors／confirmation | `api-error-safety`、`human-confirmation`、`runtime-smoke-safety` |
 | operations／operator | `backup-restore`、`backup-health`、`local-next-launcher`、`financial-operator-contract`、`foundation-demo-and-skill-eval` |
 | control Phase 0 reference | `control-cash-timeline`（synthetic fixture、coverage degradation、reserve breach、runway與 safe-to-spend gate） |
+| Financial Control runtime slices | `control-monthly-financial-pulse`、`control-financial-health`（query-time deterministic read models、coverage、watermark與compact Context Pack） |
 | browser workflow | `e2e/data-center-and-reports.spec.js` |
 
 ## CI

@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 const SECTION_TITLES = {
   "/": "總覽",
+  "/control": "財務控制",
   "/transactions": "交易明細",
   "/reports": "報表",
   "/trend": "歷月走勢",
@@ -47,6 +48,14 @@ function ShellContent({ children }) {
   // 期間預設：總覽看全部期間；交易明細預設最新月份；規則、修正紀錄、走勢不被月份鎖住。
   useEffect(() => {
     if (!monthRoute) return
+    if (pathname === "/control" && month === "all") {
+      const newest = latestMonth(meta)
+      if (!newest) return
+      const params = new URLSearchParams(searchParams.toString())
+      params.set("month", newest)
+      router.replace(`?${params.toString()}`, { scroll: false })
+      return
+    }
     if (month) return
     if (!meta) return
     if (pathname === "/") {

@@ -11,7 +11,7 @@
 | Repository／scope | `finance-viewer`；Foundation Business-Flow Closure |
 | Branch／base commit | `codex/repository-audit-and-stabilization`／`f633ada491d1eb90c3a4e6e138dfaabe6b3f97d0` |
 | Created | 2026-07-16 |
-| Last verified | 2026-07-16，repository、199 tests、17 Skill evals、5 browser flows、release verifier與formal DB v10 postflight |
+| Last verified | 2026-07-17，repository、209 tests、18 Skill evals、7 browser flows、release verifier與formal DB v10既有postflight（本輪未開啟正式DB） |
 | Inputs | Owner 近期決策、[`CURRENT-STATUS.md`](../project/CURRENT-STATUS.md)、[`ROADMAP.md`](../planning/ROADMAP.md)、[`master-financial-control-plan.md`](master-financial-control-plan.md)、現有 behavior contracts |
 | Known relevant drift | Working tree 已有未提交的 transaction classification、owner-unresolved、reporting、UI 與 Skill 變更；MP-00 已將其納入共享語意邊界，每個後續 package 仍須做 scoped diff preflight，不得覆蓋既有工作 |
 
@@ -394,7 +394,7 @@ flowchart LR
 
 ### MP-07 — Guarded real-data closure and owner acceptance
 
-**Status：Operator與formal-data工作完成；owner-only closure pending（2026-07-16）。** 升級前schema v6 backup已驗證並於temporary restore演練v6→v9；正式升級後另建schema v9 backup並演練v9→v10。兩段migration均保留1,078筆交易與相同交易雜湊；07-16晚間另以已驗證schema v10 backup與副本演練匯入current-card／Taishin evidence，正式`data/finance.sqlite`現為1,108 transactions、28 sources、12 snapshots，`integrity_check=ok`、0 FK violations。已透過typed API提交可追溯的card、liability、commitment與position facts，並建立一筆不代替人決策的reimbursement proposal；三張reports與workbench已完成正式postflight，Balance Sheet目前complete。`npm run verify:release`最近一次完整通過（199 Node tests、17 Skill evals、5 Chromium flows、build/runtime/privacy/backup evidence）。只剩owner在browser執行scope／proposal decisions並接受known gaps後，才可關閉GATE-F2與GATE-F6。
+**Status：Operator與formal-data工作完成；owner-only closure pending（2026-07-17）。** 升級前schema v6 backup已驗證並於temporary restore演練v6→v9；正式升級後另建schema v9 backup並演練v9→v10。兩段migration均保留1,078筆交易與相同交易雜湊；07-16晚間另以已驗證schema v10 backup與副本演練匯入current-card／account evidence，正式`data/finance.sqlite`現為1,108 transactions、28 sources、12 snapshots，`integrity_check=ok`、0 FK violations。已透過typed API提交可追溯的card、liability、commitment與position facts，並建立一筆不代替人決策的reimbursement proposal；三張reports與workbench已完成正式postflight，Balance Sheet目前complete。2026-07-17的`npm run verify:release`完整通過（209 Node tests、18 Skill evals、7 Chromium flows、build/runtime/privacy/backup evidence），且未開啟正式DB。只剩owner在browser執行scope／proposal decisions並接受known gaps後，才可關閉GATE-F2與GATE-F6。
 
 - **Contribution：** G-01、G-08；R-05、全部 invariants。
 - **Scope：** Local real DB、ignored evidence outputs、Gate F docs；單一 operator 串行執行。

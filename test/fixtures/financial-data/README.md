@@ -9,6 +9,11 @@ an input, its typed canonical payload, and the expected persistence/readiness
 outcome. These JSON files freeze Phase 1+ contracts; they are not a generic
 canonical storage format.
 
+`source-mappings/card-transaction-lifecycle.json` freezes the synthetic R16
+current/unbilled-to-posted match, explicit release, source supersession, and
+reversal expectations. It contains fixture references rather than real account
+or merchant data.
+
 Build the legacy v0.2.3 rehearsal database only at an explicit temporary path:
 
 ```powershell

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 
-const MONTH_SELECTOR_ROUTES = new Set(["/", "/transactions", "/reports"])
+const MONTH_SELECTOR_ROUTES = new Set(["/", "/control", "/transactions", "/reports"])
 const ALL_MONTHS = "all"
 
 function latestMonth(meta) {
@@ -53,8 +53,9 @@ export default function MonthSelector() {
   }
 
   const requestedMonth = searchParams.get("month") || ""
+  const allowAllMonths = pathname !== "/control"
   const monthValues = new Set(months.map((item) => item.month))
-  const selectedMonth = requestedMonth === ALL_MONTHS
+  const selectedMonth = requestedMonth === ALL_MONTHS && allowAllMonths
     ? ALL_MONTHS
     : monthValues.has(requestedMonth)
     ? requestedMonth
@@ -87,7 +88,7 @@ export default function MonthSelector() {
         <SelectContent>
           <SelectGroup>
             <SelectLabel>期間</SelectLabel>
-            <SelectItem value={ALL_MONTHS}>全部期間</SelectItem>
+            {allowAllMonths ? <SelectItem value={ALL_MONTHS}>全部期間</SelectItem> : null}
             {months
               .slice()
               .reverse()

@@ -1,0 +1,108 @@
+{
+  "fixture_schema": "finance.card-transaction-lifecycle-fixture/v1",
+  "privacy": "synthetic-only",
+  "existing": {
+    "account": {
+      "fixture_key": "synthetic-card-account",
+      "account_kind": "credit_card",
+      "currency": "TWD"
+    },
+    "current_sources": [
+      {
+        "fixture_key": "current-2026-07-08",
+        "source_kind": "current_transactions_csv",
+        "period_end": "2026-07-08",
+        "status": "active"
+      },
+      {
+        "fixture_key": "current-2026-07-16",
+        "source_kind": "current_transactions_csv",
+        "period_end": "2026-07-16",
+        "status": "active"
+      }
+    ],
+    "provisional_transactions": [
+      {
+        "fixture_key": "tx-match",
+        "transaction_date": "2026-07-05",
+        "external_id": "AUTH-100",
+        "name": "SYNTHETIC CAFE",
+        "amount_minor": "-12500",
+        "currency": "TWD"
+      },
+      {
+        "fixture_key": "tx-release",
+        "transaction_date": "2026-07-06",
+        "external_id": "AUTH-200",
+        "name": "SYNTHETIC HOLD",
+        "amount_minor": "-30000",
+        "currency": "TWD"
+      }
+    ]
+  },
+  "happy_path_request": {
+    "schema_id": "finance.card-transaction-lifecycle/v1",
+    "idempotency_key": "synthetic-card-lifecycle-happy",
+    "account_fixture_key": "synthetic-card-account",
+    "authority": "official",
+    "reason": "Synthetic posted statement replaces complete current evidence.",
+    "posted_source": {
+      "source_kind": "credit_card_statement_csv",
+      "description": "Synthetic July posted statement",
+      "period_start": "2026-06-20",
+      "period_end": "2026-07-19",
+      "is_official": true,
+      "authority": "official",
+      "review_state": "confirmed"
+    },
+    "expected_rows_total_minor": "-52500",
+    "posted_rows": [
+      {
+        "client_item_key": "posted-row-1",
+        "occurrence_ordinal": 1,
+        "transaction_date": "2026-07-05",
+        "external_id": "AUTH-100",
+        "name": "Synthetic Cafe",
+        "amount_minor": "-12500",
+        "currency": "TWD",
+        "flow_type": "expense",
+        "category_primary": "Food"
+      },
+      {
+        "client_item_key": "posted-row-2",
+        "occurrence_ordinal": 1,
+        "transaction_date": "2026-07-10",
+        "external_id": "POST-300",
+        "name": "Synthetic Books",
+        "amount_minor": "-40000",
+        "currency": "TWD",
+        "flow_type": "expense",
+        "category_primary": "Education"
+      }
+    ],
+    "supersede_source_fixture_keys": [
+      "current-2026-07-08",
+      "current-2026-07-16"
+    ],
+    "release_transaction_fixture_keys": [
+      "tx-release"
+    ]
+  },
+  "expected_happy_path": {
+    "committable": true,
+    "counts": {
+      "matched": 1,
+      "new": 1,
+      "ambiguous": 0,
+      "released": 1,
+      "unresolved_release_candidates": 0,
+      "source_supersessions": 2
+    },
+    "transaction_count_delta": 1,
+    "reversal_restores_effective_prior_state": true
+  },
+  "ambiguity_rule": {
+    "given": "Two provisional transactions share account, date, currency, signed amount, and normalized merchant without a unique external id.",
+    "expected": "Preview is not committable and returns both transaction keys until a valid match_transaction_key is supplied in a new payload."
+  }
+}

@@ -3,7 +3,7 @@
 Status: Draft
 Authority: Repository evidence and inferred target state
 Owner approval required: Yes
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-17
 
 ## 文件用途
 
@@ -36,6 +36,27 @@ Last validated against repository: 2026-07-16
 - **財務控制中心是下一階段。** 它必須消費既有資料基礎，不得建立第二套account、balance、liability、investment或source真相。
 - **先讓業務邏輯跑順，再做優化。** 在核心流程未穩定前，維持single-user localhost與現有簡單defaults，不提前投入完整GUI、remote deployment、複雜policy、平台化或架構美化。
 
+### Financial analysis and decision-support direction（Owner-confirmed direction, 2026-07-17）
+
+最近討論確認：目前工具的資料基礎已足以支撐查詢，但仍缺少接近專業個人財務／管理財務工作方式的整理與決策支援。這不是要在第一版直接做成完整理財顧問，而是要建立一個可逐步驗證的分析層：
+
+```mermaid
+flowchart LR
+    F["Canonical financial facts"] --> M["Deterministic metric engine"]
+    M --> C["Compact AI Context Pack"]
+    C --> A["AI interpretation and options"]
+    A --> H["Human decision / confirmation"]
+    H --> F
+```
+
+- **Owner-confirmed:** 加入新資料或修正既有資料後，分析表應在查詢時依當下canonical facts重新計算，不保存另一份報表真相。
+- **Owner-confirmed:** 程式負責金額、比例、曝險、壓力測試、差額、coverage與資料新鮮度等可重現計算；AI不應每次重新拉一大包原始交易，也不應偷偷重算不同口徑。
+- **Owner-confirmed:** AI是主要輸入與分析協作者，接收精簡且帶公式、as-of、來源、缺口與假設的Context Pack，負責處理難以程式化的語意、情境比較、取捨說明與下一步建議；高風險決定仍由人類保留。
+- **Inferred target state:** 成熟的分析層應能像財務控制／FP&A工作一樣，分開整理財務位置、流動性、負債服務、現金流驅動因素、投資因子曝險、壓力測試、資料缺口與可行選項。
+- **Needs owner decision:** 未來是否採用哪些正式風險門檻、可靠收入定義、必要支出政策、個人／家戶／公司邊界與對外專業責任，不能由單次實作自行決定。
+
+第一個驗證切片`FA-0 Financial Health Review v0`已完成query／API／contract／synthetic驗證：只產生 position、liquidity、debt、investment exposure、stress test與data quality的deterministic read model，接著用五個真實問題驗收其是否足以支援AI專業解讀；不在此切片加入完整Financial Control Center、safe-to-spend policy、預測平台或大量UI。
+
 ### Inferred mission
 
 **Inferred:** 成熟後的 Last Say 應由目前已確認的「AI主輸入、UI確認／少量修正」模式，演進為本機財務事實與決策控制層；工具負責deterministic calculations、readiness、證據與狀態，人類保留高風險決策權。
@@ -66,6 +87,7 @@ Last validated against repository: 2026-07-16
 | `G6` | 保留人類權威與可回復性 | 高風險變更需 browser confirmation；錯誤匯入可反轉且保留歷史 |
 | `G7` | 形成可驗證的學習迴圈 | 修正、結算、對帳與預測誤差能改進下一期結果 |
 | `G8` | 維持可接手與可營運性 | 新的人類或 AI 能從文件、測試、健康檢查與備份流程安全接手 |
+| `G9` | 建立可供AI解讀的專業財務分析層 | deterministic metrics先把位置、流動性、債務、曝險、壓力與資料品質算好，再交給AI解釋；同一DB state可重算且不需原始資料傾倒 |
 
 ### Soft goals
 
@@ -86,6 +108,9 @@ Last validated against repository: 2026-07-16
 7. 新能力不得另建與既有 account、source、liability、valuation、reconciliation 平行的 canonical facts。
 8. Control Center只能投影與解釋foundation facts，不能反向成為canonical資料owner。
 9. 核心AI輸入／UI確認流程未達owner可接受程度前，不以完整CRUD、remote deployment或抽象重構取代業務流程修正。
+10. Derived analysis read model不是canonical truth；它必須標示formula、scope、as-of、freshness、coverage、source watermark與drillback，且每次查詢可由canonical facts重算。
+11. 可由程式可靠計算的數字不得交給AI臨時心算；AI收到的是精簡Context Pack，缺資料時保留unknown、blocker或待決策狀態。
+12. Factor exposure與stress test必須把標的範圍、槓桿／敏感度假設與計算口徑明確標出，不得把不同風險因子或資產類別無標籤相加。
 
 ## 最終產品狀態
 
@@ -113,6 +138,7 @@ flowchart LR
 - 能以來源、權威、新鮮度與 scope 判斷分析是否可成立。
 - 能產出可 drill down 的管理損益表、資產負債表與 direct-method 現金流量表。
 - 能以 deterministic 方式產出未來義務、每日 projected cash、safe-to-spend、risk date 與 scenario delta。
+- 能由既有canonical facts產出可追溯的財務健康與決策Context Pack，讓AI針對位置、流動性、負債服務、投資因子曝險與壓力情境提供解釋與選項。
 - AI 自動化解析、研究、候選規則與解釋；人類保留 scope、歧義與高風險行動決策。
 - 所有自動化都必須有失敗狀態、重試／反轉路徑與可觀察證據。
 
@@ -159,12 +185,13 @@ flowchart LR
 
 ## 核心能力支柱
 
-| 支柱 | 理想成熟狀態 | 目前狀態（2026-07-16） | 主要差距／前置能力 | 成熟判定 |
+| 支柱 | 理想成熟狀態 | 目前狀態（2026-07-17） | 主要差距／前置能力 | 成熟判定 |
 |---|---|---|---|---|
-| Product | 從資料補齊到風險行動的完整閉環 | **Confirmed:** transaction review、Data Center、unified workbench、三張management reports、readiness可用 | runtime forecast、safe-to-spend、alerts與owner真實流程acceptance | 貼文式情境能在扣款前指出風險與選項 |
+| Product | 從資料補齊到風險行動的完整閉環 | **Confirmed:** transaction review、Data Center、unified workbench、三張management reports、readiness可用；`FA-0`已建立第一個健康分析Context Pack | runtime forecast、safe-to-spend、alerts與owner真實流程acceptance | 貼文式情境能在扣款前指出風險與選項 |
 | Domain | account／obligation／investment／reconciliation 語意一致 | **Confirmed:** foundation Phase 0–7、三時間線kernel、typed reconciliation與cross-report fixtures完成 | Control projection／policy semantics | 同一事件跨 surface 不重複、不遺失 |
 | Data | canonical facts、source、freshness、scope、audit 完整 | **Confirmed:** code與formal DB schema v10、typed real-data contexts、watermarks與server reports；migration／postflight完成 | owner scope attestation、歷史card normalization、snapshot／matching coverage quality | 可由來源重建並解釋每個重要數字 |
 | Automation | AI 做機械工作，人類處理裁決 | **Confirmed:** operator Skill、12 datasets、proposal envelope、preview/commit與unified review | owner代表性驗收、recurring／forecast learning | 維護成本與重複錯誤可量測下降 |
+| Financial analysis | 程式產生可重算的專業財務指標，AI以Context Pack提供解釋與選項 | **In progress:** FC-A2 Monthly Financial Pulse與`FA-0` Financial Health v0已是runtime read models；正式資料與factor mapping仍可partial | net-worth bridge、現金流驅動因素、曝險／壓力口徑、政策型forecast與owner驗收 | 五個核心決策問題能以同一Context Pack回答，且公式與缺口可追溯 |
 | Integration | 可替換 AI 與來源 adapter | **Partial:** local REST + external AI；無 bank connector | adapter contract、failure/retry/privacy boundary | 新來源不需改核心 domain |
 | Reliability | 失敗可見、可重試、可反轉、可恢復 | **Partial:** atomic ingestion、reversal、兩段verified backup→rehearsal→formal migration、5-case Chromium、release verifier與formal postflight | owner-approved recovery policy、排程與observability | 故障演練可重現且無資料遺失 |
 | Security | 部署邊界與資料權限相稱 | **Confirmed local-only:** localhost、no auth、confirmation guard | 公開部署前需完整 authz/security redesign | 威脅模型與實際部署一致 |
@@ -185,7 +212,7 @@ flowchart LR
 9. 文件、Skill、API、schema、tests 與 UI 必須在同一變更中同步。
 10. 先證明第二個消費者與真實需求，再新增抽象層或平台能力。
 
-目前最大原則差距是：巨型client components仍集中責任；Control Phase 0只有pure reference而無runtime adapter；真實typed matching、歷史card normalization與position／cash boundaries仍使三張表partial；browser coverage仍屬bounded；owner尚未完成Gate F acceptance。Formal DB v10、unified review workbench、server-backed BS／CF、5條Chromium流程與verified backup→rehearsal→migration postflight已於2026-07-16補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
+目前最大原則差距是：巨型client components仍集中責任；FA-0已建立第一個健康／決策Context Pack，但完整健康／決策分析層、forecast policy與Control Center尚未形成；真實typed matching、歷史card normalization與position／cash boundaries仍使部分報表partial；browser coverage仍屬bounded；owner尚未完成Gate F acceptance。Formal DB v10、unified review workbench、server-backed BS／CF、5條Chromium流程與verified backup→rehearsal→migration postflight已於2026-07-16補齊。證據詳見[`docs/planning/GAPS-RISKS-AND-DEBT.md`](docs/planning/GAPS-RISKS-AND-DEBT.md)。
 
 ## 非目標
 
@@ -220,7 +247,8 @@ flowchart LR
 ```mermaid
 flowchart LR
     A["Current Stage\nFoundation 0-7 + stabilization\nAI input / UI confirmation"] --> B["Foundation Closure\nReal workflow smoothness\nOwner acceptance"]
-    B --> C["Next Stage: Control Center\nTrusted position\nCommitment projection"]
+    B --> A1["FA-0 Health Review v0\nDeterministic metrics\nCompact AI Context Pack"]
+    A1 --> C["Next Stage: Control Center\nTrusted position\nCommitment projection"]
     C --> D0["Later Control Logic\nRuntime forecast\nReserve / income policies"]
     D0 --> D["Product Maturity\nSafe-to-spend\nAlerts\nScenario decisions"]
     D --> E["Operational Maturity\nObserved reliability\nRestore/upgrade drills\nGovernance"]
@@ -229,13 +257,13 @@ flowchart LR
 
 ### 現在在哪裡
 
-**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness、AI context／proposal contract、unified review workbench、management P&L／Balance Sheet／Cash Flow、bounded browser E2E、backup health、formal DB v10 real-data closure，以及Control Phase 0 reference已完成。Owner將目前階段定義為資料基礎建設的業務流程收斂：系統／operator工作完成，真實報表coverage仍partial，owner scope／proposal confirmation與acceptance未完成。財務控制中心是下一階段；runtime forecast、safe-to-spend、alerts與scenario尚未完成。
+**Confirmed:** Financial Data Foundation Phase 0–7、Data Center correctness、AI context／proposal contract、unified review workbench、management P&L／Balance Sheet／Cash Flow、bounded browser E2E、backup health、formal DB v10 real-data closure、Control Phase 0 reference、FC-A2 Monthly Financial Pulse與`FA-0 Financial Health Review v0` runtime read model已完成。Owner將目前階段定義為資料基礎建設的業務流程收斂；目前先用五個核心問題驗收FA-0 Context Pack，再決定下一個Control切片。正式資料的FA-0 coverage仍partial，owner scope／proposal confirmation與acceptance未完成；runtime forecast、safe-to-spend、alerts與scenario尚未完成。
 
 ### 不能直接跳到終點的原因
 
 - 沒有可信 opening cash、future obligations 與 freshness，就無法產生可靠 forecast。
 - 沒有 coverage 與 reconciliation，就不能把 safe-to-spend 顯示成確定值。
-- Phase 0 contract／fixture只證明純語意；沒有governed DB adapter與cross-report runtime tests，Control Center仍可能重複計算卡費、貸款本金與轉帳。
+- FA-0雖已有governed query／API與synthetic tests，但尚未包含net-worth bridge、完整future obligations與policy型指標；因此Control Center仍不能直接推導安全可花、預測或投資／還貸結論。
 - 單條可重跑E2E與backup health不等於日常維運；尚缺owner-approved schedule、restore drill、graceful shutdown與更廣journey evidence。
 
 文件外觀、首頁裝飾與框架升級屬表面改善；currency-aware money owner、正式 position read model、projection contracts、E2E 與 docs truth gate 能解鎖大量後續工作。
@@ -256,12 +284,12 @@ flowchart LR
 
 1. **Completed 2026-07-15：** 修正status／doc truth、money／report／manual-entry correctness，建立bounded E2E與backup health基線。
 2. **Reference completed 2026-07-15；owner approval pending：** Financial Control Phase 0 contracts、metric dictionary、synthetic fixture與pure timeline projector。
-3. **Completed in code 2026-07-16：** 三時間線語意、typed reimbursement／transfer／obligation lifecycle、12 datasets、proposal envelope、unified review workbench、三張management statements與17-case Skill eval。
+3. **Completed in code 2026-07-16：** 三時間線語意、typed reimbursement／transfer／obligation lifecycle、12 datasets、proposal envelope、unified review workbench、三張management statements與18-case Skill eval。
 4. **System work completed 2026-07-16；owner action current：** 已以verified backups與temporary rehearsals完成formal DB v10 publication、代表性typed real-data flow與postflight；現在只完成scope／material proposal確認與owner acceptance，並保留已知partial gaps。
-5. **Next stage：** 讓Control Center直接消費既有position／statements與commitment timeline；不另建canonical facts。
-6. 到forecast／safe-to-spend切片時，才由owner決定reserve與reliable income等必要policy，不拿它們阻擋目前foundation工作。
-7. 建立deterministic runtime 90-day forecast、reconciliation delta與source watermarks。
-8. 在coverage guard下推出safe-to-spend與persistent alerts，再完成settlement／forecast error learning、operations／observability與必要優化。
+5. **Implemented 2026-07-17：** 以既有position／statements／liabilities與investment owners建立`FA-0 Financial Health Review v0`，輸出精簡Context Pack；不另建canonical facts。
+6. **Current acceptance：** 用「能否買更多00675L、台股下跌是否影響生活、還貸或投資、收入中斷三個月、淨值變動原因」五個問題驗收；先確認同一組數字能支援AI判斷，再決定FC-A3與Control Center UI。
+7. 到forecast／safe-to-spend切片時，才由owner決定reserve、reliable income、essential spend等必要policy，不拿它們阻擋目前小切片。
+8. 在coverage guard下逐步加入90-day forecast、reconciliation delta、persistent alerts、scenario comparison、settlement／forecast-error learning與必要優化。
 
 詳細切片、前置條件與驗收見 [`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md)。
 
@@ -274,6 +302,7 @@ flowchart LR
 | `G1/G3/G6/G8` | AI主輸入→canonical commit→UI確認／少量修正的foundation業務閉環 | Current Foundation Closure Gate | operator Skill、typed API、browser evidence、owner acceptance |
 | `G1/G4` | trusted position + formal Balance Sheet | Gate F MP-05 completed in code；real-data acceptance current | position contract、query tests、browser evidence、Gate F postflight |
 | `G4/G5` | obligations + deterministic forecast | Roadmap Stage 3–4 | golden fixture、forecast tests、watermarks |
+| `G9` | financial health metrics + compact AI Context Pack | FA-0 v0已完成synthetic／code closure；現在用五個決策問題驗收，正式資料維持partial時不可過度解讀 | `financial-health-review` contract、query tests、source watermark、AI handoff evidence |
 | `PG-1/G5/G6` | safe-to-spend + alerts + human policy | Roadmap Stage 5 | coverage states、alert lifecycle、mobile E2E |
 | `G3/G7` | settlement／forecast-error learning | Roadmap Stage 6–7 | next-period evidence、error attribution |
 | `G8` | operational maturity | Every phase | release verifier、restore/upgrade rehearsal、docs review |

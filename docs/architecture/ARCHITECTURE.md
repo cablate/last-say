@@ -2,7 +2,7 @@
 
 用途：描述 Last Say 實際部署形態、模組依賴、信任邊界與目前架構原則的落差；不是理想化分層圖。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-17
 
 ## 實際系統形態
 
@@ -44,7 +44,7 @@ flowchart TB
 |---|---|---|---|
 | Presentation | `app/**/page.js`、`components/**` | 頁面、client state、fetch、表格與視覺化 | 多個大型 component仍同時負責取數與互動；report UI只呈現server read model，不在client重算財務語意 |
 | HTTP／control | `app/api/**/route.js` | 解析 request、呼叫 validation／query、回傳 JSON | route 數量多；legacy 與 typed APIs 並存；一般 write route 無 auth |
-| Domain／contract | `lib/finance/**`、`lib/reporting/**` | typed schema、money、三時間線語意、readiness、analysis／proposal registry、ingestion／reversal、report coverage、Control Phase 0 reference projector | 核心語意已有邊界，但並非所有 legacy query 都經過 domain layer；control projector尚未接 runtime DB／UI |
+| Domain／contract | `lib/finance/**`、`lib/reporting/**` | typed schema、money、三時間線語意、readiness、analysis／proposal registry、ingestion／reversal、card current→posted lifecycle、report coverage、Control Phase 0 reference projector與FA-0分析契約 | 核心語意已有邊界，但並非所有 legacy query 都經過 domain layer；90日control projector尚未接runtime DB／UI，FC-A2 Monthly Pulse與FA-0 Financial Health則已由獨立query owner接上既有report owners |
 | Application／query | `lib/queries/**` | SQL、transaction orchestration、read model、learning／reclassification | SQL 與業務規則集中；部分檔案變大，變更半徑高 |
 | Persistence | `lib/db.js`、`lib/db/**` | connection、PRAGMA、compatibility schema、migration ledger、transaction | `lib/db.js` 同時保留 legacy schema bootstrap 與新 migration façade，責任較重 |
 | Operator | `.claude/skills/last-say-ops/**`、`scripts/**` | 外部 AI SOP、seed、backup／restore／health check、local launcher、browser E2E、release verification | 核心 onboarding 仍依賴 agent／CLI；不是一般 GUI 使用流程 |
@@ -105,7 +105,7 @@ flowchart LR
 |---|---|---|
 | `lib/db.js`、`lib/db/migrations/**` | 所有資料與向後相容性 choke point | migration tests、new/old DB、checksum、backup restore |
 | `lib/queries/transactions.js`／`rules.js`／`learning.js` | 分類、human authority、append-only evidence 互相牽動 | correction、rule history、review policy、import dedupe tests |
-| `lib/finance/ingestion/**` | 多 context 原子性、identity、reversal | compound ingestion、reversal、contracts、conflict tests |
+| `lib/finance/ingestion/**` | 多 context 原子性、card跨來源identity／supersession、reversal | compound ingestion、card lifecycle、reversal、contracts、conflict tests |
 | `lib/queries/finance/obligations.js` | cards、loans、commitments 共用且檔案大 | obligations 全測試與 cross-context invariant |
 | `lib/queries/finance/investments.js`／money helpers | manual source+fact atomicity、quote／FX／minor-unit correctness | JPY／TWD／USD fixtures、rollback與valuation tests |
 | `lib/queries/reports/**`／`lib/reporting/**` | 三張表共享typed owners、coverage與cross-view invariants | reporting fixtures、currency scope、partial／unreconciled與browser report flow |

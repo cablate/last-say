@@ -108,10 +108,11 @@ The Skill contains bank quirks, category boundaries, web research guidance, conf
 | Monthly overview, movers, recurring baseline, trends | Ready |
 | Management P&L with explicit coverage | Ready, coverage-dependent |
 | Financial Data Center | Ready: all typed account kinds, sources, balances, cards, loans, commitments, manual investments/quotes/FX, Tier 2 values, and review tasks |
-| AI analysis preflight | Ready: 8 readiness goals, prioritized gaps, scoped/as-of checks, 7 named datasets, and provenance watermarks |
+| AI analysis preflight | Ready: 8 readiness goals, prioritized gaps, scoped/as-of checks, 12 named datasets, and provenance watermarks |
 | Control Phase 0 reference | Complete but not a runtime capability: contracts, metric dictionary, synthetic fixture, and pure 90-day timeline projector; no real DB/API/UI adapter yet |
-| Balance sheet | Data foundation ready; UI honestly reports unavailable until a scoped, reconciled read model exists |
-| Cash flow statement | Readiness checks ready; UI honestly reports unavailable until cash boundaries and reconciliation exist |
+| Financial Health Review v0 | First runtime read model; formal-data coverage is partial | `/api/finance/control/financial-health` recomputes position, liquidity, debt, explicit investment-factor exposure, and stress into a compact AI Context Pack; it does not answer safe-to-spend or forecast questions |
+| Balance sheet | Server-backed report with explicit coverage; missing snapshots, valuation, or FX keep it partial |
+| Cash flow statement | Server-backed direct-method report with explicit boundary and reconciliation coverage |
 | Tax, options, and complex derivatives | Unsupported; requires a separate typed context |
 
 Last Say is currently a single-user localhost application with no authentication or tenant isolation. Do not expose any configured port to a network or reverse proxy. See [SECURITY.md](./SECURITY.md).
@@ -141,7 +142,7 @@ The release verifier runs lint, dependency audit, Node tests, an isolated Chromi
 
 ## Roadmap
 
-Financial Data Foundation Phases 0-7 plus the trust-stabilization and Control Phase 0 reference slice are complete; see [Current Status](./docs/project/CURRENT-STATUS.md). The current priority is to make the AI-primary input → typed commit → UI confirmation/minor-correction foundation workflow run smoothly in real use. Financial Control Center is the next stage; base-currency, reserve, and reliable-income policies are deferred until their runtime consumers actually need them.
+Financial Data Foundation Phases 0-7 plus the trust-stabilization and Control Phase 0 reference slice are complete; `FA-0 Financial Health Review v0` is also the first runtime read model for deterministic financial-health context. See [Current Status](./docs/project/CURRENT-STATUS.md). The current priority is to make the AI-primary input → typed commit → UI confirmation/minor-correction foundation workflow run smoothly and validate FA-0 with five owner questions. Financial Control Center is the next stage; base-currency, reserve, and reliable-income policies are deferred until their runtime consumers actually need them.
 
 See the evidence-derived [Roadmap](./docs/planning/ROADMAP.md) for gates and acceptance criteria, and [Open Questions](./docs/planning/OPEN-QUESTIONS.md) for decisions that still belong to the project owner.
 

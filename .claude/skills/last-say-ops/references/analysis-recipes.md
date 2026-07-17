@@ -103,6 +103,28 @@ For a descriptive historical floor only:
    key, valuation/FX key, match key, or named blocker, report it as unexplained
    and keep coverage partial/unreconciled.
 
+## Financial Health Review v0
+
+Use this for questions about current financial position, liquidity, debt capacity,
+investment exposure, or stress scenarios.
+
+1. Run `health -> capabilities -> readiness` for the requested entity, as-of date,
+   and relevant goals before interpreting any number.
+2. Call the advertised
+   `GET /api/finance/control/financial-health` read model first. Supply the exact
+   instrument keys and any owner-provided leverage/sensitivity assumption; never
+   silently treat all Taiwan investments or all investments as one factor.
+3. Give the AI Context Pack's `facts` and `derived` to the AI before any raw
+   transaction or holding dataset. Keep `facts`, formulas, assumptions, and AI
+   interpretation in separate sections.
+4. Use `coverage`, `source_watermark`, and `drillback` to state what is known,
+   stale, missing, or only assumed. `null` is unavailable, not zero.
+5. For v0, treat runway, reliable income, essential spend, safe-to-spend, and
+   buy/hold/sell or repay/invest thresholds as unresolved unless separate evidence
+   and an owner-approved policy exist.
+6. Validate the same Context Pack against concrete user questions before adding
+   a second metric or a full Control Center surface.
+
 ## Human Review Handoff
 
 Use `GET /api/finance/review-workbench` to describe the smallest material human

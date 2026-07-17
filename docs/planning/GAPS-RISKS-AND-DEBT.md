@@ -2,7 +2,7 @@
 
 用途：把目前到長期目標之間仍存在的缺口轉成有證據、影響、前置條件與驗證方式的優先級，並保留已完成修正的證據。本文件不是一般 TODO 清單。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-17
 
 ## 評分方式
 
@@ -14,7 +14,7 @@ Last validated against repository: 2026-07-16
 
 **Confirmed：** 目前 localhost＋既有 verifier 下沒有已證實的 P0。若 server 對外暴露，無 auth 會立刻成為 P0；目前 loopback 是禁止任意改變的 trust boundary。
 
-**Owner sequencing decision（2026-07-15）：** Current gate仍是讓foundation的AI主輸入→typed commit→UI確認／少量修正流程在實際業務中跑順。R4的formal Balance Sheet已於2026-07-16完成code／synthetic／browser切片；R6 runtime forecast／safe-to-spend才是Gate F後的主要產品缺口。Reserve／reliable income等policy延後。
+**Owner sequencing decision（2026-07-15）：** Current gate仍是讓foundation的AI主輸入→typed commit→UI確認／少量修正流程在實際業務中跑順。R4 formal Balance Sheet與FC-A2 Monthly Financial Pulse已完成code／synthetic／browser切片；下一個分析產品切片是FC-A3，R6 runtime forecast／safe-to-spend則是後續主要產品缺口。Reserve／reliable income等policy延後。
 
 ## 仍開放的優先級
 
@@ -23,7 +23,7 @@ Last validated against repository: 2026-07-16
 | R6 | P1 — next stage | Phase 0只有純reference；缺runtime 90日forecast／safe-to-spend／alerts | High | Medium | High | L | High financial interpretation | R4、obligation timeline、later owner policies | Medium | G4, G5 |
 | R7 | P1 — owner gate | AI-primary、unified review、三張表、正式DB v10與代表性typed flow已完成；scope／proposal／owner acceptance未關閉 | High | High | High | S（owner操作） | High authority | browser-bound confirmation＋owner acceptance | High | G3, G8 |
 | R15 | P1 — foundation maintenance | 2026-01至05官方卡片月檔與既有normalized rows總額不一致；現有source-conflict選擇語意不能修復轉換差異 | Medium | Medium | High | M | High data repair | reversible re-import／transaction repair contract | Medium | G2, G3, G8 |
-| R16 | P1 — before July posted statement | 缺可重複使用的current／unbilled→posted卡片生命週期匯入器；07-16需用受控operator adapter完成跨來源matching與supersession | High | High | High | M | High duplicate/statement risk | previewable card re-import contract、R15 identity rules | High | G2, G3, G8 |
+| R16 | P1 — implemented；real statement acceptance pending | current／unbilled→posted生命週期匯入器、reversal與operator recipe已完成；尚待07月正式帳單在backup副本與正式DB驗收 | High | High | High | S（操作驗收） | High duplicate/statement risk | actual posted source、backup／rehearsal | High | G2, G3, G8 |
 | R8 | Later | legacy／typed schema與money語意雙軌 | Medium | Low | High | L | High migration | stable business flow＋compatibility evidence | Low | G1, G8 |
 | R9 | Later | 大型UI／query模組責任集中 | Medium | Low | High | L | Medium regression | actual flow pain＋characterization | High | G8 |
 | R10 | Later / Needs owner decision | 已有backup health與policy worksheet；缺實際排程、retention、RPO／RTO、restore drill與graceful shutdown | High | Low | High | M | High recovery | actual operations need＋owner policy | Medium | G6, G8 |
@@ -37,7 +37,7 @@ Last validated against repository: 2026-07-16
 
 - **完成證據：** `lib/queries/reports/balance-sheet.js`、API route、`BalanceSheet.jsx`、`balance-sheet-contract.md`與`test/reporting-three-view.test.js`。
 - **已關閉風險：** Account snapshot優先、完整holding fallback、tier-2 valuation、FX／source／snapshot watermarks、missing／stale blockers與derived net worth均由server read model提供；current debt不由original principal或schedule猜測。
-- **Real-data closure（2026-07-16）：** 已在可驗證備份與副本演練後，加入國泰current-liability與台新same-date cash snapshot；正式Balance Sheet現在為`complete`、equation delta 0、blockers 0。這只關閉當前position缺口，不會補出歷史cash boundaries，也不代表owner已接受所有分類。精確私人金額只存在ignored evidence zone。
+- **Real-data closure（2026-07-16）：** 已在可驗證備份與副本演練後，加入主要卡片current-liability與低活動現金帳戶的same-date snapshot；正式Balance Sheet現在為`complete`、equation delta 0、blockers 0。這只關閉當前position缺口，不會補出歷史cash boundaries，也不代表owner已接受所有分類。精確私人金額只存在ignored evidence zone。
 
 ### R6 — 缺runtime forecast／safe-to-spend／alerts
 
@@ -50,12 +50,18 @@ Last validated against repository: 2026-07-16
 - **規模／可逆性：** L／Medium；依adapter、timeline、forecast、control signals分stage。
 - **驗證：** runtime fixture可重現daily curve、minimum cash、first breach與driver events；uncertain income排除、unknown commitment降級、duplicate與loan component invariant生效；alerts可ack／resolve且不重複。
 
+### FC-A2 — Monthly Financial Pulse（Resolved in code；formal-data acceptance pending under R7）
+
+- **完成證據：** `monthly-financial-pulse-contract.md`、`lib/queries/finance/control/monthly-pulse.js`、API route、`MonthlyPulseView.jsx`、3個focused tests與2個browser flows。
+- **已關閉風險：** 管理淨收支、現金變動、card／loan／investment／reimbursement movement不再由AI或前端臨時拼算；proposed reimbursement不會先扣抵，且所有值可drillback並帶deterministic watermark。
+- **剩餘界線：** 此切片不提供90日forecast、safe-to-spend、essentiality判斷或正式資料接受；真實Cash Flow缺boundary／matching時，Pulse會跟著維持partial／unreconciled。
+
 ## Current gate與延後項目
 
 ### R7 — AI-primary foundation workflow仍需實際收斂
 
 - **Owner decision：** AI是主要輸入方式；UI只負責確認、歧義、高風險授權與少量修正，不追求純GUI full onboarding。
-- **現況證據：** Account／investment UI、12 analysis datasets、proposal envelope、unified review workbench與三張server reports均已存在；正式DB已先備份／演練後升至v10，代表性card／liability／commitment facts及reimbursement proposal均走typed API；199 Node tests、17 Skill evals、5 browser flows與完整release verifier通過。
+- **現況證據：** Account／investment UI、12 analysis datasets、proposal envelope、unified review workbench、三張server reports與FC-A2 Monthly Pulse均已存在；正式DB已先備份／演練後升至v10，代表性card／liability／commitment facts及reimbursement proposal均走typed API；2026-07-17最近一次完整release verifier為209 Node tests、18 Skill evals、7 browser flows及build／runtime／privacy／backup restore全通過。
 - **剩餘缺口：** 五類scope尚未由browser-bound human confirmation聲明；1筆reimbursement proposal待owner確認／拒絕；20筆真正未知仍刻意owner-unresolved；GATE-F6沒有人工acceptance evidence。
 - **不處理後果：** 技術table雖齊全，實際使用仍可能卡在Skill指引、錯誤訊息、identity／source缺口或confirmation，而被誤判為foundation完成。
 - **Recommended：** 以真實workflow發現的摩擦做最小修正；優先Skill、contract、error recovery與bounded confirmation UI，不以CRUD數量衡量進度。
@@ -69,12 +75,12 @@ Last validated against repository: 2026-07-16
 - **Recommended：** 先建立可preview、可逐筆diff、可reversal的card transaction repair／re-import contract；以官方statement totals與row identity驗證，不直接SQL修補。
 - **驗證：** 每期items合計等於官方statement total、credits／installments保持正確符號與timeline、re-import idempotent、P&L不重複、payment match唯一且完整。
 
-### R16 — Current／unbilled卡片生命週期尚缺正式匯入器
+### R16 — Current／unbilled卡片生命週期（Implemented in code；real statement acceptance pending）
 
-- **問題／證據：** 07-16國泰匯出含92筆未出帳與10筆即時授權；其中72筆已存在於07-08舊快照。現有typed cash-activity API能建立新列，但dedupe包含`source_key`，沒有公開的「跨來源比對既有交易、補source link、將舊快照標為superseded、把未出帳改為posted／released」完整操作。因此本次只能以先備份、在副本演練、逐列audit log的受控operator adapter完成。
-- **影響：** 07-19正式帳單若直接視為新source逐筆建立，可能重複計算92筆未出帳或保留10筆已解除授權；這會污染P&L與卡片曝險。
-- **Recommended：** 在匯入07月正式帳單前，建立previewable／idempotent card statement replacement contract。Identity至少使用statement account、transaction date、normalized merchant、signed amount、occurrence ordinal與必要的card／mobile-card hints；ambiguous rows必須產生review item，不可自動合併。
-- **驗證：** 07-16來源可在副本重放為0新增；07月posted statement能明確產生matched／new／reversed-or-released／ambiguous清單；commit後未出帳來源superseded、posted totals精確對帳、交易不重複，reversal可恢復。
+- **原問題／證據：** 07-16主要信用卡匯出含92筆未出帳與10筆即時授權；其中72筆已存在於07-08舊快照。一般cash dedupe包含`source_key`，正式posted source若直接逐列新增會重複經濟事件或保留已解除授權。
+- **2026-07-17完成內容：** `credit-card-transaction-lifecycle-contract.md`、`lib/finance/ingestion/card-lifecycle.js`、既有ingestion dispatch、typed reversal blocker／restore、capabilities schema、synthetic fixture與Operator Skill recipe已落地。唯一強identity才自動match；new row才建立交易；release必須明確列key；ambiguous、stale impact、row-total mismatch或未處理provisional facts都阻擋commit。
+- **驗證證據：** `test/card-transaction-lifecycle.test.js`共4例覆蓋match／new／release／source supersession／idempotency／existing source／explicit ambiguity resolution／reversal及downstream statement blocker；該slice驗證時Node suite為209/209、Skill eval 18/18、lint與diff check通過；加入FA-0後最新Node suite為212/212。所有R16資料為synthetic，沒有正式DB write或schema migration。
+- **剩餘驗收：** 取得07月正式posted source後，先建立可驗證backup，在restore副本preview並比對matched／new／released／ambiguous與signed row total；只有副本commit、reversal及typed statement total都通過後才寫正式DB。這是real-data acceptance，不再是缺產品API。
 
 ### R8 — Legacy／typed schema雙軌
 
@@ -122,7 +128,7 @@ Last validated against repository: 2026-07-16
 | R1 | JPY UI money exponent錯誤 | `lib/finance/money/presentation.js`；account／obligation UI；`test/money-presentation.test.js`；browser E2E | JPY 0位、TWD／USD 2位、超額精度拒絕；focused tests與E2E通過 |
 | R2 | BS／CF readiness preview可能被誤認為正式能力 | `ReportsView.jsx`、三張server query／API、reporting tests、browser E2E | 靜態preview先被移除；2026-07-16由具coverage與drillback的正式management read models取代 |
 | R3 | Control Phase 0 contract／metric／fixture缺口 | 四份behavior contracts、metric dictionary、synthetic fixture、`project-cash-timeline.js`、`test/control-cash-timeline.test.js` | reference語意與acceptance通過；owner policy與runtime adapter仍屬R4／R6 |
-| R5 | 缺browser E2E | Playwright config／runner、Data Center／reports spec、review workbench spec、CI／release gate | 隔離DB驗證JPY account、manual valuation、server-backed reports、typed decisions、stale／partial／retry；Chromium 5/5 |
+| R5 | 缺browser E2E | Playwright config／runner、Data Center／reports spec、review workbench／Monthly Pulse spec、CI／release gate | 隔離DB驗證JPY account、manual valuation、server-backed reports、typed decisions、Monthly Pulse ready／partial／error／retry；Chromium 7/7 |
 | R12 | port設定漂移 | `scripts/run-next-local.mjs`、package scripts、`.env.example`、`test/local-next-launcher.test.js` | PORT precedence／range與loopback binding已測試 |
 
 本次另補上manual investment source＋fact atomicity、backup health check／policy worksheet，以及privacy scan對untracked working files的coverage。這些不代表formal statements、runtime forecast或實際backup schedule已完成。
