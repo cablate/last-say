@@ -2,6 +2,7 @@
 
 import { useMemo } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { CalendarDays } from "lucide-react"
 
 import { formatMonth } from "@/lib/format"
 import { useMeta } from "@/lib/hooks"
@@ -46,14 +47,14 @@ export default function MonthSelector() {
   if (loading && months.length === 0) {
     return (
       <div className="flex w-full items-center gap-2 sm:w-auto">
-        <Label className="text-xs text-muted-foreground">月份</Label>
-        <Skeleton className="h-9 w-full min-w-40 sm:w-40" />
+        <Label className="sr-only">月份</Label>
+        <Skeleton className="h-11 w-full min-w-40 sm:w-40" />
       </div>
     )
   }
 
   const requestedMonth = searchParams.get("month") || ""
-  const allowAllMonths = pathname !== "/control"
+  const allowAllMonths = pathname !== "/control" && pathname !== "/"
   const monthValues = new Set(months.map((item) => item.month))
   const selectedMonth = requestedMonth === ALL_MONTHS && allowAllMonths
     ? ALL_MONTHS
@@ -70,7 +71,7 @@ export default function MonthSelector() {
 
   return (
     <div className="flex w-full items-center gap-2 sm:w-auto">
-      <Label htmlFor="app-month-selector" className="text-xs text-muted-foreground">
+      <Label htmlFor="app-month-selector" className="sr-only">
         月份
       </Label>
       <Select
@@ -81,9 +82,12 @@ export default function MonthSelector() {
         <SelectTrigger
           id="app-month-selector"
           aria-label="選擇月份"
-          className="h-9 w-full min-w-40 sm:w-40"
+          className="w-full min-w-40 data-[size=default]:h-11 sm:w-40"
         >
-          <SelectValue placeholder="選擇月份" />
+          <CalendarDays className="text-muted-foreground" aria-hidden="true" />
+          <SelectValue placeholder="選擇月份">
+            {selectedMonth === ALL_MONTHS ? "全部期間" : formatMonth(selectedMonth)}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
@@ -93,8 +97,9 @@ export default function MonthSelector() {
               .slice()
               .reverse()
               .map((item) => {
+                const count = Number(item.visible_rows ?? item.rows ?? 0)
                 const label = `${formatMonth(item.month)}（${Number(
-                  item.rows || 0,
+                  count,
                 ).toLocaleString("zh-TW")} 筆）`
                 return (
                   <SelectItem key={item.month} value={item.month}>

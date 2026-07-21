@@ -18,21 +18,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { formatCurrencyMinor } from "@/lib/format"
 
 function formatMoney(amountMinor, currency = "TWD") {
-  if (amountMinor === null || amountMinor === undefined) return "尚無可靠數值"
-  const amount = Number(amountMinor)
-  const safeAmount = Number.isFinite(amount) ? amount : 0
-  const digits = new Intl.NumberFormat("en", {
-    style: "currency",
-    currency,
-  }).resolvedOptions().maximumFractionDigits
-  return new Intl.NumberFormat("zh-TW", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: digits,
-    signDisplay: "exceptZero",
-  }).format(safeAmount / (10 ** digits))
+  return formatCurrencyMinor(amountMinor, currency, { signed: true, missing: "尚無可靠數值" })
+}
+
+function formatBalance(amountMinor, currency = "TWD") {
+  return formatCurrencyMinor(amountMinor, currency, { missing: "尚無可靠數值" })
+}
+
+function displayFlowLabel(label) {
+  return label === "Unresolved cash movement" ? "待釐清現金流" : label
 }
 
 function Metric({ label, value, tone = "default" }) {
@@ -71,7 +68,7 @@ function FlowSection({ title, lines, total, currency, onLineClick, emptyLabel })
         return (
           <TableRow key={line.line}>
             <TableCell>
-              <p className="font-medium">{line.label}</p>
+            <p className="font-medium">{displayFlowLabel(line.label)}</p>
               <p className="text-xs text-muted-foreground">{line.transaction_count ?? line.transaction_ids?.length ?? 0} 筆</p>
             </TableCell>
             <TableCell className="text-right font-mono tabular-nums">
@@ -84,7 +81,7 @@ function FlowSection({ title, lines, total, currency, onLineClick, emptyLabel })
                 size="sm"
                 disabled={!canOpen}
                 onClick={() => onLineClick(line)}
-                aria-label={`查看「${line.label}」交易`}
+                aria-label={`查看「${displayFlowLabel(line.label)}」交易`}
               >
                 明細 <ArrowRight data-icon="inline-end" />
               </Button>
@@ -103,9 +100,9 @@ export default function CashFlowStatement({ report, onLineClick }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="期初現金" value={formatMoney(report.beginning_cash_cents, currency)} />
+        <Metric label="期初現金" value={formatBalance(report.beginning_cash_cents, currency)} />
         <Metric label="本期淨現金流" value={formatMoney(net, currency)} tone={net >= 0 ? "positive" : "negative"} />
-        <Metric label="期末現金" value={formatMoney(report.ending_cash_cents, currency)} />
+        <Metric label="期末現金" value={formatBalance(report.ending_cash_cents, currency)} />
         <Metric
           label="對帳差額"
           value={formatMoney(delta, currency)}
@@ -134,9 +131,9 @@ export default function CashFlowStatement({ report, onLineClick }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                <FlowSection title="營業活動" lines={report.operating || []} total={report.operating_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的營業現金流。" />
-                <FlowSection title="投資活動" lines={report.investing || []} total={report.investing_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的投資現金流。" />
-                <FlowSection title="籌資活動" lines={report.financing || []} total={report.financing_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的籌資現金流。" />
+                <FlowSection title="日常收支（營業活動）" lines={report.operating || []} total={report.operating_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的日常收支現金流。" />
+                <FlowSection title="投資買賣（投資活動）" lines={report.investing || []} total={report.investing_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的投資現金流。" />
+                <FlowSection title="借貸與還款（籌資活動）" lines={report.financing || []} total={report.financing_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="本期沒有已分類的借貸與還款現金流。" />
                 <FlowSection title="待釐清流量" lines={report.unresolved || []} total={report.unresolved_cash_flow_cents} currency={currency} onLineClick={onLineClick} emptyLabel="沒有待釐清的現金流。" />
               </TableBody>
             </Table>

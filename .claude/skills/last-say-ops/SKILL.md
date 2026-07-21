@@ -75,6 +75,8 @@ Read only the files needed for the current task:
 - `references/financial-data-foundation.md`: financial inventory/readiness, governed analysis context, account/balance/cash ingestion, typed payloads, reversal, scope rules, confirmation, backup boundary, and current limitations.
 - `references/fx-and-market-valuation-refresh.md`: executable daily FX/crypto quote refresh, evidence capture, TWD conversion semantics, idempotency, same-day limits, validation, and scheduling guidance.
 - `references/analysis-recipes.md`: executable recipes for fixed/variable spend, work/personal/reimbursement, descriptive income floor, installment audit, unresolved transfers, and three-statement readiness.
+- `references/analysis-prompt-template.md`: reusable analysis prompt skeleton、read-model selection與facts／derived／interpretation answer boundary。
+- `references/analysis-recipes.md`: also contains the FC-2 obligation timeline and FC-3 raw cash forecast recipes。
 - `docs/contracts/financial-health-review-contract.md`: FA-0 deterministic financial-health Context Pack, explicit exposure assumptions, stress boundaries, and AI handoff.
 
 ## Error Recovery

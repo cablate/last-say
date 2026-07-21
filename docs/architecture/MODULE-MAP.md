@@ -16,7 +16,7 @@ Last validated against repository: 2026-07-17
 | `app/(app)/corrections/page.js` + `components/CorrectionsLog.jsx` | append-only correction evidence | correction API／query |
 | `app/(app)/confirmations/page.js` + `components/finance/ConfirmationQueue.jsx` | human confirmation queue | browser session與 one-time authorization |
 | `app/(app)/trend/page.js` + `components/TrendView.jsx` | 月度趨勢 | trend API、Recharts |
-| `app/(app)/control/page.js` + `components/financial-control/MonthlyPulseView.jsx` | 月度財務脈搏：管理淨收支、現金變動、typed義務／投資／報銷與coverage | `/api/finance/control/monthly-pulse`；前端只格式化與drillback，不重算財務語意 |
+| `app/(app)/control/page.js` + `components/financial-control/**` | 月度財務脈搏、FA-0 財務健康檢視、FC-A3 支出結構／報銷與 FC-2 義務時間軸：管理淨收支、現金變動、position、liquidity、debt、投資曝險、支出科目、confirmed recovery、固定義務與未來付款事件 | `/api/finance/control/monthly-pulse`、`/api/finance/control/financial-health`、`/api/finance/control/spending-structure`、`/api/finance/control/obligations`；前端只格式化與drillback，不重算財務語意；尚非現金forecast／safe-to-spend 控制中心 |
 | `components/ui/**` | shadcn／Radix 基礎元件 | 第三方風格封裝；通常不是 domain owner |
 
 ## HTTP API
@@ -47,11 +47,14 @@ Last validated against repository: 2026-07-17
 | `lib/finance/control/project-cash-timeline.js` | 純函式90日daily cash reference、coverage degradation、reserve breach、runway與safe-to-spend gate | synthetic Phase 0 tests；尚無runtime adapter/API/UI |
 | `lib/queries/finance/control/monthly-pulse.js` | FC-A2 query-time composition owner；重用P&L／Cash Flow並提取typed movements、candidate reimbursements與deterministic watermark | `/api/finance/control/monthly-pulse`、`MonthlyPulseView.jsx`、focused／browser tests；不保存報表、不呼叫AI |
 | `lib/queries/finance/control/financial-health.js` | FA-0 Financial Health Review v0 owner；以既有Balance Sheet、liability／card與investment owners組合compact deterministic Context Pack | `/api/finance/control/financial-health`、capabilities、Operator Skill與focused tests；factor scope必須由request明確提供，缺schedule／income／essential spend時保留partial／null |
+| `lib/queries/finance/control/spending-structure.js` | FC-A3支出結構／報銷read model owner；重用management P&L、confirmed commitments與reimbursement owners | `/api/finance/control/spending-structure`、`SpendingStructureView.jsx`、analysis-context、focused tests；不保存快照、不判斷必要性或工作用途 |
+| `lib/finance/control/project-obligations.js`、`lib/queries/finance/control/obligations.js` | FC-2A／FC-2B obligation event projection；重用card／loan／commitment owners，分開exact／range／unknown與blockers | `/api/finance/control/obligations`、`UpcomingCommitments.jsx`、analysis-context、focused tests；不做forecast、不寫canonical facts |
+| `lib/finance/control/project-cash-timeline.js`、`lib/queries/finance/control/forecast.js` | FC-3A／FC-3B trusted opening cash＋FC-2已知義務的raw 90日projection；policy unavailable時不產生safe-to-spend | `/api/finance/control/forecast`、`CashTimeline.jsx`、analysis-context、focused tests；不寫forecast、不猜收入或reserve |
 | `lib/finance/ingestion/index.js` | staged payload、context dispatch、atomic commit | import commit route |
 | `lib/finance/ingestion/card-lifecycle.js` | official posted source對provisional card facts的唯一強identity match、explicit release、source supersession與stale impact guard | shared import preview／commit routes、Operator Skill |
 | `lib/finance/ingestion/reversal.js` | reverse preview、依賴檢查、soft reversal | import reverse routes |
 | `lib/finance/readiness/policy.js` | 8 goal requirements、gap priority、next action、watermark | inventory/readiness query、API、agent |
-| `lib/finance/analysis/registry.js`、`proposal-envelope.js` | 12 named datasets、filter allowlist、response limits與candidate proposal hints | analysis-context query／route、external AI |
+| `lib/finance/analysis/registry.js`、`proposal-envelope.js` | 15 named datasets、filter allowlist、response limits與candidate proposal hints | analysis-context query／route、external AI；另有 FC-A3／FC-2／FC-3 read models |
 | `lib/finance/capabilities.js` | 支援 context／endpoint／policy 描述 | capability route、skill |
 | `lib/finance/http.js` | typed API error envelope／request helpers | finance routes |
 | `lib/reporting/report-lines.js` | management report-line與deterministic exclusion semantics | income statement、cash fallback、UI、skill |

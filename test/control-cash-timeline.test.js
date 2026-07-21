@@ -40,3 +40,17 @@ test('projector fails closed on duplicate events, non-integer money and mismatch
   mismatch.events.find((event) => event.event_key === 'loan-jul').components_minor.interest = '99999';
   assert.throws(() => projectCashTimeline(mismatch), /components must equal cash effect/);
 });
+
+test('FC-3A keeps raw projection available while policy metrics stay unavailable', () => {
+  const result = projectCashTimeline({
+    as_of_date: '2026-07-17', horizon_days: 3, currency: 'TWD', opening_liquid_cash_minor: '100000',
+    policy: { status: 'unavailable', reason: 'owner_policy_not_configured' }, coverage: { status: 'complete', gaps: [] },
+    events: [{ event_key: 'rent', date: '2026-07-18', kind: 'commitment', cash_effect_minor: '-70000', reliability: 'committed', source_fact_keys: ['rent'] }],
+  });
+  assert.equal(result.summary.minimum_projected_cash_minor, '30000');
+  assert.equal(result.summary.safe_to_spend_minor, null);
+  assert.equal(result.summary.first_reserve_breach_date, null);
+  assert.equal(result.policy.status, 'unavailable');
+  assert.equal(result.daily[1].reserve_floor_minor, null);
+  assert.equal(result.daily[1].closing_projected_cash_minor, '30000');
+});

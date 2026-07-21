@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, CircleDollarSign, CreditCard, Database, FileCheck2, FileSearch, LineChart, ListChecks, Pencil, Plus, RefreshCw, ShieldAlert, WalletCards } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ENUMS, SUPPORTED_CURRENCIES } from '@/lib/finance/contracts/enums';
 import { currencyInputMode, currencyInputPlaceholder, formatMoneyMinor, majorToMinorExact } from '@/lib/finance/money/presentation';
+import { displayAccountLabel, displayAuthority, displayBalanceKind, displayCurrency, displayInstitution, displayReviewState, displaySourceKind, displayStatus } from '@/lib/finance/presentation-labels';
 import ObligationRegister from './ObligationRegister';
 import InvestmentRegister from './InvestmentRegister';
 import ReconciliationRegister from './ReconciliationRegister';
@@ -31,8 +33,10 @@ const ACCOUNT_KIND_LABELS = Object.freeze({
   equity: '權益', other: '其他',
 });
 
+const DATA_TABS = new Set(['readiness', 'accounts', 'obligations', 'investments', 'review']);
+
 function StatusBadge({ status }) {
-  const value = STATUS[status] || { label: status || '未知', variant: 'secondary' };
+  const value = STATUS[status] || { label: displayStatus(status), variant: 'secondary' };
   return <Badge variant={value.variant}>{value.label}</Badge>;
 }
 
@@ -56,7 +60,7 @@ function SourceEvidenceDialog({ sourceKey, onOpenChange }) {
     return () => { active = false; };
   }, [sourceKey]);
   const source = state.source;
-  return <Dialog open={Boolean(sourceKey)} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>來源證據</DialogTitle><DialogDescription>確認這筆數值的來源類型、權威性、涵蓋期間與審查狀態。</DialogDescription></DialogHeader>{state.loading ? <LoadingState /> : null}{state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertDescription>{state.error}</AlertDescription></Alert> : null}{source ? <dl className="grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-muted-foreground">來源類型</dt><dd className="mt-1 font-medium">{source.source_kind}</dd></div><div><dt className="text-muted-foreground">權威與審查</dt><dd className="mt-1 flex gap-2"><Badge variant="outline">{source.authority}</Badge><Badge variant="outline">{source.review_state}</Badge></dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">說明</dt><dd className="mt-1">{source.description || '未提供說明'}</dd></div><div><dt className="text-muted-foreground">涵蓋期間</dt><dd className="mt-1 tabular-nums">{source.period_start || '未提供'} 至 {source.period_end || source.as_of_at?.slice(0, 10) || '未提供'}</dd></div><div><dt className="text-muted-foreground">狀態</dt><dd className="mt-1">{source.status} · {source.artifact_status}</dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">證據 key</dt><dd className="mt-1 break-all font-mono text-xs">{source.source_key}</dd></div></dl> : null}</DialogContent></Dialog>;
+  return <Dialog open={Boolean(sourceKey)} onOpenChange={onOpenChange}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>來源證據</DialogTitle><DialogDescription>確認這筆數值的來源類型、權威性、涵蓋期間與審查狀態。</DialogDescription></DialogHeader>{state.loading ? <LoadingState /> : null}{state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertDescription>{state.error}</AlertDescription></Alert> : null}{source ? <dl className="grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-muted-foreground">來源類型</dt><dd className="mt-1 font-medium">{displaySourceKind(source.source_kind)}</dd></div><div><dt className="text-muted-foreground">權威與審查</dt><dd className="mt-1 flex gap-2"><Badge variant="outline">{displayAuthority(source.authority)}</Badge><Badge variant="outline">{displayReviewState(source.review_state)}</Badge></dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">說明</dt><dd className="mt-1">{source.description || '未提供說明'}</dd></div><div><dt className="text-muted-foreground">涵蓋期間</dt><dd className="mt-1 tabular-nums">{source.period_start || '未提供'} 至 {source.period_end || source.as_of_at?.slice(0, 10) || '未提供'}</dd></div><div><dt className="text-muted-foreground">狀態</dt><dd className="mt-1">{displayStatus(source.status)} · {displayStatus(source.artifact_status)}</dd></div><div className="sm:col-span-2"><dt className="text-muted-foreground">證據 key</dt><dd className="mt-1 break-all font-mono text-xs">{source.source_key}</dd></div></dl> : null}</DialogContent></Dialog>;
 }
 
 function AccountDialog({ open, account, onOpenChange, onSaved }) {
@@ -71,7 +75,7 @@ function AccountDialog({ open, account, onOpenChange, onSaved }) {
       onOpenChange(false); await onSaved();
     } catch (reason) { setError(reason.message); } finally { setSaving(false); }
   }
-  return <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{account ? '編輯帳戶' : '新增帳戶'}</DialogTitle><DialogDescription>帳戶類型與幣別會影響盤點、金額精度與後續分析；建立後在此畫面不直接變更身分。</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={submit} aria-describedby={error ? 'account-form-error' : undefined}><div className="space-y-2"><Label htmlFor="account-name">帳戶名稱</Label><Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="account-kind">帳戶類型</Label><Select value={kind} onValueChange={setKind} disabled={Boolean(account)}><SelectTrigger id="account-kind" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{ENUMS.account_kind.map((value) => <SelectItem key={value} value={value}>{ACCOUNT_KIND_LABELS[value] || value}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="account-currency">幣別</Label><Select value={currency} onValueChange={setCurrency} disabled={Boolean(account)}><SelectTrigger id="account-currency" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{SUPPORTED_CURRENCIES.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div></div>{account ? <p className="text-xs text-muted-foreground">若帳戶類型或幣別建錯，請建立新帳戶並保留舊資料的稽核脈絡。</p> : null}{error ? <p id="account-form-error" className="text-sm text-destructive" role="alert">{error}</p> : null}<DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>取消</Button><Button type="submit" disabled={saving || !name.trim()}>{saving ? '儲存中' : '儲存'}</Button></DialogFooter></form></DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>{account ? '編輯帳戶' : '新增帳戶'}</DialogTitle><DialogDescription>帳戶類型與幣別會影響盤點、金額精度與後續分析；建立後在此畫面不直接變更身分。</DialogDescription></DialogHeader><form className="space-y-4" onSubmit={submit} aria-describedby={error ? 'account-form-error' : undefined}><div className="space-y-2"><Label htmlFor="account-name">帳戶名稱</Label><Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} required maxLength={160} /></div><div className="grid gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="account-kind">帳戶類型</Label><Select value={kind} onValueChange={setKind} disabled={Boolean(account)}><SelectTrigger id="account-kind" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{ENUMS.account_kind.map((value) => <SelectItem key={value} value={value}>{ACCOUNT_KIND_LABELS[value] || '其他'}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label htmlFor="account-currency">幣別</Label><Select value={currency} onValueChange={setCurrency} disabled={Boolean(account)}><SelectTrigger id="account-currency" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{SUPPORTED_CURRENCIES.map((value) => <SelectItem key={value} value={value}>{displayCurrency(value)}</SelectItem>)}</SelectContent></Select></div></div>{account ? <p className="text-xs text-muted-foreground">若帳戶類型或幣別建錯，請建立新帳戶並保留舊資料的稽核脈絡。</p> : null}{error ? <p id="account-form-error" className="text-sm text-destructive" role="alert">{error}</p> : null}<DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>取消</Button><Button type="submit" disabled={saving || !name.trim()}>{saving ? '儲存中' : '儲存'}</Button></DialogFooter></form></DialogContent></Dialog>;
 }
 
 function BalanceDialog({ open, account, onOpenChange, onSaved }) {
@@ -86,10 +90,12 @@ function BalanceDialog({ open, account, onOpenChange, onSaved }) {
       onOpenChange(false); await onSaved();
     } catch (reason) { setError(reason.message); } finally { setSaving(false); }
   }
-  return <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>更新餘額</DialogTitle><DialogDescription>{account?.display_name}。新 snapshot 會保留舊紀錄，不會覆寫來源事實。</DialogDescription></DialogHeader>{account ? <form className="space-y-4" onSubmit={submit} aria-describedby={error ? 'balance-form-error' : undefined}><div className="space-y-2"><Label htmlFor="balance-amount">餘額（{account.currency}）</Label><Input id="balance-amount" inputMode={currencyInputMode(account.currency)} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={currencyInputPlaceholder(account.currency)} required /></div><div className="space-y-2"><Label htmlFor="balance-date">餘額日期</Label><Input id="balance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="balance-kind">餘額類型</Label><Select value={kind} onValueChange={setKind}><SelectTrigger id="balance-kind" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ledger">帳面餘額</SelectItem><SelectItem value="available">可用餘額</SelectItem><SelectItem value="statement">帳單餘額</SelectItem><SelectItem value="cash">現金</SelectItem></SelectContent></Select></div>{error ? <p id="balance-form-error" className="text-sm text-destructive" role="alert">{error}</p> : null}<DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>取消</Button><Button type="submit" disabled={saving || !amount || !date}>{saving ? '儲存中' : '新增 snapshot'}</Button></DialogFooter></form> : null}</DialogContent></Dialog>;
+  return <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>更新餘額</DialogTitle><DialogDescription>{account ? displayAccountLabel(account) : '帳戶'}。新餘額快照會保留舊紀錄，不會覆寫來源事實。</DialogDescription></DialogHeader>{account ? <form className="space-y-4" onSubmit={submit} aria-describedby={error ? 'balance-form-error' : undefined}><div className="space-y-2"><Label htmlFor="balance-amount">餘額（{displayCurrency(account.currency)}）</Label><Input id="balance-amount" inputMode={currencyInputMode(account.currency)} value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={currencyInputPlaceholder(account.currency)} required /></div><div className="space-y-2"><Label htmlFor="balance-date">餘額日期</Label><Input id="balance-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} required /></div><div className="space-y-2"><Label htmlFor="balance-kind">餘額類型</Label><Select value={kind} onValueChange={setKind}><SelectTrigger id="balance-kind" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="ledger">帳面餘額</SelectItem><SelectItem value="available">可用餘額</SelectItem><SelectItem value="statement">帳單餘額</SelectItem><SelectItem value="cash">現金</SelectItem></SelectContent></Select></div>{error ? <p id="balance-form-error" className="text-sm text-destructive" role="alert">{error}</p> : null}<DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>取消</Button><Button type="submit" disabled={saving || !amount || !date}>{saving ? '儲存中' : '新增餘額快照'}</Button></DialogFooter></form> : null}</DialogContent></Dialog>;
 }
 
 export default function AccountRegister() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [state, setState] = useState({ loading: true, error: null, inventory: null });
   const [accountDialog, setAccountDialog] = useState({ open: false, account: null });
   const [balanceAccount, setBalanceAccount] = useState(null);
@@ -105,6 +111,14 @@ export default function AccountRegister() {
   useEffect(() => { load(); }, [load]);
 
   const inventory = state.inventory; const accounts = inventory?.accounts || []; const cash = inventory?.readiness?.cash_position;
+  const requestedTab = searchParams.get('tab') || 'readiness';
+  const activeTab = DATA_TABS.has(requestedTab) ? requestedTab : 'readiness';
+  function setActiveTab(tab) {
+    const next = new URLSearchParams(searchParams.toString());
+    if (tab === 'readiness') next.delete('tab'); else next.set('tab', tab);
+    const query = next.toString();
+    router.replace(query ? `/data?${query}` : '/data', { scroll: false });
+  }
   return (
     <section className="mx-auto w-full max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:py-8" aria-labelledby="data-center-title">
       <header className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-end sm:justify-between">
@@ -119,7 +133,7 @@ export default function AccountRegister() {
       {state.error ? <Alert variant="destructive"><AlertCircle aria-hidden="true" /><AlertTitle>資料載入失敗</AlertTitle><AlertDescription>{state.error}</AlertDescription></Alert> : null}
       {state.loading && !inventory ? <LoadingState /> : null}
 
-      {inventory ? <Tabs defaultValue="readiness" className="gap-6"><TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit sm:grid-cols-5"><TabsTrigger value="readiness"><FileCheck2 aria-hidden="true" />分析就緒度</TabsTrigger><TabsTrigger value="accounts"><Database aria-hidden="true" />帳戶與餘額</TabsTrigger><TabsTrigger value="obligations"><CreditCard aria-hidden="true" />卡片與負債</TabsTrigger><TabsTrigger value="investments"><LineChart aria-hidden="true" />投資估值</TabsTrigger><TabsTrigger value="review"><ListChecks aria-hidden="true" />估值與待辦</TabsTrigger></TabsList><TabsContent value="readiness"><ReadinessPanel inventory={inventory} /></TabsContent><TabsContent value="accounts" className="space-y-6">
+      {inventory ? <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-6"><TabsList className="grid h-auto w-full grid-cols-2 sm:w-fit sm:grid-cols-5"><TabsTrigger value="readiness"><FileCheck2 aria-hidden="true" />分析就緒度</TabsTrigger><TabsTrigger value="accounts"><Database aria-hidden="true" />帳戶與餘額</TabsTrigger><TabsTrigger value="obligations"><CreditCard aria-hidden="true" />卡片與負債</TabsTrigger><TabsTrigger value="investments"><LineChart aria-hidden="true" />投資估值</TabsTrigger><TabsTrigger value="review"><ListChecks aria-hidden="true" />估值與待辦</TabsTrigger></TabsList><TabsContent value="readiness"><ReadinessPanel inventory={inventory} /></TabsContent><TabsContent value="accounts" className="space-y-6">
         <section className="grid gap-4 border-b pb-6 md:grid-cols-[minmax(0,1.6fr)_minmax(15rem,0.8fr)]">
           <div className="space-y-2">
             <div className="flex items-center gap-2"><CircleDollarSign className="size-5 text-primary" aria-hidden="true" /><h2 className="font-semibold">現金部位準備度</h2><StatusBadge status={cash?.status} /></div>
@@ -133,14 +147,14 @@ export default function AccountRegister() {
 
         <section className="space-y-3" aria-labelledby="accounts-title">
           <div className="flex items-center gap-2"><Database className="size-5 text-primary" aria-hidden="true" /><h2 id="accounts-title" className="font-semibold">帳戶登錄</h2><span className="text-sm tabular-nums text-muted-foreground">{accounts.length}</span></div>
-          {accounts.length === 0 ? <div className="rounded-md border border-dashed px-6 py-12 text-center"><p className="font-medium">尚未建立帳戶</p><p className="mt-1 text-sm text-muted-foreground">由 AI 先用 structured ingestion preview 提案，再由你確認匯入內容。</p></div> :
+          {accounts.length === 0 ? <div className="rounded-md border border-dashed px-6 py-12 text-center"><p className="font-medium">尚未建立帳戶</p><p className="mt-1 text-sm text-muted-foreground">由 AI 先建立匯入預覽，再由你確認匯入內容。</p></div> :
             <div className="divide-y rounded-md border">
               {accounts.map((account) => {
                 const balance = account.balance; const selected = balance?.selected;
                 return <article key={account.account_key} className="@container grid gap-4 px-4 py-4 sm:px-5 @md:grid-cols-[minmax(0,1fr)_minmax(13rem,0.7fr)_auto] @md:items-center">
-                  <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-medium">{account.display_name}</h3><Badge variant="outline">{account.account_kind}</Badge>{!account.active ? <Badge variant="secondary">已停用</Badge> : null}</div><p className="mt-1 truncate text-xs text-muted-foreground">{account.institution_name || '未指定機構'} · {account.currency} · {account.masked_number || '無遮罩識別'}</p></div>
-                  <div><p className="font-mono text-lg font-semibold tabular-nums">{formatMoneyMinor(selected?.amount_minor, selected?.currency || account.currency)}</p>{selected ? <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{selected.as_of_date} · {selected.balance_kind}</span>{selected.source_key ? <Button type="button" variant="link" size="sm" className="h-auto px-0 text-xs" onClick={() => setSourceKey(selected.source_key)}><FileSearch aria-hidden="true" />查看來源</Button> : <span>無來源</span>}</div> : <p className="text-xs text-muted-foreground">尚無可用餘額 snapshot</p>}</div>
-                  <div className="flex flex-wrap items-center gap-2 justify-self-start @md:justify-self-end"><StatusBadge status={balance?.status || 'missing'} /><Button variant="ghost" size="icon-sm" title="編輯帳戶" aria-label={`編輯 ${account.display_name}`} onClick={() => setAccountDialog({ open: true, account })}><Pencil aria-hidden="true" /></Button><Button variant="outline" size="sm" onClick={() => setBalanceAccount(account)}><WalletCards aria-hidden="true" />更新餘額</Button></div>
+                  <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><h3 className="truncate font-medium">{displayAccountLabel(account)}</h3><Badge variant="outline">{ACCOUNT_KIND_LABELS[account.account_kind] || '其他'}</Badge>{!account.active ? <Badge variant="secondary">已停用</Badge> : null}</div><p className="mt-1 truncate text-xs text-muted-foreground">{displayInstitution(account.institution_name)} · {displayCurrency(account.currency)} · {account.masked_number || '無遮罩識別'}</p></div>
+                  <div><p className="font-mono text-lg font-semibold tabular-nums">{formatMoneyMinor(selected?.amount_minor, selected?.currency || account.currency)}</p>{selected ? <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>{selected.as_of_date} · {displayBalanceKind(selected.balance_kind)}</span>{selected.source_key ? <Button type="button" variant="link" size="sm" className="h-auto px-0 text-xs" onClick={() => setSourceKey(selected.source_key)}><FileSearch aria-hidden="true" />查看來源</Button> : <span>無來源</span>}</div> : <p className="text-xs text-muted-foreground">尚無可用餘額快照</p>}</div>
+                  <div className="flex flex-wrap items-center gap-2 justify-self-start @md:justify-self-end"><StatusBadge status={balance?.status || 'missing'} /><Button variant="ghost" size="icon-sm" title="編輯帳戶" aria-label={`編輯 ${displayAccountLabel(account)}`} onClick={() => setAccountDialog({ open: true, account })}><Pencil aria-hidden="true" /></Button><Button variant="outline" size="sm" onClick={() => setBalanceAccount(account)}><WalletCards aria-hidden="true" />更新餘額</Button></div>
                 </article>;
               })}
             </div>}

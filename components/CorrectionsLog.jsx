@@ -120,13 +120,13 @@ function FeedbackLoopCard({ feedback, loading }) {
             <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
               {corrections}
             </p>
-            <p className="text-xs text-muted-foreground">筆 correction_log</p>
+            <p className="text-xs text-muted-foreground">筆修正紀錄</p>
           </div>
           <ArrowRight className="hidden h-4 w-4 text-muted-foreground md:block" aria-hidden="true" />
           <div className="rounded-lg border bg-muted/30 p-3">
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-              human_correction
+              人工分類規則
             </p>
             <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
               {rules}
@@ -142,7 +142,7 @@ function FeedbackLoopCard({ feedback, loading }) {
             <p className="mt-1 font-mono text-2xl font-semibold tabular-nums">
               {autoApplied}
             </p>
-            <p className="text-xs text-muted-foreground">筆 applied_count</p>
+            <p className="text-xs text-muted-foreground">次自動套用</p>
           </div>
         </div>
       </CardContent>

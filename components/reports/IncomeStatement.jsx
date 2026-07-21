@@ -4,6 +4,7 @@ import { useState } from "react"
 import { ArrowRight, ChevronDown, ChevronRight, FileText, ReceiptText } from "lucide-react"
 
 import { formatTWD } from "@/lib/format"
+import { displayCurrency } from "@/lib/finance/presentation-labels"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,21 +35,26 @@ function signedTWD(amount) {
 function mappingSourceLabel(source) {
   const labels = {
     built_in: "內建判斷",
+    typed_owner: "已確認配對",
     report_rule: "報表規則",
+    category: "交易分類",
+    rule: "交易分類規則",
+    pending: "待確認分類",
     human: "人工指定",
+    human_correction: "人工修正",
     explicit: "明細指定",
-    ai: "AI 建議",
+    ai: "AI 分類",
   }
-  return labels[source] || source || "未標示"
+  return labels[source] || "其他來源"
 }
 
 function basisLabel(basis) {
   const labels = {
-    card_accrual_management: "管理用信用卡權責制",
+    card_accrual_management: "信用卡消費按刷卡月計入",
     cash: "現金制",
     accrual: "權責制",
   }
-  return labels[basis] || basis || "未指定"
+  return labels[basis] || "管理報表"
 }
 
 function entityLabel(entity) {
@@ -57,14 +63,18 @@ function entityLabel(entity) {
     household: "家庭",
     business: "事業",
   }
-  return labels[entity] || entity || "未指定"
+  return labels[entity] || "其他範圍"
 }
 
 function currencyLabel(currency) {
-  const labels = {
-    TWD: "新台幣（TWD）",
-  }
-  return labels[currency] || currency || "未指定"
+  return currency ? displayCurrency(currency) : "未指定"
+}
+
+function displayReviewTransactionName(name) {
+  const value = String(name || "未命名交易").trim()
+  const parts = value.split(/\s*\|\s*/)
+  if (parts.length > 1 && /[A-Za-z0-9]{6,}/.test(parts.at(-1))) return parts.slice(0, -1).join("｜")
+  return value
 }
 
 function LineButton({ line, onLineClick }) {
@@ -274,7 +284,7 @@ function MobileStatementSection({
 
 const REVIEW_PREVIEW_COUNT = 5
 
-function ReviewItemsTable({ items }) {
+function ReviewItemsTable({ items, onItemClick }) {
   const [expanded, setExpanded] = useState(false)
   if (!items?.length) return null
 
@@ -300,6 +310,7 @@ function ReviewItemsTable({ items }) {
                 <TableHead scope="col">交易</TableHead>
                 <TableHead scope="col">分類</TableHead>
                 <TableHead scope="col" className="text-right">金額</TableHead>
+                <TableHead scope="col" className="text-right">交易</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -308,12 +319,34 @@ function ReviewItemsTable({ items }) {
                   <TableCell className="whitespace-nowrap font-mono text-xs">
                     {item.transaction_date}
                   </TableCell>
-                  <TableCell className="min-w-48 font-medium">{item.name}</TableCell>
+                  <TableCell className="min-w-64">
+                    <p className="font-medium" title={item.name}>{displayReviewTransactionName(item.name)}</p>
+                    {item.reason ? (
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {item.reason}
+                      </p>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="text-muted-foreground">
                     {item.category_primary || "未分類"}
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums">
                     {formatTWD(item.outflow_cents || item.inflow_cents || item.amount_cents)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onItemClick?.({
+                        label: item.name,
+                        transaction_ids: [item.transaction_id || item.id],
+                      })}
+                      aria-label={`開啟「${item.name}」交易明細`}
+                    >
+                      查看
+                      <ArrowRight data-icon="inline-end" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -372,7 +405,7 @@ export default function IncomeStatement({ report, onLineClick }) {
           <div className="hidden overflow-x-auto md:block">
             <Table>
               <TableCaption>
-                損益表以報表科目彙總收入、支出與不列入損益項目；點「查看」可回到交易明細。
+                只有已確認配對或明確報表指定才能排除於損益；沒有足夠證據的交易會列在下方待處理。
               </TableCaption>
               <TableHeader>
                 <TableRow>
@@ -402,10 +435,10 @@ export default function IncomeStatement({ report, onLineClick }) {
                 />
                 <NetRow amount={netIncome} />
                 <StatementRows
-                  title="不列入損益"
+                  title="已確認不列入損益"
                   lines={report.excluded || []}
-                  emptyLabel="這個範圍沒有需排除的轉帳、繳款、本金或資產移轉。"
-                  subtotalLabel="不列入損益小計"
+                  emptyLabel="這個範圍沒有具備已確認配對或人工指定的排除項目。"
+                  subtotalLabel="已確認排除小計"
                   total={report.excluded_total_cents}
                   onLineClick={onLineClick}
                   defaultOpen={false}
@@ -440,10 +473,10 @@ export default function IncomeStatement({ report, onLineClick }) {
               </span>
             </div>
             <MobileStatementSection
-              title="不列入損益"
+              title="已確認不列入損益"
               lines={report.excluded || []}
-              emptyLabel="這個範圍沒有需排除的轉帳、繳款、本金或資產移轉。"
-              subtotalLabel="不列入損益小計"
+              emptyLabel="這個範圍沒有具備已確認配對或人工指定的排除項目。"
+              subtotalLabel="已確認排除小計"
               total={report.excluded_total_cents}
               onLineClick={onLineClick}
               defaultOpen={false}
@@ -452,7 +485,7 @@ export default function IncomeStatement({ report, onLineClick }) {
         </CardContent>
       </Card>
 
-      <ReviewItemsTable items={report.review_items} />
+      <ReviewItemsTable items={report.review_items} onItemClick={onLineClick} />
     </div>
   )
 }

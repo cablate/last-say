@@ -2,10 +2,10 @@
 schema_version: behavior-contract/v1
 id: finance.control.commitment-liability-projection
 title: Commitment And Liability Projection Contract
-status: draft
+status: active
 owner_surface: control-read-model
 owner_approval_required: true
-last_validated_against_repository: 2026-07-15
+last_validated_against_repository: 2026-07-17
 change_context:
   type: feature
   reason: 將已存在的 card、loan 與 general commitment facts 映射成不重複的未來現金義務。
@@ -67,6 +67,7 @@ test_mapping:
 ## Evidence
 
 - `lib/queries/finance/obligations.js`與`docs/contracts/liability-and-commitment-storage-contract.md`。
+- `lib/finance/control/project-obligations.js`、`lib/queries/finance/control/obligations.js`與`/api/finance/control/obligations`提供FC-2A／FC-2B第一版query-time projection；沒有新增canonical table或forecast persistence。
 - Acceptance A1、A2、A5 in `docs/plans/master-financial-control-plan.md`。
 
 ## Open Questions

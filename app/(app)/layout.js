@@ -6,7 +6,9 @@
 // 補月：任何 route 下 URL 無 month 時，用 useMeta 最新月補上（replace 不進 history，維持當前 route）。
 
 import { Suspense, useEffect } from "react"
+import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { ChevronRight } from "lucide-react"
 
 import AppSidebar from "@/components/AppSidebar"
 import SearchInput from "@/components/SearchInput"
@@ -14,13 +16,14 @@ import MonthSelector, { shouldShowMonthSelector } from "@/components/MonthSelect
 import AIBanner from "@/components/AIBanner"
 import ErrorBoundary from "@/components/ErrorBoundary"
 import { useMeta } from "@/lib/hooks"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const SECTION_TITLES = {
-  "/": "總覽",
-  "/control": "財務控制",
+  "/": "財務儀表板",
+  "/control": "財務儀表板",
   "/transactions": "交易明細",
-  "/reports": "報表",
+  "/reports": "財務報表",
   "/trend": "歷月走勢",
   "/corrections": "修正紀錄",
   "/rules": "分類規則",
@@ -45,10 +48,10 @@ function ShellContent({ children }) {
   const month = searchParams.get("month") || ""
   const monthRoute = shouldShowMonthSelector(pathname)
 
-  // 期間預設：總覽看全部期間；交易明細預設最新月份；規則、修正紀錄、走勢不被月份鎖住。
+  // 儀表板與其他月份頁面預設最新月份；規則、修正紀錄、走勢不被月份鎖住。
   useEffect(() => {
     if (!monthRoute) return
-    if (pathname === "/control" && month === "all") {
+    if ((pathname === "/" || pathname === "/control") && month === "all") {
       const newest = latestMonth(meta)
       if (!newest) return
       const params = new URLSearchParams(searchParams.toString())
@@ -58,12 +61,6 @@ function ShellContent({ children }) {
     }
     if (month) return
     if (!meta) return
-    if (pathname === "/") {
-      const params = new URLSearchParams(searchParams.toString())
-      params.set("month", "all")
-      router.replace(`?${params.toString()}`, { scroll: false })
-      return
-    }
     const lm = latestMonth(meta)
     if (!lm) return
     const params = new URLSearchParams(searchParams.toString())
@@ -74,25 +71,34 @@ function ShellContent({ children }) {
   const lm = latestMonth(meta)
   const isReady = !monthRoute || month !== "" || (meta && !lm)
   const sectionTitle = SECTION_TITLES[pathname] || "Last Say"
+  const isDashboard = pathname === "/" || pathname === "/control"
 
   return (
     <AppSidebar>
-      <header className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground">Last Say</p>
-          <h1 className="truncate text-lg font-semibold tracking-tight">
-            {sectionTitle}
+      <header className="shrink-0 px-4 pt-5 sm:px-6 lg:px-8 lg:pt-7">
+        <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-4 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+              {sectionTitle}
           </h1>
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
-          <MonthSelector />
-          <SearchInput />
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            <MonthSelector />
+            {isDashboard ? (
+              <Button asChild variant="outline" className="h-11 justify-between sm:justify-center">
+                <Link href="/data">
+                  <span className="size-2 rounded-full bg-primary" aria-hidden="true" />
+                  資料狀態
+                  <ChevronRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : null}
+            {pathname === "/transactions" ? <SearchInput /> : null}
+          </div>
         </div>
       </header>
-      <AIBanner />
-      <main className="p-4">
+      {pathname === "/transactions" ? <AIBanner /> : null}
+      <div className="min-w-0 px-4 pb-8 sm:px-6 lg:px-8">
         {!isReady ? (
-          <div className="space-y-3">
+          <div className="mx-auto max-w-[1180px] space-y-3">
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-[28rem] w-full" />
           </div>
@@ -100,7 +106,7 @@ function ShellContent({ children }) {
           <ErrorBoundary>
             <Suspense
               fallback={
-                <div className="space-y-3">
+                <div className="mx-auto max-w-[1180px] space-y-3">
                   <Skeleton className="h-8 w-48" />
                   <Skeleton className="h-[28rem] w-full" />
                 </div>
@@ -110,7 +116,7 @@ function ShellContent({ children }) {
             </Suspense>
           </ErrorBoundary>
         )}
-      </main>
+      </div>
     </AppSidebar>
   )
 }

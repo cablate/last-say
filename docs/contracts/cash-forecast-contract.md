@@ -2,10 +2,10 @@
 schema_version: behavior-contract/v1
 id: finance.control.cash-forecast
 title: Deterministic Cash Forecast Contract
-status: draft
+status: active
 owner_surface: control-domain
 owner_approval_required: true
-last_validated_against_repository: 2026-07-15
+last_validated_against_repository: 2026-07-17
 change_context:
   type: feature
   reason: 定義可重現、可追溯且對缺資料誠實的 90 天現金時間軸、最低現金與 reserve headroom。
@@ -19,11 +19,12 @@ change_context:
 
 ## Behavior Boundary
 
-Forecast 以 Trusted Financial Position opening liquid cash、projected occurrences 與 explicit policy 生成 daily timeline。Phase 0 reference implementation只處理 synthetic fixture/pure function；正式 DB adapter、API 與 UI 屬後續 Phase。
+Forecast 以 Trusted Financial Position opening liquid cash、projected occurrences 與 explicit policy 生成 daily timeline。FC-3 v0 已提供 query-time DB adapter、API 與 Control consumer；policy 未設定時只回傳 raw known-obligations path，`safe_to_spend` 保持 unavailable。
 
 ## Consumers And Entrypoints
 
 - `lib/finance/control/project-cash-timeline.js` pure function。
+- `lib/queries/finance/control/forecast.js`、`/api/finance/control/forecast`與`components/financial-control/CashTimeline.jsx`。
 - Future forecast analysis context、Control Center、alerts and scenarios。
 - `financial-position-contract.md` 與 `commitment-and-liability-contract.md`。
 
@@ -74,7 +75,7 @@ test_mapping:
 
 ## Intentional Changes
 
-- Phase 0 introduces a pure reference projector and frozen synthetic expected output; no runtime financial claim is exposed yet。
+- FC-3 v0 introduces a read-only runtime raw forecast; it does not persist daily projections or expose policy/safety conclusions。
 
 ## Open Questions
 

@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { classifyTransactionForReport } = require('../lib/reporting/report-lines');
 
 function runFixture(rows, params = 'month=2026-06', extraSql = '', options = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'finance-reporting-'));
@@ -82,7 +83,7 @@ function findLine(lines, line) {
   return lines.find((item) => item.line === line);
 }
 
-test('management P&L counts card charges once and excludes settlements/transfers/principal', () => {
+test('management P&L recognizes ordinary income and expenses without inventing exclusions', () => {
   const report = runFixture([
     {
       name: 'Card restaurant charge',
@@ -94,33 +95,6 @@ test('management P&L counts card charges once and excludes settlements/transfers
       category_primary: 'Food',
     },
     {
-      name: 'Credit card payment from checking',
-      source_type: 'bank',
-      account_name: 'Checking',
-      account_type: 'bank',
-      amount: -100000,
-      outflow: 100000,
-      category_primary: 'Transfer',
-    },
-    {
-      name: 'Internal transfer to savings',
-      source_type: 'bank',
-      account_name: 'Checking',
-      account_type: 'bank',
-      amount: -500000,
-      outflow: 500000,
-      category_primary: 'Transfer',
-    },
-    {
-      name: 'Internal transfer from checking',
-      source_type: 'bank',
-      account_name: 'Savings',
-      account_type: 'bank',
-      amount: 500000,
-      inflow: 500000,
-      category_primary: 'Transfer',
-    },
-    {
       name: 'Salary deposit',
       source_type: 'bank',
       account_name: 'Checking',
@@ -128,15 +102,6 @@ test('management P&L counts card charges once and excludes settlements/transfers
       amount: 8000000,
       inflow: 8000000,
       category_primary: 'Salary',
-    },
-    {
-      name: 'Loan principal repayment',
-      source_type: 'bank',
-      account_name: 'Checking',
-      account_type: 'bank',
-      amount: -900000,
-      outflow: 900000,
-      category_primary: 'Loan',
     },
     {
       name: 'Loan interest',
@@ -155,9 +120,7 @@ test('management P&L counts card charges once and excludes settlements/transfers
   assert.equal(report.net_income_cents, 7800000);
   assert.equal(findLine(report.expenses, 'expense:food').amount_cents, 100000);
   assert.equal(findLine(report.expenses, 'expense:interest').amount_cents, 100000);
-  assert.equal(findLine(report.excluded, 'excluded:credit_card_payment').amount_cents, 100000);
-  assert.equal(findLine(report.excluded, 'excluded:internal_transfer').amount_cents, 1000000);
-  assert.equal(findLine(report.excluded, 'excluded:loan_principal').amount_cents, 900000);
+  assert.deepEqual(report.excluded, []);
 
   // management-pl-contract L190: drilldown from statement line to underlying transactions.
   // The card restaurant charge is the first inserted row (id = 1) and maps to expense:food.
@@ -229,30 +192,79 @@ test('owner-unresolved cash is disclosed separately and never invented as P&L', 
   assert.equal(report.coverage.blockers[0].kind, 'owner_unresolved_transaction');
 });
 
-test('ordinary report rules cannot turn deterministic card-payment exclusions into expenses', () => {
-  const report = runFixture([
-    {
-      name: '本行自動扣繳',
-      flow_type: '信用卡繳款/移轉',
-      amount: -3913200,
-      inflow: 3913200,
-      outflow: 0,
-      category_primary: '轉帳/內部移轉',
-      reviewed: 0,
-      ai_confidence: 0.95,
-    },
-  ], 'month=2026-06', `
-    INSERT INTO report_mapping_rules (
-      match_key, report_line, confidence, origin, note
-    ) VALUES (
-      '本行自動扣繳', 'expense:education', 0.9, 'ai_analysis', 'rule test'
-    );
-  `);
+test('confirmed typed card-payment owner outranks an ordinary report rule', () => {
+  const classification = classifyTransactionForReport({
+    name: '本行自動扣繳',
+    import_match_key: '本行自動扣繳',
+    flow_type: '信用卡繳款/移轉',
+    amount: -3913200,
+    outflow: 3913200,
+    category_primary: '轉帳/內部移轉',
+    typed_card_payment_amount_minor: 3913200,
+  }, [{
+    id: 1,
+    match_key: '本行自動扣繳',
+    report_line: 'expense:education',
+    confidence: 0.9,
+    note: 'rule test',
+  }]);
 
-  assert.equal(report.total_expense_cents, 0);
-  assert.equal(report.unreviewed_transaction_count, 0);
-  assert.equal(findLine(report.expenses, 'expense:education'), undefined);
-  assert.equal(findLine(report.excluded, 'excluded:internal_transfer').amount_cents, 3913200);
+  assert.equal(classification.reportLine, 'excluded:credit_card_payment');
+  assert.equal(classification.mappingSource, 'typed_owner');
+});
+
+test('partial typed-owner amount cannot exclude an entire cash transaction', () => {
+  const classification = classifyTransactionForReport({
+    name: 'Possible card settlement',
+    flow_type: '信用卡繳款/移轉',
+    amount: -500000,
+    outflow: 500000,
+    category_primary: '轉帳/內部移轉',
+    typed_card_payment_amount_minor: 200000,
+  });
+
+  assert.equal(classification.status, 'unmapped');
+  assert.equal(classification.reportLine, null);
+  assert.match(classification.reason, /配對金額.*整筆/);
+});
+
+test('a broad report rule cannot create a P&L exclusion without confirmed evidence', () => {
+  const classification = classifyTransactionForReport({
+    name: 'Opaque bank movement',
+    import_match_key: 'opaque-bank-movement',
+    amount: -500000,
+    outflow: 500000,
+    category_primary: 'Other',
+  }, [{
+    id: 2,
+    match_key: 'opaque-bank-movement',
+    report_line: 'excluded:internal_transfer',
+    confidence: 1,
+    note: 'over-broad exclusion rule',
+  }]);
+
+  assert.equal(classification.status, 'unmapped');
+  assert.equal(classification.reportLine, null);
+  assert.match(classification.reason, /一般報表規則.*缺少.*確認/);
+});
+
+test('an explicit exclusion requires a reviewed human mapping', () => {
+  const proposed = classifyTransactionForReport({
+    mapping_report_line: 'excluded:investment_purchase',
+    mapping_source: 'ai',
+    mapping_reviewed: 1,
+    mapping_confidence: 0.99,
+  });
+  assert.equal(proposed.status, 'unmapped');
+  assert.match(proposed.reason, /尚未經人工確認/);
+
+  const confirmed = classifyTransactionForReport({
+    mapping_report_line: 'excluded:investment_purchase',
+    mapping_source: 'human_correction',
+    mapping_reviewed: 1,
+  });
+  assert.equal(confirmed.status, 'mapped');
+  assert.equal(confirmed.reportLine, 'excluded:investment_purchase');
 });
 
 test('report review coverage matches the low-confidence transaction review queue', () => {
@@ -339,21 +351,92 @@ test('income statement recreates missing reporting tables for upgraded live DBs'
   assert.equal(findLine(report.expenses, 'expense:food').amount_cents, 12000);
 });
 
-test('transfer keyword catches transfers whose category is not the Transfer category', () => {
-  // WP4: the 'transfer' keyword was added so built-in detection fires on rows whose
-  // category_primary is not the dedicated Transfer category but whose name signals a transfer.
+test('bank transfer wording does not override an income or expense category', () => {
+  const report = runFixture([
+    {
+      name: '跨行轉入 | 0630登月教育講師費',
+      flow_type: '轉入待確認',
+      amount: 2000000,
+      inflow: 2000000,
+      category_primary: '薪資收入',
+    },
+    {
+      name: '電子轉出 | 7月房租',
+      flow_type: '一般支出',
+      amount: -600000,
+      outflow: 600000,
+      category_primary: '居住',
+    },
+  ]);
+
+  assert.equal(report.coverage.status, 'complete');
+  assert.equal(findLine(report.revenue, 'income:salary').amount_cents, 2000000);
+  assert.equal(findLine(report.expenses, 'expense:housing').amount_cents, 600000);
+  assert.equal(findLine(report.excluded, 'excluded:internal_transfer'), undefined);
+});
+
+test('unconfirmed exclusion-like rows become review items instead of P&L exclusions', () => {
   const report = runFixture([
     {
       name: 'Transfer to savings',
       amount: -300000,
       outflow: 300000,
-      category_primary: 'Other',
+      category_primary: 'Transfer',
+    },
+    {
+      name: 'Loan principal repayment',
+      flow_type: '貸款本金還款',
+      amount: -900000,
+      outflow: 900000,
+      category_primary: 'Transfer',
+    },
+    {
+      name: 'Credit card payment from checking',
+      flow_type: '信用卡繳款/移轉',
+      amount: -100000,
+      outflow: 100000,
+      category_primary: 'Transfer',
     },
   ]);
 
-  assert.equal(report.coverage.status, 'complete');
-  assert.equal(findLine(report.excluded, 'excluded:internal_transfer').amount_cents, 300000);
-  assert.equal(findLine(report.excluded, 'excluded:internal_transfer').transaction_count, 1);
+  assert.deepEqual(report.excluded, []);
+  assert.equal(report.unmapped_transaction_count, 3);
+  assert.equal(report.unmatched_transfer_count, 0, 'the same rows must not create a duplicate blocker');
+  assert.equal(report.review_items.length, 3);
+  assert.match(report.review_items[0].reason, /轉帳/);
+  assert.match(report.review_items[1].reason, /本金.*利息.*費用/);
+  assert.match(report.review_items[2].reason, /信用卡/);
+});
+
+test('confirmed transfer match excludes both cash legs with typed-owner provenance', () => {
+  const report = runFixture([
+    {
+      name: 'Opaque movement A',
+      amount: -300000,
+      outflow: 300000,
+      category_primary: 'Mystery',
+    },
+    {
+      name: 'Opaque movement B',
+      amount: 300000,
+      inflow: 300000,
+      category_primary: 'Mystery',
+    },
+  ], 'month=2026-06', `
+    INSERT INTO transfer_matches (
+      match_key, from_transaction_id, to_transaction_id, amount_minor,
+      currency, match_status, confidence, authority, review_state, note
+    ) VALUES (
+      'fixture-transfer', 1, 2, 300000,
+      'TWD', 'confirmed', 1.0, 'user_confirmed', 'confirmed', 'fixture'
+    );
+  `);
+
+  const transfer = findLine(report.excluded, 'excluded:internal_transfer');
+  assert.equal(transfer.amount_cents, 600000);
+  assert.equal(transfer.transaction_count, 2);
+  assert.deepEqual(transfer.mapping_sources, ['typed_owner']);
+  assert.equal(report.unmapped_transaction_count, 0);
 });
 
 test('amountForReportGroup falls back to negative amount when outflow is zero', () => {

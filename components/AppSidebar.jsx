@@ -1,10 +1,7 @@
 "use client"
 
-// AppSidebar：整體側欄 layout shell。
-// 多 route 架構：導覽項是獨立 route（/, /transactions, /trend, /corrections, /rules），
-// 用 <Link> + asChild；active 依 usePathname。跨 route 保留 month/scope query（其他 view 專屬 param 不帶）。
-// SidebarFooter 用 useBreakdown(dimension=category) 顯示分類，點擊帶 category 到 /transactions。
-// 行動：shadcn <Sidebar> 在 isMobile 時自動以 <Sheet> 呈現（含 SheetTitle），並於主內容頂部放 <SidebarTrigger>。
+// 日常導覽只保留使用者要完成的財務工作；分類、確認與修正工具移到資料管理流程。
+// 行動版沿用 shadcn Sidebar 的 Sheet 行為，交易與資料編輯元件本身不在此變更。
 
 import Link from "next/link"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -13,7 +10,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -22,33 +18,22 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useBreakdown } from "@/lib/hooks"
-import { formatTWD } from "@/lib/format"
-import { OWNER_UNRESOLVED_CATEGORY } from "@/lib/constants"
 import {
-  ChartNoAxesColumnIncreasing,
-  CircleDollarSign,
   Database,
-  History,
   LayoutDashboard,
-  ListChecks,
+  Landmark,
   PieChart,
   ReceiptText,
-  ShieldCheck,
   TrendingUp,
+  WalletCards,
 } from "lucide-react"
 
-const NAV = [
-  { href: "/", label: "總覽", icon: LayoutDashboard },
-  { href: "/control", label: "財務控制", icon: CircleDollarSign },
-  { href: "/transactions", label: "交易明細", icon: ReceiptText },
-  { href: "/reports", label: "報表", icon: ChartNoAxesColumnIncreasing },
-  { href: "/data", label: "資料中心", icon: Database },
-  { href: "/trend", label: "走勢", icon: TrendingUp },
-  { href: "/corrections", label: "修正紀錄", icon: History },
-  { href: "/rules", label: "分類規則", icon: ListChecks },
-  { href: "/confirmations", label: "資料確認", icon: ShieldCheck },
+const PRIMARY_NAV = [
+  { key: "dashboard", href: "/control", label: "總覽", icon: LayoutDashboard },
+  { key: "income", href: "/reports", query: { statement: "income" }, label: "收支", icon: WalletCards },
+  { key: "balance", href: "/reports", query: { statement: "balance" }, label: "資產與負債", icon: Landmark },
+  { key: "investments", href: "/data", query: { tab: "investments" }, label: "投資", icon: TrendingUp },
+  { key: "transactions", href: "/transactions", label: "交易", icon: ReceiptText },
 ]
 
 export default function AppSidebar({ children }) {
@@ -56,7 +41,6 @@ export default function AppSidebar({ children }) {
   const searchParams = useSearchParams()
   const month = searchParams.get("month") || ""
   const scope = searchParams.get("scope") || "all"
-  const activeCategory = searchParams.get("category") || ""
 
   // 跨 route 保留 month / scope（皆具跨頁意義）；其他 view 專屬 param 不帶，避免跨頁污染。
   function withScope(href, extra = {}) {
@@ -72,32 +56,35 @@ export default function AppSidebar({ children }) {
     return qs ? `${href}?${qs}` : href
   }
 
-  // footer 分類列表：保留 month / scope 篩選，dimension=category。
-  const footerParams = new URLSearchParams({ dimension: "category" })
-  if (month) footerParams.set("month", month)
-  if (scope && scope !== "all") footerParams.set("scope", scope)
-  const { data: categories, loading } = useBreakdown(footerParams.toString())
+  function isActive(key) {
+    if (key === "dashboard") return pathname === "/" || pathname === "/control"
+    if (key === "income") return pathname === "/reports" && searchParams.get("statement") !== "balance"
+    if (key === "balance") return pathname === "/reports" && searchParams.get("statement") === "balance"
+    if (key === "investments") return pathname === "/data" && searchParams.get("tab") === "investments"
+    if (key === "transactions") return pathname === "/transactions"
+    return false
+  }
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div className="flex items-center gap-2 px-2 py-1.5">
-            <PieChart className="size-5 text-primary" aria-hidden="true" />
-            <span className="text-sm font-semibold">Last Say</span>
+          <div className="flex items-center gap-3 px-3 py-5">
+            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <PieChart className="size-5" aria-hidden="true" />
+            </span>
+            <span className="text-lg font-semibold tracking-tight">Last Say</span>
           </div>
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>導覽</SidebarGroupLabel>
-            <SidebarMenu>
-              {NAV.map(({ href, label, icon: Icon }) => {
-                const active = href === "/" ? pathname === "/" : pathname === href
+          <SidebarGroup className="px-2">
+            <SidebarMenu className="gap-1">
+              {PRIMARY_NAV.map(({ key, href, query, label, icon: Icon }) => {
                 return (
-                  <SidebarMenuItem key={href}>
-                    <SidebarMenuButton asChild isActive={active} tooltip={label}>
-                      <Link href={withScope(href)}>
+                  <SidebarMenuItem key={key}>
+                    <SidebarMenuButton asChild isActive={isActive(key)} tooltip={label} size="lg" className="px-3 text-[15px]">
+                      <Link href={withScope(href, query)}>
                         <Icon aria-hidden="true" />
                         <span>{label}</span>
                       </Link>
@@ -109,42 +96,17 @@ export default function AppSidebar({ children }) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter>
-          <SidebarGroup>
-            <SidebarGroupLabel>分類</SidebarGroupLabel>
+        <SidebarFooter className="border-t">
+          <SidebarGroup className="px-2 py-3">
             <SidebarMenu>
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => (
-                  <SidebarMenuItem key={`sk-${i}`}>
-                    <Skeleton className="h-8 w-full" />
-                  </SidebarMenuItem>
-                ))
-              ) : Array.isArray(categories) && categories.length > 0 ? (
-                categories.map((c) => {
-                  const displayedAmount = c.label === OWNER_UNRESOLVED_CATEGORY
-                    ? Number(c.inflow || 0) + Number(c.outflow || 0)
-                    : c.spend
-                  return <SidebarMenuItem key={c.label}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={activeCategory === c.label}
-                      tooltip={c.label}
-                      className="cursor-pointer"
-                    >
-                      <Link href={withScope("/transactions", { category: c.label })}>
-                        <span className="truncate">{c.label}</span>
-                        <span className="ml-auto text-xs tabular-nums text-muted-foreground">
-                          {formatTWD(displayedAmount)}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                })
-              ) : (
-                <li className="px-2 py-1.5 text-xs text-muted-foreground">
-                  無分類資料
-                </li>
-              )}
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/data" && searchParams.get("tab") !== "investments"} tooltip="資料管理" size="lg" className="px-3 text-[15px] text-muted-foreground">
+                  <Link href="/data">
+                    <Database aria-hidden="true" />
+                    <span>資料管理</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroup>
         </SidebarFooter>
@@ -153,7 +115,7 @@ export default function AppSidebar({ children }) {
       <SidebarInset>
         {/* 行動頂部列：漢堡鈕開啟側欄 Sheet；桌面隱藏 */}
         <div className="flex items-center gap-2 border-b px-3 py-2 md:hidden">
-          <SidebarTrigger />
+          <SidebarTrigger className="size-11" />
           <span className="text-sm font-medium">Last Say</span>
         </div>
         {children}

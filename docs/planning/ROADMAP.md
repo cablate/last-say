@@ -2,9 +2,9 @@
 
 用途：從目前完成的資料基礎與 [`../../Final-Long-Term-Goal.md`](../../Final-Long-Term-Goal.md) 反推能力順序。這不是日期承諾，也不代表未經owner核准的phase已排入backlog。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-21
 
-Status: Foundation Gate F system/operator work is complete on formal DB v10; owner-only scope, proposal, and acceptance actions remain; Control runtime stays behind that gate
+Status: Foundation Gate F system/operator work is complete on formal DB v10; bounded Control read models are implemented；owner-only scope、proposal、real-data Context Pack acceptance與policy decisions remain
 
 ## 推導原則
 
@@ -14,7 +14,7 @@ flowchart LR
     S --> W["Current: owner-only Gate F closure\nscope + proposal + acceptance"]
     S -.-> M
     M["Completed planning reference:\ncontrol semantics + fixtures"] -.-> P
-    W --> P["Next stage: Control Center\nposition adapter + obligations timeline"]
+    W --> P["Next stage: real-data Context Pack\nacceptance + prompt calibration"]
     P --> F["90-day forecast"]
     F --> G["Safe-to-spend + alerts"]
     P --> A["Cross-view control integration"]
@@ -28,7 +28,7 @@ flowchart LR
 
 **Current gate：** AI主輸入、typed preview／commit、正式DB v10、代表性真實facts與postflight已完成。現在只由owner在UI處理scope、1筆proposal與最終接受；20筆真正未知可以明示保留。Reserve與reliable income不是目前要解的問題，不阻擋foundation closure。
 
-**Next stage：** Owner已確認Financial Control Center接在foundation之後。Stage 2的management Balance Sheet與Stage 6的direct-method Cash Flow read model已由Gate F MP-05提前完成，下一階段不重做報表；它建立foundation→Control position／obligation adapter，只有走到forecast／safe-to-spend真正需要時才決定policy。Phase 0 pure projector不得直接接UI冒充可用forecast。
+**Next stage：** Owner已確認Financial Control Center接在foundation之後。Stage 2的management Balance Sheet與Stage 6的direct-method Cash Flow read model已由Gate F MP-05完成；FC-A2、FA-0、FC-A3、FC-2與FC-3也已有bounded query／API／Control consumers，下一步是用真實問題驗收Context Pack與AI提示詞。這些read models不等於safe-to-spend；reserve、reliable income、alerts與scenario policy仍等真正consumer需要時再決定。不得把未持久化的Phase 0 projector或raw forecast誤稱為完整控制中心。
 
 ## Current Gate F — Foundation Business-Flow Closure
 
@@ -181,6 +181,8 @@ tax／statutory adjustments、arbitrary manual balancing plug、cloud market dat
 
 ## Stage 3 — Obligation 與 commitment timeline
 
+**Implementation status（2026-07-17）：** FC-2 Obligation Timeline v0已完成pure projection、query／API、analysis-context dataset與Control consumer；正式資料與owner acceptance仍待驗收。它提供7／30／90日已知義務，不是safe-to-spend。
+
 ### 階段目標
 
 把cards、installments、loans與commitments投影成不重複的future cash events。
@@ -214,6 +216,8 @@ Control Plan A1／A2／A5 fixture不重複計算；同一payment只settle對應o
 Deterministic forecast events與near-term risk explanation。
 
 ## Stage 4 — Deterministic 90-day cash forecast
+
+**Implementation status（2026-07-17）：** FC-3 Raw Cash Forecast v0已完成policy-aware pure projector、trusted opening cash adapter、query／API、analysis-context dataset與Control consumer；它只投影可信期初現金與已知義務，不持久化forecast run，也不提供safe-to-spend。正式資料與owner policy acceptance仍待驗收。
 
 ### 階段目標
 

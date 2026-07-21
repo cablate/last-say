@@ -34,10 +34,10 @@ function account(db, name) {
   }, {}, db);
 }
 
-function cash(db, target, amount, name, flowType = 'expense', category = '其他') {
+function cash(db, target, amount, name, flowType = 'expense', category = '其他', date = '2026-07-10') {
   return createCashActivity({
     account_key: target.account_key,
-    transaction_date: '2026-07-10',
+    transaction_date: date,
     name,
     amount_minor: String(amount),
     currency: 'TWD',
@@ -138,6 +138,25 @@ test('review workbench hydrates every authority class and keeps counts aligned',
   assert.equal(transferItem.impact.financial[0].amount_minor, '5000');
   assert.deepEqual(transferItem.actions.map((item) => item.kind), ['confirm', 'reject']);
   assert.ok(result.sections.actionable_reviews.every((item) => item.reason));
+}));
+
+test('review workbench applies an explicit transaction-month scope to unresolved cash', () => isolated((db) => {
+  const checking = account(db, 'Synthetic scoped checking');
+  const june = cash(db, checking, -800, 'June unresolved row', 'expense', '無法確認', '2026-06-15');
+  cash(db, checking, -900, 'July unresolved row', 'expense', '無法確認', '2026-07-10');
+
+  const result = reviewWorkbench(
+    new URLSearchParams('month=2026-06'),
+    db,
+    new Date('2026-07-17T00:00:00Z'),
+  );
+  assert.deepEqual(result.scope, {
+    month: '2026-06',
+    kind: 'transaction_month',
+    note: '目前只列出 2026-06 的待釐清交易；確認提案與 typed review 仍依其自身證據範圍顯示。',
+  });
+  assert.equal(result.counts.owner_unresolved, 1);
+  assert.equal(result.sections.owner_unresolved[0].transaction_id, june.id);
 }));
 
 test('generic task resolution cannot orphan a typed owner decision', () => isolated((db) => {

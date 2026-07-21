@@ -3,28 +3,41 @@
 import { AlertTriangle, CheckCircle2, CircleDashed, Info, XCircle } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { displayAccountLabel } from "@/lib/finance/presentation-labels"
+import { formatCurrencyMinor } from "@/lib/format"
+
+const BLOCKER_LABELS = {
+  unmatched_card_settlement: "信用卡繳款尚未與卡片帳單配對",
+  missing_loan_allocation: "貸款還款尚未拆分本金與利息",
+  unmatched_transfer: "帳戶轉帳尚未配對另一側帳戶",
+}
 
 function formatMinor(amountMinor, currency = "TWD") {
-  if (amountMinor === null || amountMinor === undefined) return "未知"
-  const digits = new Intl.NumberFormat("en", {
-    style: "currency",
-    currency,
-  }).resolvedOptions().maximumFractionDigits
-  return new Intl.NumberFormat("zh-TW", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: digits,
-    signDisplay: "exceptZero",
-  }).format(Number(amountMinor) / (10 ** digits))
+  return formatCurrencyMinor(amountMinor, currency, { signed: true, missing: "尚無可靠數值" })
+}
+
+function blockerLabel(blocker) {
+  if (BLOCKER_LABELS[blocker.kind]) return BLOCKER_LABELS[blocker.kind]
+  const label = String(blocker.label || "")
+  if (/cash movement has no usable report-line mapping/i.test(label)) return "有現金流尚未對應到報表科目。"
+  const beginningCash = label.match(/^No beginning cash balance is available for (.+)\.?$/i)
+  if (beginningCash) return `缺少${displayAccountLabel(beginningCash[1].replace(/\.$/, ""))}的期初現金餘額。`
+  return label || "仍有資料需要確認"
 }
 
 function BlockerList({ blockers }) {
   if (blockers.length === 0) return null
+  const visibleBlockers = [...blockers.reduce((groups, blocker) => {
+    const key = `${blocker.kind || "blocker"}:${blocker.label || ""}`
+    const current = groups.get(key)
+    groups.set(key, current ? { ...current, count: current.count + 1 } : { ...blocker, count: 1 })
+    return groups
+  }, new Map()).values()]
   return (
     <ul className="mt-2 flex flex-col gap-1 text-sm">
-      {blockers.map((blocker, index) => (
-        <li key={`${blocker.kind}:${blocker.resource_key || blocker.transaction_id || blocker.account_id || index}`}>
-          {blocker.label}
+      {visibleBlockers.map((blocker, index) => (
+        <li key={`${blocker.kind || "blocker"}:${blocker.resource_key || blocker.transaction_id || blocker.account_id || "unknown"}:${index}`}>
+          {blockerLabel(blocker)}{blocker.count > 1 ? `（${blocker.count} 筆）` : ""}
         </li>
       ))}
     </ul>

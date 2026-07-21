@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 
 import { useDataChangeRefetch, useMonthlyFinancialPulse } from "@/lib/hooks"
+import { formatCurrencyMinor } from "@/lib/format"
 import CoverageBadge from "@/components/reports/CoverageBadge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -29,18 +30,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/
 
+const BLOCKER_LABELS = {
+  unmatched_card_settlement: "信用卡繳款尚未與卡片帳單配對",
+  missing_loan_allocation: "貸款還款尚未拆分本金與利息",
+  unmatched_transfer: "帳戶轉帳尚未配對另一側帳戶",
+}
+
 function formatMinor(value, currency = "TWD", { signed = false, absolute = false } = {}) {
-  if (value === null || value === undefined) return "未知"
-  const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return "未知"
-  const digits = new Intl.NumberFormat("en", { style: "currency", currency })
-    .resolvedOptions().maximumFractionDigits
-  return new Intl.NumberFormat("zh-TW", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: digits,
-    signDisplay: signed ? "exceptZero" : "auto",
-  }).format((absolute ? Math.abs(numeric) : numeric) / (10 ** digits))
+  return formatCurrencyMinor(value, currency, {
+    signed,
+    absolute,
+    missing: "尚無可靠數值",
+  })
 }
 
 function PulseSkeleton() {
@@ -99,6 +100,12 @@ function MovementRow({ label, value, currency, note }) {
 function CoverageNotice({ coverage }) {
   if (!coverage || coverage.status === "complete") return null
   const blockers = coverage.blockers || []
+  const visibleBlockers = [...blockers.reduce((groups, item) => {
+    const key = `${item.kind || "blocker"}:${item.label || ""}`
+    const current = groups.get(key)
+    groups.set(key, current ? { ...current, count: current.count + 1 } : { ...item, count: 1 })
+    return groups
+  }, new Map()).values()]
   const destructive = coverage.status === "unreconciled"
   return (
     <Alert variant={destructive ? "destructive" : "default"} className={destructive ? "" : "border-warning/30 bg-warning/10 text-warning"}>
@@ -107,9 +114,9 @@ function CoverageNotice({ coverage }) {
         缺少或待確認的部分不會被猜成零。
         {blockers.length ? (
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            {blockers.map((item, index) => (
-              <li key={`${item.source || "pulse"}:${item.kind || index}:${item.resource_key || index}`}>
-                {item.label || item.kind}
+            {visibleBlockers.map((item, index) => (
+              <li key={`${item.source || "pulse"}:${item.kind || "blocker"}:${item.resource_key || "unknown"}:${index}`}>
+                {BLOCKER_LABELS[item.kind] || item.label || item.kind}{item.count > 1 ? `（${item.count} 筆）` : ""}
               </li>
             ))}
           </ul>
@@ -241,7 +248,7 @@ export default function MonthlyPulseView() {
 
       {candidates.length ? (
         <Alert className="border-warning/30 bg-warning/10 text-warning">
-          <AlertTitle>有 {candidates.length} 筆報銷proposal尚未計入</AlertTitle>
+        <AlertTitle>有 {candidates.length} 筆報銷提案尚未計入</AlertTitle>
           <AlertDescription className="flex flex-col items-start gap-3">
             <span>確認或拒絕後，下一次查詢會直接重算回收金額與coverage。</span>
             <Button asChild variant="outline" size="sm"><Link href="/confirmations">前往資料確認</Link></Button>

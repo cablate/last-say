@@ -117,7 +117,7 @@ flowchart LR
 | 原則 | 現況 | 差距 |
 |---|---|---|
 | 核心語意不依賴 UI | typed contracts／queries 大致符合 | legacy UI仍重複 money／filter logic |
-| 外部 AI 可替換 | skill 是 HTTP operator contract，server 無模型 SDK；12個named datasets與proposal envelope公開owner/evidence hints | 尚無 vendor-neutral operator conformance suite，只測現行 skill |
+| 外部 AI 可替換 | skill 是 HTTP operator contract，server 無模型 SDK；15個named datasets與proposal envelope公開owner/evidence hints | 尚無 vendor-neutral operator conformance suite，只測現行 skill |
 | 關鍵流程可驗證 | Node suite、5條隔離Chromium流程、Skill eval與release verifier | browser coverage仍屬bounded；缺效能與長時間運行基線 |
 | 失敗可恢復 | atomic commit/reversal、backup/restore | 無 service-level rollback／operational drill automation |
 | 重要操作可稽核 | 多個 append-only logs + confirmation | 一般 CRUD audit coverage 不完全一致 |

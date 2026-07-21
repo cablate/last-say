@@ -1,5 +1,5 @@
-import MonthlyPulseView from "@/components/financial-control/MonthlyPulseView"
+import FinancialDashboard from "@/components/financial-control/FinancialDashboard"
 
 export default function FinancialControlPage() {
-  return <MonthlyPulseView />
+  return <FinancialDashboard />
 }

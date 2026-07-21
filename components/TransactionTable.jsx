@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Field, FieldLabel } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -361,18 +362,18 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`edit-category-${row.id}`}>分類</Label>
+      <Field>
+        <FieldLabel htmlFor={`edit-category-${row.id}`}>分類</FieldLabel>
         <CategoryPicker
           id={`edit-category-${row.id}`}
           value={draft.category_primary}
           onValueChange={set("category_primary")}
           options={categoryOptions}
         />
-      </div>
+      </Field>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor={`edit-memo-${row.id}`}>備註</Label>
+      <Field>
+        <FieldLabel htmlFor={`edit-memo-${row.id}`}>備註</FieldLabel>
         <Textarea
           id={`edit-memo-${row.id}`}
           value={draft.memo}
@@ -380,7 +381,7 @@ function TransactionEditPanel({ row, categoryOptions, onSaved, onClose }) {
           placeholder="輸入備註"
           rows={2}
         />
-      </div>
+      </Field>
 
       {row.judgment_reason ? (
         <div className="flex flex-col gap-1 rounded-md bg-muted/50 p-2.5 text-xs">

@@ -32,6 +32,62 @@ unreconciled, stale, conflicted, or unsupported.
 5. Report fixed confirmed total, variable observed total, candidate total, and
    unresolved amount separately; include drillback keys and coverage.
 
+## Spending Structure And Reimbursement
+
+1. For a single month, call `/api/finance/control/spending-structure` first. If
+   using `POST /api/finance/analysis-context`, request the named
+   `spending_structure` dataset with the same month, entity, currency, and
+   management basis.
+2. Give the read model's `facts`, `derived`, `coverage`, `source_watermark`,
+   and `drillback` to the AI before any raw transaction drillback. Do not
+   recreate `confirmed_expense - confirmed_recovery` from raw rows.
+3. Treat `explicit_business_expense_minor` as only the explicitly mapped
+   `expense:business_operating` line. Transportation, lodging, food, or a
+   merchant name alone is not evidence of work purpose or reimbursement.
+4. Keep confirmed recovery, gross expense, unallocated recovery, and proposed
+   reimbursement separate. A proposal is a human-review item and is never
+   subtracted before its typed owner is confirmed.
+5. The AI may explain observed drivers and ask for the smallest missing
+   evidence. It must not label spending essential, wasteful, reimbursable, or
+   safe-to-cut unless an owner policy or typed evidence exists.
+
+## Obligation Timeline
+
+1. For questions such as "接下來要付什麼" or "未來三個月已知義務多少",
+   call `/api/finance/control/obligations` with explicit `as_of_date`, entity,
+   currency, and `horizon_days=90`; or request the named `obligation_timeline`
+   dataset through analysis-context.
+2. Read `facts.events`, `facts.windows`, `facts.counts`, `coverage`,
+   `source_watermark`, and `drillback` before interpreting. `known_amount_minor`
+   is exact only; range and unknown amounts remain separate.
+3. Card statement due, future installment entries, loan schedule payments, and
+   confirmed commitment occurrences are obligation events. Card merchant
+   charges, card payments, loan principal, and loan interest must not be added
+   again as ordinary spending.
+4. Missing loan schedule, missing card due date, incomplete installment plan,
+   provisional commitment, or missing commitment amount is a blocker or
+   uncertainty—not a zero and not a guessed monthly payment from APR.
+5. This read model can answer what is currently sourced and due; it cannot
+   answer cash safety, runway, safe-to-spend, or whether to repay/invest. Those
+   require later forecast and owner-policy contexts.
+
+## Raw Cash Forecast
+
+1. For questions such as "未來三個月現金會怎麼走" or "哪些已知付款會壓低現金",
+   call `/api/finance/control/forecast` with explicit `as_of_date`, entity,
+   currency, and `horizon_days=90`; or request the named `cash_forecast`
+   dataset through analysis-context.
+2. Read `facts.opening_liquid_cash`, `facts.obligations`, `facts.forecast`,
+   `derived`, `coverage`, `source_watermark`, and `drillback` together. A
+   missing, stale, conflicted, or needs-review opening snapshot blocks the
+   timeline; never substitute zero.
+3. This is `raw_known_obligations`: trusted current liquid cash plus exact
+   sourced obligation events. Uncertain income and range／unknown obligation
+   amounts remain excluded or separately disclosed.
+4. The response deliberately keeps `safe_to_spend_minor` null and policy status
+   unavailable. Do not convert the minimum projected cash into a purchase,
+   repayment, investment, reserve, or income recommendation.
+
 ## Work, Personal, And Reimbursement
 
 1. Keep objective ownership/category evidence separate from subjective spending

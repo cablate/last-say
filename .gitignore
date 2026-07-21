@@ -38,6 +38,8 @@ server.pid
 
 # screenshots may contain real transaction data — don't commit
 *.png
+# local consultation / UI audit bundles may also contain written personal figures
+/audit/
 # ...but keep committed demo screenshots and brand assets under docs/
 !docs/screenshots/*.png
 !docs/brand/*.jpg

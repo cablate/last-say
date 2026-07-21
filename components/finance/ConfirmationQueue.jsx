@@ -2,15 +2,19 @@
 
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { AlertTriangle, Check, ExternalLink, Loader2, RefreshCw, ShieldCheck } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { ButtonGroup } from "@/components/ui/button-group"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Item } from "@/components/ui/item"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { displayResourceType, displaySourceKind, displayStatus } from "@/lib/finance/presentation-labels"
 
 const WORKBENCH_CONTRACT = "finance.review-workbench/v1"
 const DEFAULT_RESOLUTION_NOTE = "已檢視工作台提供的證據、缺漏資訊與影響，依目前資料做成決議。"
@@ -48,7 +52,24 @@ function itemActions(item) {
 }
 
 function fieldLabel(value) {
-  return String(value).replaceAll("_", " ")
+  const labels = {
+    account_key: "帳戶",
+    amount_minor: "金額",
+    as_of_date: "資料日期",
+    commitment_kind: "固定收支項目",
+    direction: "方向",
+    entity_key: "分析範圍",
+    match_status: "配對狀態",
+    resource_key: "資料識別碼",
+    resource_type: "資料類型",
+    review_state: "審查狀態",
+    selected_source_key: "採用來源",
+    source_key: "來源識別碼",
+    source_kind: "來源類型",
+    status: "狀態",
+    version: "版本",
+  }
+  return labels[value] || "資料欄位"
 }
 
 async function requestJson(url, options, fallbackMessage) {
@@ -252,10 +273,10 @@ function ItemContext({ item }) {
             查看目前狀態、伺服器預覽與復原方式
           </summary>
           <div className="mt-2 grid gap-2 rounded-sm border bg-muted/20 p-2 sm:grid-cols-2">
-            <div><p className="mb-1 font-medium">resource</p><DataValue value={item.resource} /></div>
-            <div><p className="mb-1 font-medium">recovery</p><DataValue value={item.recovery} /></div>
-            {hasFields(item.before) ? <div><p className="mb-1 font-medium">before</p><DataValue value={item.before} /></div> : null}
-            {hasFields(item.after_preview) ? <div><p className="mb-1 font-medium">after preview</p><DataValue value={item.after_preview} /></div> : null}
+            <div><p className="mb-1 font-medium">資料項目</p><DataValue value={item.resource} /></div>
+            <div><p className="mb-1 font-medium">復原方式</p><DataValue value={item.recovery} /></div>
+            {hasFields(item.before) ? <div><p className="mb-1 font-medium">變更前</p><DataValue value={item.before} /></div> : null}
+            {hasFields(item.after_preview) ? <div><p className="mb-1 font-medium">變更後預覽</p><DataValue value={item.after_preview} /></div> : null}
           </div>
         </details>
       ) : null}
@@ -265,7 +286,7 @@ function ItemContext({ item }) {
 
 function DecisionButtons({ item, actions }) {
   return (
-    <div className="flex flex-wrap justify-end gap-2">
+    <ButtonGroup orientation="horizontal" className="ml-auto flex-wrap justify-end" aria-label={`${item.title} decisions`}>
       {actions.map((action) => (
         <Button
           key={action.kind}
@@ -280,7 +301,7 @@ function DecisionButtons({ item, actions }) {
           {action.label}
         </Button>
       ))}
-    </div>
+    </ButtonGroup>
   )
 }
 
@@ -350,7 +371,7 @@ function ActionPanel({ item, domId, form, itemState, onFormChange, onResolve }) 
                   className="mt-0.5 size-4 accent-primary"
                 />
                 <span className="min-w-0">
-                  <span className="block font-medium">{source.description || source.source_kind || "來源證據"}</span>
+                  <span className="block font-medium">{source.description || displaySourceKind(source.source_kind)}</span>
                   <span className="block break-all text-muted-foreground">{source.source_key}</span>
                 </span>
               </label>
@@ -446,17 +467,17 @@ function ActionPanel({ item, domId, form, itemState, onFormChange, onResolve }) 
 function WorkbenchItem({ item, domId, form, itemState, onFormChange, onResolve }) {
   const pendingLabel = itemState.locked ? "決議已送出，正在同步工作台" : "處理中"
   return (
-    <article
-      aria-labelledby={`${domId}-title`}
-      aria-busy={itemState.pending || undefined}
-      className="space-y-3 rounded-md border bg-card p-3"
-    >
+    <Item asChild variant="outline" className="flex-col items-stretch gap-3 bg-card p-3">
+      <article
+        aria-labelledby={`${domId}-title`}
+        aria-busy={itemState.pending || undefined}
+      >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h4 id={`${domId}-title`} className="text-sm font-semibold">{item.title}</h4>
           <p className="mt-0.5 break-all text-xs text-muted-foreground">
-            {item.resource?.type || item.item_kind} · {item.resource?.status || "status 未提供"}
-            {item.resource?.version == null ? "" : ` · version ${item.resource.version}`}
+            {displayResourceType(item.resource?.type || item.item_kind)} · {displayStatus(item.resource?.status)}
+            {item.resource?.version == null ? "" : ` · 版本 ${item.resource.version}`}
           </p>
         </div>
         {item.expires_at ? <p className="text-xs text-muted-foreground">期限：{item.expires_at}</p> : null}
@@ -476,7 +497,8 @@ function WorkbenchItem({ item, domId, form, itemState, onFormChange, onResolve }
         </p>
       ) : null}
       {itemState.error ? <p role="alert" className="text-xs text-destructive">{itemState.error}</p> : null}
-    </article>
+      </article>
+    </Item>
   )
 }
 
@@ -533,9 +555,9 @@ function PartialErrors({ errors, refreshing, onRetry }) {
         <ul role="list" className="space-y-1">
           {errors.map((error, index) => (
             <li key={`${error.task_key || error.resource_key || "partial"}-${index}`}>
-              {error.message || error.kind}
+              {error.message || "資料來源錯誤"}
               {error.resource_type || error.resource_key
-                ? `（${[error.resource_type, error.resource_key].filter(Boolean).join(" · ")}）`
+                ? `（${[error.resource_type ? displayResourceType(error.resource_type) : null, error.resource_key ? "有關資料" : null].filter(Boolean).join(" · ")}）`
                 : ""}
             </li>
           ))}
@@ -550,6 +572,9 @@ function PartialErrors({ errors, refreshing, onRetry }) {
 }
 
 export default function ConfirmationQueue() {
+  const searchParams = useSearchParams()
+  const requestedMonth = searchParams.get("month")
+  const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth || "") ? requestedMonth : null
   const [workbench, setWorkbench] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -575,7 +600,7 @@ export default function ConfirmationQueue() {
 
     try {
       const data = await requestJson(
-        "/api/finance/review-workbench",
+        `/api/finance/review-workbench${month ? `?month=${encodeURIComponent(month)}` : ""}`,
         { cache: "no-store", signal: controller.signal },
         "無法讀取待確認工作台",
       )
@@ -595,7 +620,7 @@ export default function ConfirmationQueue() {
         else setLoading(false)
       }
     }
-  }, [])
+  }, [month])
 
   useEffect(() => {
     load()
@@ -699,6 +724,10 @@ export default function ConfirmationQueue() {
           ))}
         </dl>
       </div>
+
+      <p className="text-xs text-muted-foreground">
+        {workbench.scope?.note || (month ? `目前範圍：${month}` : "目前範圍：全部期間")}
+      </p>
 
       {refreshNotice ? (
         <Alert variant={refreshNotice.tone === "error" ? "destructive" : "default"}>

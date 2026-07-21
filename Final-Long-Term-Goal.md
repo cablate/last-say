@@ -3,7 +3,7 @@
 Status: Draft
 Authority: Repository evidence and inferred target state
 Owner approval required: Yes
-Last validated against repository: 2026-07-17
+Last validated against repository: 2026-07-21
 
 ## 文件用途
 
@@ -56,6 +56,19 @@ flowchart LR
 - **Needs owner decision:** 未來是否採用哪些正式風險門檻、可靠收入定義、必要支出政策、個人／家戶／公司邊界與對外專業責任，不能由單次實作自行決定。
 
 第一個驗證切片`FA-0 Financial Health Review v0`已完成query／API／contract／synthetic驗證：只產生 position、liquidity、debt、investment exposure、stress test與data quality的deterministic read model，接著用五個真實問題驗收其是否足以支援AI專業解讀；不在此切片加入完整Financial Control Center、safe-to-spend policy、預測平台或大量UI。
+
+2026-07-21 的下一個小切片已把 `/control` 收束為 compact daily dashboard，並新增 `financial_dashboard_history`：程式從六個完整月份的 Monthly Pulse 產生可重算平均與 sample count，AI 可直接取得這個 bounded Context Pack，不必重拉原始交易。這仍是描述性基準，不是可靠收入、必要支出、安全現金線或自動投資建議；完整每月生存線必須等待負債排程與 owner policy 成為 canonical facts。
+
+### 外部 GPT 討論整合：目前資料層的真實邊界（2026-07-21）
+
+外部討論提出了一條成熟系統可能採用的路徑：`raw evidence → financial events → postings → allocations → statements／AI Context Pack`。這個方向補充了本文件對「資料不只是明細，還要能支援財務判斷」的描述，但不能把未實作的企業會計能力倒灌成目前需求。
+
+- **Confirmed current implementation：** Last Say 已有來源證據、typed financial contexts、三時間線語意、typed matching／allocation、query-time management P&L／Balance Sheet／Cash Flow，以及FA-0 compact Context Pack。加入資料或修正資料後，read model會從當下canonical facts重新計算。
+- **Confirmed boundary：** 目前沒有完整 persisted `financial_events`、double-entry `postings`／journal、通用多對多 allocation、customer／project／invoice／AR/AP或personal／business／combined elimination模型。這與`financial-event-semantics-contract.md`的non-goal及capabilities的`business_consolidation` unsupported一致。
+- **Inferred long-term option：** 若未來要支援企業／接案財務，才建立獨立的event／posting／allocation contract與可回溯收入認列流程；必須先由owner決定企業範圍與管理／法定會計邊界。
+- **Current non-goal：** 現階段不為了完整化而重做foundation、不建立第二套帳戶／資產／負債／投資真相，也不把FA-0誤稱為safe-to-spend、完整投資顧問或企業總帳。
+
+完整逐項證據對照見[`docs/audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md`](docs/audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md)。
 
 ### Inferred mission
 

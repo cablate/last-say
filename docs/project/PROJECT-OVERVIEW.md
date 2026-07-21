@@ -2,7 +2,7 @@
 
 用途：用可驗證的 Repository 證據回答 Last Say 是什麼、由哪些執行單元組成，以及使用者資料如何在系統內流動。
 
-Last validated against repository: 2026-07-16
+Last validated against repository: 2026-07-21
 
 ## 一句話
 
@@ -67,9 +67,9 @@ legacy CSV／ledger 流程仍存在：外部 AI 產生 ledger → `/api/import-l
 
 ## 目前成熟階段
 
-**Confirmed：** 資料基礎、AI proposal contract、統一待審工作台與三張管理報表已在code／synthetic／browser層完成，正式DB亦已經受保護的v6→v9→v10升級、typed real-data write與postflight。產品仍處於「可信事實、人工裁決與管理報表平台」到「主動財務控制工具」之間；剩餘foundation gate是owner-only scope／proposal confirmation與acceptance。
+**Confirmed：** 資料基礎、AI proposal contract、統一待審工作台與三張管理報表已有code／synthetic／bounded browser evidence，正式DB亦已經受保護的v6→v9→v10升級、typed real-data write與postflight。產品仍處於「可信事實、人工裁決與管理報表平台」到「主動財務控制工具」之間；剩餘foundation gate是owner-only scope／proposal confirmation、E2E契約修正與acceptance。
 
-- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、unified review workbench、readiness、analysis contexts、management P&L／Balance Sheet／Cash Flow、currency-aware Data Center、browser E2E、backup／restore／health、Control Phase 0 reference semantics、FC-A2 Monthly Financial Pulse與FA-0 Financial Health Context Pack。
+- 已具備：canonical identity、source／scope、typed ingestion、balances、cards、liabilities、commitments、investments、valuations、reconciliation、unified review workbench、readiness、analysis contexts、management P&L／Balance Sheet／Cash Flow、currency-aware Data Center、browser E2E、backup／restore／health、Control Phase 0 reference semantics、FC-A2 Monthly Financial Pulse、FA-0 Financial Health Context Pack、FC-A3 Spending Structure、FC-2 Obligation Timeline與FC-3 Raw Cash Forecast。這些是personal-management read models，不是完整double-entry或企業consolidation系統。
 - 尚未具備：owner Gate F acceptance、foundation-backed forecast API/UI、safe-to-spend、alerts、scenario policy、正式deployment／monitoring。部分真實報表因missing／stale snapshots、cash boundaries與matching維持partial／unreconciled。
 
 詳細狀態見 [`CURRENT-STATUS.md`](CURRENT-STATUS.md) 與 [`FEATURE-INVENTORY.md`](FEATURE-INVENTORY.md)。

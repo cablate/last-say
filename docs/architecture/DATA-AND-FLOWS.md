@@ -2,7 +2,7 @@
 
 用途：描述 Last Say 的持久資料模型、事實層次、資料生命週期、主要寫入／分析流程，以及一致性與資料遺失風險。
 
-Last validated against repository: 2026-07-17
+Last validated against repository: 2026-07-21
 
 ## 資料庫與表示規則
 
@@ -27,6 +27,14 @@ flowchart TB
 ```
 
 事實、工具推導與 AI 解釋必須分開。Repository 不應把 AI summary 寫回 canonical financial facts，除非經 typed contract、來源與 authority policy。
+
+### 目前與長期事件層邊界
+
+目前的資料流是 `source evidence + typed facts／relationships → query-time read models`。`lib/finance/semantics/financial-events.js`提供跨報表共用的事件角色與三條時間線語意，但它是pure semantic owner，不是持久化的總事件表。
+
+目前**沒有** `financial_events`、double-entry `postings`／journal或通用多對多 `allocations` schema。現有 loan、card payment、transfer、reimbursement與investment cash match各自由typed owner保存；這些關係可供報表與Control read model使用，但不能被描述成完整企業總帳。企業收入認列、customer／project／invoice、AR／AP與personal／business／combined consolidation仍是長期候選範圍，需另立contract與owner決策。
+
+這個邊界是刻意的：目前先讓個人財務 foundation、三張管理報表與AI Context Pack跑順，不因未來企業擴張而建立第二套帳戶、資產、負債或投資真相。逐項交叉核對見[`../audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md`](../audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md)。
 
 ## Schema 群組
 
@@ -123,10 +131,10 @@ R16沿用同一組routes與run tables，但由`lib/finance/ingestion/card-lifecy
 2. 讀 `/api/finance/inventory` 與特定 goal 的 `/readiness`。
 3. readiness 依 `scope`、balances、sources、obligations、valuation、reconciliation 等 requirements 回傳 status、gaps、priority、next actions、source watermark。
 4. 只有足夠時，agent 向 `/api/finance/analysis-context` 要求白名單 dataset。
-5. server 只接受 registry 中 12 個 dataset 與 allowlisted filters，並限制 dataset count／response bytes；其中5個candidate datasets以`finance.proposal-envelope/v1`指向typed owner、evidence、impact與missing evidence，但不具canonical write或human authority。
+5. server 只接受 registry 中 15 個 dataset 與 allowlisted filters，並限制 dataset count／response bytes；其中5個candidate datasets以`finance.proposal-envelope/v1`指向typed owner、evidence、impact與missing evidence，另有`spending_structure`、`obligation_timeline`與`cash_forecast` deterministic read models；它們不具canonical write或human authority。
 6. AI 在 facts／derived data 之外增加 interpretation，不能把 Unknown 補成數字。
 
-目前 8 個 readiness goals：`spending_history`、`cash_position`、`net_worth`、`debt_obligations`、`investment_value`、`cash_flow_statement`、`liquidity_forecast_90d`、`tax_or_derivatives`。最後一項明確要求 separate context；forecast readiness 不等於 forecast engine。
+目前 8 個 readiness goals：`spending_history`、`cash_position`、`net_worth`、`debt_obligations`、`investment_value`、`cash_flow_statement`、`liquidity_forecast_90d`、`tax_or_derivatives`。最後一項明確要求 separate context；forecast readiness 不等於 policy／safe-to-spend。
 
 ## 流程 4：manual investment evidence
 
@@ -216,6 +224,25 @@ flowchart LR
 ```
 
 這個read model不寫report snapshot、不呼叫AI、不保存另一套資產／負債／投資資料，也不輸出買賣、還貸、safe-to-spend或runway結論。若缺current cash、debt schedule、reliable income、essential spend、position detail或factor mapping，回應必須保留`partial`、`null`與可追蹤missing inputs；canonical fact被新增或修正後，下一次查詢即時重算。
+
+## 流程 11：六個完整月份的 Dashboard History
+
+`GET /api/finance/control/history?month=YYYY-MM&entity_id=personal&currency=TWD`不直接掃原始交易建立另一套統計，而是對六個已結束月份逐月呼叫`Monthly Financial Pulse`。選定月份仍在進行時，該月不納入平均；歷史月份則可成為視窗終點。每個metric只平均non-null facts並附自己的sample count，任一月份partial時保留warning。
+
+```mermaid
+flowchart LR
+    Request["Selected month / entity / currency"] --> Window["Six completed calendar months"]
+    Window --> Pulse["Monthly Financial Pulse × 6"]
+    Pulse --> Facts["Revenue / expense / net result / cash change"]
+    Facts --> Average["Integer minor-unit averages + sample counts"]
+    Pulse --> Coverage["Per-month coverage and blocker kinds"]
+    Average --> Dashboard["/control monthly baseline"]
+    Coverage --> Dashboard
+    Average --> AI["financial_dashboard_history dataset"]
+    Coverage --> AI
+```
+
+此流程只供描述性比較，不產生可靠收入、必要支出、runway、safe-to-spend或投資建議。交易、報表mapping或餘額快照更新後，下一次查詢會重新計算；沒有持久化第二份歷史摘要。
 
 ## 資料生命週期
 

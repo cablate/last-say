@@ -2,7 +2,7 @@
 
 用途：以目前程式、API、UI與驗證證據盤點能力。`Implemented`表示有可執行路徑，不表示真實資料coverage一定complete。
 
-Last validated against repository: 2026-07-17
+Last validated against repository: 2026-07-21
 
 ## 狀態定義
 
@@ -31,7 +31,7 @@ Last validated against repository: 2026-07-17
 | typed ingestion／atomic commit／reversal | Implemented | `/api/finance/imports/**`、`lib/finance/ingestion/**` |
 | cards、statements、payments、installments | Implemented；operator-first beyond basic UI | `/api/finance/credit-cards/**`、`obligations.js` |
 | current／unbilled→posted card lifecycle | Implemented；real statement acceptance pending | `finance.card-transaction-lifecycle/v1`、`card-lifecycle.js`、typed reversal、4 focused tests |
-| liabilities、schedules、allocations | Implemented；operator-first | `/api/finance/liabilities/**` |
+| liabilities、schedules、typed allocations | Implemented；operator-first；不是通用allocation ledger | `/api/finance/liabilities/**`、reimbursement／reconciliation routes；loan、card、transfer、reimbursement各有自己的owner |
 | commitments／occurrences | Implemented；review workbench integrated | `/api/finance/commitments/**` |
 | instruments、trades、holdings、quotes、FX | Implemented；manual setup UI partial | `/api/finance/investments/**`、`InvestmentRegister.jsx` |
 | valued items／valuation snapshots | Implemented；operator-first | `/api/finance/valued-items/**` |
@@ -45,7 +45,7 @@ Last validated against repository: 2026-07-17
 | 能力 | 狀態 | 證據與限制 |
 |---|---|---|
 | Inventory／8 readiness goals | Implemented | capability、inventory、readiness APIs；readiness不等於資料complete |
-| 12 named analysis datasets | Implemented, operator-facing | `analysis/registry.js`、`analysis-context.js` |
+| 16 named analysis datasets | Implemented, operator-facing | `analysis/registry.js`、`analysis-context.js`；含 `spending_structure`、`financial_dashboard_history`、`obligation_timeline`、`cash_forecast` |
 | Proposal envelope | Implemented | `finance.proposal-envelope/v1`；不具canonical mutation／human authority |
 | Unified impact review workbench | Implemented | `/api/finance/review-workbench`、`ConfirmationQueue.jsx`、Node＋Playwright tests |
 | Management P&L | Implemented | `income-statement.js`、`finance.management-pl/v1`；只支援card-accrual management basis |
@@ -53,8 +53,11 @@ Last validated against repository: 2026-07-17
 | Direct-method cash flow | Implemented | `cash-flow.js`、API、`CashFlowStatement.jsx`；按selected currency獨立scope，boundary／typed match不足時partial或unreconciled |
 | Shared report coverage | Implemented | `lib/reporting/coverage.js`；complete／partial／empty／unmapped／unreconciled |
 | Monthly Financial Pulse | Implemented；formal-data acceptance pending | `lib/queries/finance/control/monthly-pulse.js`、`/api/finance/control/monthly-pulse`、`/control`；query-time組合P&L、Cash Flow、typed debt／investment／reimbursement owner，不另存報表且不由AI算術 |
-| Financial Health Review v0 | Implemented；formal-data acceptance pending | `lib/queries/finance/control/financial-health.js`、`/api/finance/control/financial-health`、`financial-health-review` contract；query-time產出position、liquidity、debt、指定投資因子曝險與stress Context Pack；不回答safe-to-spend／runway，缺資料時partial／null |
-| 90-day forecast | Phase 0 reference only | pure synthetic projector；無foundation adapter／API／UI |
+| Financial Health Review v0 | Implemented；formal-data acceptance pending | `lib/queries/finance/control/financial-health.js`、`/api/finance/control/financial-health`、`components/financial-control/FinancialHealthView.jsx`、`/control`、`financial-health-review` contract；query-time產出position、liquidity、debt、指定投資因子曝險與stress Context Pack；不回答safe-to-spend／runway，缺資料時partial／null |
+| Financial Dashboard History | Implemented；formal data remains partial | `lib/queries/finance/control/history.js`、`/api/finance/control/history`、analysis-context dataset、`FinancialDashboard.jsx`；只使用最近六個已結束月份的Monthly Pulse facts，輸出每月值、平均、sample count與coverage；不把平均解讀成可靠收入或必要支出 |
+| Spending Structure FC-A3 | Implemented；formal-data acceptance pending | `lib/queries/finance/control/spending-structure.js`、`/api/finance/control/spending-structure`、`components/financial-control/SpendingStructureView.jsx`、`spending-structure` contract；支出科目、confirmed commitment、confirmed recovery與proposal disclosure；不判斷必要性或可省 |
+| Obligation Timeline FC-2 | Implemented v0；formal-data acceptance pending | `lib/finance/control/project-obligations.js`、`lib/queries/finance/control/obligations.js`、`/api/finance/control/obligations`、`UpcomingCommitments.jsx`、`commitment-and-liability` contract；提供7／30／90日exact／range／unknown義務；尚非現金預測 |
+| 90-day raw cash forecast FC-3 | Implemented v0；formal-data acceptance pending | `project-cash-timeline.js`、`control/forecast.js`、`/api/finance/control/forecast`、`CashTimeline.jsx`、`cash-forecast` contract；可信期初現金＋FC-2已知義務；policy／safe-to-spend仍不可用 |
 | safe-to-spend、alerts、scenarios | Planned | Control plan only |
 
 ## UI surfaces
@@ -63,6 +66,7 @@ Last validated against repository: 2026-07-17
 
 - `/reports`現在是三張server-backed報表，不再是Balance Sheet／Cash Flow占位頁。
 - `/confirmations`是material review workbench；typed decisions回到各自owner endpoint，owner-unresolved交易deep-link到精確transaction id。
+- `/control` 是 compact daily dashboard：顯示目前財務位置、本月與近六個完整月、已建檔支出底線、逐筆負債與投資情境；缺貸款排程時月付與完整生存線保持未知。
 - Data Center涵蓋完整account kinds、currency-aware balances與bounded manual investment／FX資料；statements、schedule、bulk source ingestion仍採AI／API-first。
 
 ## Operations與品質
@@ -82,6 +86,8 @@ Last validated against repository: 2026-07-17
 
 - Tax／statutory reporting與derivatives不在目前支援範圍。
 - 不是GAAP／IFRS／audit-ready ledger；目前三張表是personal management views。
+- 沒有 persisted `financial_events`、double-entry `postings`／journal、通用多對多allocation、customer／project／invoice或完整AR／AP lifecycle；現有financial-event semantics與typed allocations不代表上述能力已存在。
+- `reporting_entities`目前支援個人範圍與entity-scoped read model，但不代表已支援personal／business／combined consolidation或internal elimination。
 - Large DB、multi-browser、long-running concurrency與remote deployment沒有成熟證據。
 - 正式DB已發布v10與代表性typed real-data facts；但scope、snapshot、matching或source normalization缺口仍會讓個別report保持partial／unreconciled，不能把「已發布」誤寫成「資料完整」。
 

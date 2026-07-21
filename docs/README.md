@@ -2,12 +2,12 @@
 
 用途：這是人類與 AI 重新進入 Last Say 時的第一個文件索引。它說明各文件的責任、閱讀順序、證據標籤與更新規則；產品入口仍是根目錄 `README.md`。
 
-Last validated against repository: 2026-07-17
+Last validated against repository: 2026-07-21
 
 ## 先理解目前結論
 
 - **Confirmed：** Last Say 已有可運作的本機交易審查、規則學習、管理損益表，以及 Phase 0–7 財務資料基礎；這不等於完整的財務控制產品。
-- **Confirmed：** 管理損益表、資產負債表與直接法現金流量表都已有server-backed read model、coverage／blockers與UI；第一個Financial Control runtime consumer「Monthly Financial Pulse」也已用query-time composition接上既有P&L／Cash Flow owner。真實資料仍會因缺少boundary、matching或新鮮快照而誠實降級；Control Phase 0的pure 90日timeline尚未接成runtime forecast，safe-to-spend與主動警示也尚未實作。
+- **Confirmed：** 管理損益表、資產負債表與直接法現金流量表都已有server-backed read model、coverage／blockers與UI；Financial Control 已接上 Monthly Financial Pulse、FA-0 Health Review、FC-A3 Spending Structure、FC-2 Obligation Timeline與FC-3 Raw Cash Forecast。真實資料仍會因缺少boundary、matching或新鮮快照而誠實降級；safe-to-spend與主動警示尚未實作。
 - **Confirmed：** 伺服器不內建 LLM；外部 AI 透過 `.claude/skills/last-say-ops/` 與受約束 API 操作。
 - **Owner-confirmed（2026-07-15）：** AI是主要輸入方式，UI負責確認與少量修正；目前先收斂foundation業務流程，Financial Control Center是下一階段。Reserve／reliable income與其他優化延後處理。
 - **Recommended：** 開始任何新功能前，先讀根目錄 [`Final-Long-Term-Goal.md`](../Final-Long-Term-Goal.md)、[目前狀態](project/CURRENT-STATUS.md) 與[風險／技術債](planning/GAPS-RISKS-AND-DEBT.md)。
@@ -48,6 +48,9 @@ Last validated against repository: 2026-07-17
 - [`contracts/ai-analysis-context-and-proposal-contract.md`](contracts/ai-analysis-context-and-proposal-contract.md)：AI named candidate datasets、proposal envelope、typed owner提示與隱私／權限邊界。
 - [`contracts/monthly-financial-pulse-contract.md`](contracts/monthly-financial-pulse-contract.md)：FC-A2月度財務脈搏的P&L／現金／typed movement分離、query-time重算、候選揭露與Control UI狀態契約。
 - [`contracts/financial-health-review-contract.md`](contracts/financial-health-review-contract.md)：FA-0財務健康Context Pack的position／liquidity／debt／指定投資因子／stress邊界，以及AI只解讀、不重新計算的協作契約。
+- [`contracts/spending-structure-contract.md`](contracts/spending-structure-contract.md)：FC-A3支出科目、confirmed commitment、報銷回收／proposal與工作費判斷邊界。
+- [`contracts/commitment-and-liability-contract.md`](contracts/commitment-and-liability-contract.md)：FC-2義務事件的card／loan／commitment來源、去重、exact／range／unknown與forecast邊界。
+- [`../.claude/skills/last-say-ops/references/analysis-prompt-template.md`](../.claude/skills/last-say-ops/references/analysis-prompt-template.md)：AI 讀取 read model、選擇資料集與輸出 facts／derived／interpretation 的共用提示詞骨架。
 - [`planning/FINANCIAL-CONTROL-METRIC-DICTIONARY.md`](planning/FINANCIAL-CONTROL-METRIC-DICTIONARY.md)：Control Phase 0 metrics、availability與去重語意；目前是proposed reference，非owner核准政策。
 
 ### 開發與維運
@@ -67,7 +70,8 @@ Last validated against repository: 2026-07-17
 - [`planning/ROADMAP.md`](planning/ROADMAP.md)：由現況與長期目標推導的能力階段。
 - [`planning/OPEN-QUESTIONS.md`](planning/OPEN-QUESTIONS.md)：需要 owner 決策或 Repository 無法回答的問題。
 - [`audit/PROJECT-AUDIT-REPORT.md`](audit/PROJECT-AUDIT-REPORT.md)：2026-07-15 全專案盤點、證據、驗證與覆蓋限制。
-- [`plans/master-financial-control-plan.md`](plans/master-financial-control-plan.md)：foundation完成後唯一canonical Financial Control spec-plan；包含real-data entry gate、`FC-*`／`FA-*`執行包、Data Source Map、AI權限矩陣、平行邊界與驗證階梯。`FC-A1`、`FC-A2`與`FA-0`已完成第一輪code／synthetic closure；先用五個決策問題驗收FA-0，再決定`FC-A3`，正式資料接受仍受Gate F約束。
+- [`audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md`](audit/AI-DISCUSSION-ARCHITECTURE-CROSSCHECK.md)：2026-07-21 外部 GPT 討論與目前資料層、報表、AI Context Pack及長期企業架構的逐項交叉核對。
+- [`plans/master-financial-control-plan.md`](plans/master-financial-control-plan.md)：foundation完成後唯一canonical Financial Control spec-plan；包含real-data entry gate、`FC-*`／`FA-*`執行包、Data Source Map、AI權限矩陣、平行邊界與驗證階梯。`FC-A1`、`FC-A2`、`FA-0`、`FC-A3`、`FC-2`與`FC-3`已完成第一輪code／synthetic closure，下一步是以真實問題驗收compact AI Context Pack，正式資料接受仍受Gate F約束。
 - [`contracts/deterministic-analysis-read-model-contract.md`](contracts/deterministic-analysis-read-model-contract.md)：未來分析表共用的query-time recomputation、coverage、watermark、drillback、money與no-AI-hot-path契約。
 - [`contracts/credit-card-transaction-lifecycle-contract.md`](contracts/credit-card-transaction-lifecycle-contract.md)：current／unbilled卡片交易晉升為posted時的強identity、explicit release、source supersession、idempotency與reversal契約。
 - [`plans/ai-assisted-financial-semantics-plan.md`](plans/ai-assisted-financial-semantics-plan.md)：目前 Gate F 唯一 canonical Foundation AI master plan；包含 GORE goals、ownership、三時間線語意、typed closure、AI context／review、三視角報表、Skill、真實資料驗收與交棒條件。
@@ -100,6 +104,7 @@ Last validated against repository: 2026-07-17
 | 開發Financial Control第二階段 | `Final-Long-Term-Goal` → `CURRENT-STATUS` → `master-financial-control-plan`第17節 → 對應Control contract → 實際code／tests |
 | 重構 | `ARCHITECTURE` → `MODULE-MAP` → 受影響 contract／test → CodeGraph impact → `GAPS` |
 | 產品規劃 | `Final-Long-Term-Goal` → `PRODUCT-AND-USERS` → `CURRENT-STATUS` → `IMPROVEMENT-OPPORTUNITIES` → `ROADMAP`／`OPEN-QUESTIONS` |
+| 核對外部架構討論 | `Final-Long-Term-Goal` → `AI-DISCUSSION-ARCHITECTURE-CROSSCHECK` → `CURRENT-STATUS` → 相關contract／程式／測試 |
 | 部署／故障 | `CONFIGURATION` → `DEPLOYMENT-AND-OPERATIONS` → `backup-restore` → `TROUBLESHOOTING` |
 
 ## AI Session Bootstrap

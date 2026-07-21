@@ -27,6 +27,10 @@ It is not a CRUD administration console and it does not own financial semantics.
   available actions, current version, and recovery behavior.
 - **Public contract:** additive `GET /api/finance/review-workbench`; existing
   mutation routes remain authoritative and unchanged.
+- **Optional scope:** `?month=YYYY-MM` limits the `owner_unresolved` transaction
+  section to that transaction month. Without it, the projection remains global.
+  Human confirmations and typed review tasks retain their own evidence scope;
+  the response exposes this distinction in `scope.note`.
 
 ## Authority and Ownership Invariants
 
@@ -57,6 +61,11 @@ It is not a CRUD administration console and it does not own financial semantics.
 {
   "contract": "finance.review-workbench/v1",
   "generated_at": "2026-07-16T00:00:00.000Z",
+  "scope": {
+    "month": "2026-06",
+    "kind": "transaction_month",
+    "note": "目前只列出 2026-06 的待釐清交易；確認提案與 typed review 仍依其自身證據範圍顯示。"
+  },
   "counts": {
     "human_confirmations": 1,
     "actionable_reviews": 2,

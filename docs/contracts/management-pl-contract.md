@@ -58,14 +58,20 @@ Future data:
 For each transaction:
 
 1. explicit human-reviewed `transaction_report_mappings`;
-2. enabled `report_mapping_rules`;
-3. deterministic built-in exclusions for known transfer/payment/principal
-   patterns;
-4. AI-proposed mapping if confidence is allowed and a reason is present;
+2. confirmed typed-owner facts from transfer, card-payment, loan-allocation, or
+   investment-cash matching;
+3. enabled `report_mapping_rules`;
+4. normal income or expense category/keyword mapping;
 5. `unmapped` review item.
 
 Merchant classification rules must not be reused as accounting mappings. They
 can be hints only.
+
+Transaction names, bank rail wording such as `轉入` or `轉出`, `flow_type`, AI
+confidence, and an ordinary `轉帳/內部移轉` category are exclusion hints only.
+They must not create a P&L exclusion without an explicit report mapping or a
+confirmed typed-owner fact. See
+`docs/contracts/evidence-backed-pl-exclusions-contract.md`.
 
 ## Included Lines
 

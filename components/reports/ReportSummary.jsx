@@ -32,11 +32,18 @@ function topExpense(expenses, totalExpenseCents) {
 // 完成度提示：還有未審/未對應就提示，否則顯示完整。
 function completionMessage(report) {
   const coverage = report?.coverage
+  if (!coverage) {
+    return { tone: "info", text: "尚未取得完整性檢查結果，請先確認資料範圍。" }
+  }
+  const coverageStatus = coverage.status || "partial"
   const unreviewed = Number(coverage?.unreviewed_transaction_count) || 0
   const unmapped = Number(coverage?.unmapped_transaction_count) || 0
   const unresolved = Number(coverage?.owner_unresolved_transaction_count) || 0
   const unresolvedInflow = Number(coverage?.owner_unresolved_inflow_cents) || 0
   const unresolvedOutflow = Number(coverage?.owner_unresolved_outflow_cents) || 0
+  const missingSnapshots = Array.isArray(coverage?.missing_balance_snapshots)
+    ? coverage.missing_balance_snapshots.length
+    : 0
 
   if (unresolved > 0) {
     return {
@@ -60,6 +67,15 @@ function completionMessage(report) {
     return {
       tone: "info",
       text: `還有 ${unmapped} 筆交易尚未對應報表科目，完成後報表會更完整。`,
+    }
+  }
+  if (coverageStatus !== "complete") {
+    const snapshotNote = missingSnapshots > 0
+      ? `另有 ${missingSnapshots} 個帳戶缺少期末快照；缺少快照不代表餘額為 0。`
+      : "目前仍有資料完整性限制，請先查看上方完整性說明。"
+    return {
+      tone: coverageStatus === "unreconciled" ? "warning" : "info",
+      text: snapshotNote,
     }
   }
   return { tone: "success", text: "本月資料已完整，可直接作為管理報表使用。" }
@@ -169,7 +185,7 @@ export default function ReportSummary({ report }) {
 
         {/* 過渡標示：精簡版，原本獨立一段灰字整合進這裡 */}
         <p className="text-xs text-muted-foreground">
-          報表科目對應目前由內建規則與 category 推斷產生，接通 AI 後將更精準。
+          報表依交易分類、人工修正與已確認配對彙總；缺少證據的項目不會先算進損益。
         </p>
       </CardContent>
     </Card>

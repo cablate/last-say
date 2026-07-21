@@ -21,7 +21,10 @@ change_context:
 
 ## Public Contract
 
-- 新datasets：`transfer_candidates`、`reimbursement_candidates`、`recurring_candidates`、`installment_anomalies`、`statement_blockers`。
+- 新datasets：`transfer_candidates`、`reimbursement_candidates`、`recurring_candidates`、`installment_anomalies`、`statement_blockers`、`spending_structure`、`financial_dashboard_history`、`obligation_timeline`、`cash_forecast`。
+- `spending_structure` 是單月 deterministic read model；它重用管理損益、confirmed commitments 與 reimbursement owners，供 AI 先讀摘要，不能用原始交易自行重算另一個淨支出。
+- `financial_dashboard_history` 是六個完整月份的 deterministic baseline；它重用 Monthly Financial Pulse，只回已確認收入、支出、損益、現金增減、sample count 與 coverage。當月未結束時不得混入平均，AI 不得把 partial average 改稱穩定收入、必要支出或未來預測。
+- `obligation_timeline` 是7／30／90日 exact／range／unknown future obligation read model；`cash_forecast` 是可信期初流動現金加 FC-2 已知義務的 raw 90日路徑。兩者都不提供safe-to-spend或human authority。
 - 每個candidate使用`finance.proposal-envelope/v1`，至少包含`proposal_kind`、`target.owner/action`、`evidence.resource_keys`、`impact.timelines/summary`、`authority.human_review_required`、`missing_evidence`與`recovery`。
 - Capabilities公開dataset filters／limits與proposal schema id；未知dataset／field、超限與過大response維持fail closed。
 - Envelope是proposal hint，不是可直接commit的mutation payload；AI仍須讀取最新resource/version並走對應typed preview／PATCH／review流程。
@@ -39,6 +42,7 @@ change_context:
 2. Provisional commitment回`commitment_templates/review_commitment`，且review queue仍是決策owner。
 3. Card profile沒有statement時回`statement_blocker`，不推算應付額。
 4. 任意SQL-like filter或未知dataset回validation error。
+5. 選擇當月時，`financial_dashboard_history`回前六個完整月份；每個metric保留自己的non-null sample count與partial-month warning。
 
 ## Test Mapping
 
@@ -48,6 +52,7 @@ test_mapping:
     - test/analysis-context-api.test.js
     - test/analysis-proposal-context.test.js
     - test/financial-capabilities.test.js
+    - test/control-dashboard-history.test.js
 ```
 
 ## Evidence

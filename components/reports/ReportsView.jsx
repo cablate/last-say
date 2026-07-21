@@ -12,6 +12,7 @@ import CoverageBadge from "@/components/reports/CoverageBadge"
 import CoveragePanel from "@/components/reports/CoveragePanel"
 import IncomeStatement from "@/components/reports/IncomeStatement"
 import ReportSummary from "@/components/reports/ReportSummary"
+import { defaultAsOfDateForMonth } from "@/lib/finance/reports/presentation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Empty,
@@ -31,13 +32,6 @@ function activeStatement(searchParams) {
   return STATEMENTS.has(value) ? value : "income"
 }
 
-function monthEnd(month) {
-  if (!/^\d{4}-\d{2}$/.test(month || "")) return null
-  const [year, monthNumber] = month.split("-").map(Number)
-  if (monthNumber < 1 || monthNumber > 12) return null
-  return new Date(Date.UTC(year, monthNumber, 0)).toISOString().slice(0, 10)
-}
-
 function scopedParams(searchParams, report) {
   const params = new URLSearchParams()
   const entity = searchParams.get("entity_id")
@@ -54,14 +48,19 @@ function scopedParams(searchParams, report) {
     const month = searchParams.get("month")
     const periodStart = searchParams.get("period_start")
     const periodEnd = searchParams.get("period_end")
-    if (month) params.set("month", month)
-    else if (periodStart && periodEnd) {
+    if (month) {
+      const effectiveEnd = defaultAsOfDateForMonth(month)
+      if (effectiveEnd) {
+        params.set("period_start", `${month}-01`)
+        params.set("period_end", effectiveEnd)
+      }
+    } else if (periodStart && periodEnd) {
       params.set("period_start", periodStart)
       params.set("period_end", periodEnd)
     }
   }
   if (report === "balance") {
-    const asOfDate = searchParams.get("as_of_date") || monthEnd(searchParams.get("month"))
+    const asOfDate = searchParams.get("as_of_date") || defaultAsOfDateForMonth(searchParams.get("month"))
     if (asOfDate) params.set("as_of_date", asOfDate)
   }
   return params.toString()
@@ -73,6 +72,12 @@ function periodLabel(report) {
   if (report.month && report.month !== "all") return formatMonth(report.month)
   if (report.period_start && report.period_end) return `${report.period_start} 至 ${report.period_end}`
   return "全部可用期間"
+}
+
+function scopeDescription(statement) {
+  if (statement === "income") return "依交易發生月份彙總收入與支出。"
+  if (statement === "cash") return "依實際現金帳戶的流入與流出彙總。"
+  return "依截止日前各項最新快照彙總；每列資料日期可能不同。"
 }
 
 function ReportsSkeleton() {
@@ -162,7 +167,7 @@ export default function ReportsView() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{periodLabel(report)}</p>
-          <h2 className="text-2xl font-semibold tracking-tight">財務報表</h2>
+          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{scopeDescription(statement)}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <CoverageBadge status={status} />
